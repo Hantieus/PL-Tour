@@ -1,0 +1,83 @@
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="PLTourApp.Views.HomePage"
+    Title="PLTour">
+
+    <ScrollView>
+
+        <VerticalStackLayout Padding="20" Spacing="25">
+
+            <!-- Banner -->
+            <Frame
+                BackgroundColor="#ff8c6b"
+                CornerRadius="20"
+                Padding="20">
+
+                <VerticalStackLayout>
+
+                    <Label
+                        Text="PL TOUR"
+                        FontSize="32"
+                        FontAttributes="Bold"
+                        TextColor="White"/>
+
+                    <Label
+                        Text="Ứng dụng hướng dẫn du lịch thông minh"
+                        TextColor="White"/>
+
+                </VerticalStackLayout>
+
+            </Frame>
+
+
+            <!-- Menu -->
+            <Grid
+                ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="15"
+                RowSpacing="15">
+
+                <!-- Map -->
+                <Frame Grid.Row="0" Grid.Column="0" CornerRadius="15" Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="🗺" FontSize="40"/>
+                        <Label Text="Bản đồ"/>
+                        <Button Text="Mở" Clicked="OnMapClicked"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- POI -->
+                <Frame Grid.Row="0" Grid.Column="1" CornerRadius="15" Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="📍" FontSize="40"/>
+                        <Label Text="Điểm tham quan"/>
+                        <Button Text="Xem" Clicked="OnPoiClicked"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- QR -->
+                <Frame Grid.Row="1" Grid.Column="0" CornerRadius="15" Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="📷" FontSize="40"/>
+                        <Label Text="Quét QR"/>
+                        <Button Text="Mở" Clicked="OnQRClicked"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Analytics -->
+                <Frame Grid.Row="1" Grid.Column="1" CornerRadius="15" Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="📊" FontSize="40"/>
+                        <Label Text="Thống kê"/>
+                        <Button Text="Xem" Clicked="OnAnalyticsClicked"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+            </Grid>
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>
