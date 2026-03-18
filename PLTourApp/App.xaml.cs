@@ -27,14 +27,23 @@ public partial class App : Application
             await narration.Enqueue(poi);
         };
 
-        Task.Run(async () =>
+        InitApp(locationService);
+
+        MainPage = new AppShell();
+    }
+
+    async void InitApp(LocationService locationService)
+    {
+        try
         {
             await db.Init();
             await SeedData.Seed(db);
             await manager.Init();
             await locationService.Start();
-        });
-
-        MainPage = new AppShell();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"INIT ERROR: {ex.Message}");
+        }
     }
 }

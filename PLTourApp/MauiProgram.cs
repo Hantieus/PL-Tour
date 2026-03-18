@@ -29,10 +29,14 @@ public static class MauiProgram
         builder.Services.AddSingleton<NarrationEngine>();
         builder.Services.AddSingleton<LocationService>();
 
+        // ===== ENGINES (THÊM QUAN TRỌNG) =====
+        builder.Services.AddSingleton<GeofenceEngine>();
+        builder.Services.AddSingleton<LocationManager>();
+
         // ===== VIEWMODELS =====
         builder.Services.AddSingleton<MapViewModel>();
 
-        // ===== PAGES (khuyên dùng) =====
+        // ===== PAGES =====
         builder.Services.AddSingleton<Views.HomePage>();
         builder.Services.AddTransient<Views.MapPage>();
         builder.Services.AddTransient<Views.PoiListPage>();

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
@@ -64,7 +64,16 @@
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
-
+	<!-- ===== XAML PAGES (QUAN TRỌNG) ===== -->
+	<ItemGroup>
+		<MauiXaml Include="Views\AnalyticsPage.xaml" />
+		<MauiXaml Include="Views\HomePage.xaml" />
+		<MauiXaml Include="Views\MapPage.xaml" />
+		<MauiXaml Include="Views\PoiDetailPage.xaml" />
+		<MauiXaml Include="Views\PoiListPage.xaml" />
+		<MauiXaml Include="Views\QRScannerPage.xaml" />
+	</ItemGroup>
+	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />

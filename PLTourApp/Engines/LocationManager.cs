@@ -37,23 +37,30 @@ public class LocationManager
 
     async void OnLocationChanged(Location location)
     {
-        await db.InsertRoute(new UserRoute
+        try
         {
-            Latitude = location.Latitude,
-            Longitude = location.Longitude,
-            TimeStamp = DateTime.Now
-        });
+            await db.InsertRoute(new UserRoute
+            {
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                TimeStamp = DateTime.Now
+            });
 
-        var poi = geofence.FindCandidate(location, pois);
+            var poi = geofence.FindCandidate(location, pois);
 
-        if (poi == null)
-            return;
+            if (poi == null)
+                return;
 
-        if ((DateTime.Now - lastTrigger).TotalSeconds < 20)
-            return;
+            if ((DateTime.Now - lastTrigger).TotalSeconds < 20)
+                return;
 
-        lastTrigger = DateTime.Now;
+            lastTrigger = DateTime.Now;
 
-        PoiTriggered?.Invoke(poi, location);
+            PoiTriggered?.Invoke(poi, location);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Location Error: {ex.Message}");
+        }
     }
 }
