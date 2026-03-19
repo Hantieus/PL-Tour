@@ -1,44 +1,67 @@
+using PLTourApp.Database;
 using PLTourApp.ViewModels;
 using PLTourApp.Services;
-using PLTourApp.Database;
 using PLTourApp.Engines;
+using System;
 
-namespace PLTourApp.Views;
-
-public partial class HomePage : ContentPage
+namespace PLTourApp.Views
 {
-    public HomePage()
+    public partial class HomePage : ContentPage
     {
-        InitializeComponent();
-    }
+        public HomePage()
+        {
+            InitializeComponent();
+        }
 
-    async void OnMapClicked(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new MapPage());
-    }
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+            Console.WriteLine("HomePage Loaded");
+        }
 
-    async void OnPoiClicked(object sender, EventArgs e)
-    {
-        var db = new SQLiteHelper();
-        var vm = new MapViewModel(db);
+        // ===== QUICK ACTION =====
 
-        await Navigation.PushAsync(new PoiListPage(vm));
-    }
+        private async void OnMapClicked(object sender, EventArgs e)
+        {
+            await Navigation.PushAsync(new MapPage());
+        }
 
-    async void OnQRClicked(object sender, EventArgs e)
-    {
-        var db = new SQLiteHelper();
+        private async void OnPoiClicked(object sender, EventArgs e)
+        {
+            var db = new SQLiteHelper();
+            var vm = new MapViewModel(db);
 
-        var audio = new AudioService();
-        var tts = new TTSService();
+            await Navigation.PushAsync(new PoiListPage(vm));
+        }
 
-        var narration = new NarrationEngine(audio, tts, db);
+        private async void OnQRClicked(object sender, EventArgs e)
+        {
+            // 🔥 FIX LỖI constructor
+            var db = new SQLiteHelper();
+            var audio = new AudioService();
+            var tts = new TTSService();
+            var engine = new NarrationEngine(audio, tts, db);
 
-        await Navigation.PushAsync(new QRScannerPage(db, narration));
-    }
+            await Navigation.PushAsync(new QRScannerPage(db, engine));
+        }
 
-    async void OnAnalyticsClicked(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new AnalyticsPage());
+        private async void OnAnalyticsClicked(object sender, EventArgs e)
+        {
+            await Navigation.PushAsync(new AnalyticsPage());
+        }
+
+        // ===== BUTTON =====
+
+        private async void OnCreateTourClicked(object sender, EventArgs e)
+        {
+            await DisplayAlert("Thông báo", "Tạo tour mới", "OK");
+        }
+
+        // ===== ITEM =====
+
+        private async void OnLocationTapped(object sender, EventArgs e)
+        {
+            await DisplayAlert("Địa điểm", "Xem chi tiết địa điểm", "OK");
+        }
     }
 }

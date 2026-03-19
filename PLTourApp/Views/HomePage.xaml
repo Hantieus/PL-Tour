@@ -1,80 +1,143 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
 <ContentPage
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     x:Class="PLTourApp.Views.HomePage"
-    Title="PLTour">
+    BackgroundColor="#F9FAFB"
+    Title="Home">
 
     <ScrollView>
 
-        <VerticalStackLayout Padding="20" Spacing="25">
+        <VerticalStackLayout Padding="20" Spacing="20">
 
-            <!-- Banner -->
-            <Frame
-                BackgroundColor="#ff8c6b"
-                CornerRadius="20"
-                Padding="20">
+            <!-- HEADER -->
+            <Grid ColumnDefinitions="*,Auto">
 
-                <VerticalStackLayout>
-
-                    <Label
-                        Text="PL TOUR"
-                        FontSize="32"
-                        FontAttributes="Bold"
-                        TextColor="White"/>
-
-                    <Label
-                        Text="Ứng dụng hướng dẫn du lịch thông minh"
-                        TextColor="White"/>
-
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="Xin chào 👋" FontSize="14" TextColor="Gray"/>
+                    <Label Text="Phi Long" FontSize="22" FontAttributes="Bold"/>
                 </VerticalStackLayout>
 
-            </Frame>
+                <Frame WidthRequest="45" HeightRequest="45"
+                       CornerRadius="25"
+                       BackgroundColor="#ff8c6b">
 
-
-            <!-- Menu -->
-            <Grid
-                ColumnDefinitions="*,*"
-                RowDefinitions="Auto,Auto"
-                ColumnSpacing="15"
-                RowSpacing="15">
-
-                <!-- Map -->
-                <Frame Grid.Row="0" Grid.Column="0" CornerRadius="15" Padding="20">
-                    <VerticalStackLayout>
-                        <Label Text="🗺" FontSize="40"/>
-                        <Label Text="Bản đồ"/>
-                        <Button Text="Mở" Clicked="OnMapClicked"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- POI -->
-                <Frame Grid.Row="0" Grid.Column="1" CornerRadius="15" Padding="20">
-                    <VerticalStackLayout>
-                        <Label Text="📍" FontSize="40"/>
-                        <Label Text="Điểm tham quan"/>
-                        <Button Text="Xem" Clicked="OnPoiClicked"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- QR -->
-                <Frame Grid.Row="1" Grid.Column="0" CornerRadius="15" Padding="20">
-                    <VerticalStackLayout>
-                        <Label Text="📷" FontSize="40"/>
-                        <Label Text="Quét QR"/>
-                        <Button Text="Mở" Clicked="OnQRClicked"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- Analytics -->
-                <Frame Grid.Row="1" Grid.Column="1" CornerRadius="15" Padding="20">
-                    <VerticalStackLayout>
-                        <Label Text="📊" FontSize="40"/>
-                        <Label Text="Thống kê"/>
-                        <Button Text="Xem" Clicked="OnAnalyticsClicked"/>
-                    </VerticalStackLayout>
+                    <Label Text="👤"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
                 </Frame>
 
             </Grid>
+
+            <!-- SEARCH -->
+            <Frame CornerRadius="15" Padding="10" BackgroundColor="White">
+                <HorizontalStackLayout>
+                    <Label Text="🔍" FontSize="18"/>
+                    <Entry Placeholder="Tìm địa điểm..." />
+                </HorizontalStackLayout>
+            </Frame>
+
+            <!-- QUICK ACTION -->
+            <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
+
+                <!-- MAP -->
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#FFE5DD">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnMapClicked"/>
+                        </Frame.GestureRecognizers>
+                        <Label Text="🗺" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    <Label Text="Bản đồ" FontSize="12" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <!-- POI -->
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#E0F7FA">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnPoiClicked"/>
+                        </Frame.GestureRecognizers>
+                        <Label Text="📍" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    <Label Text="Địa điểm" FontSize="12" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <!-- QR -->
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#E8F5E9">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnQRClicked"/>
+                        </Frame.GestureRecognizers>
+                        <Label Text="📷" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    <Label Text="QR" FontSize="12" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <!-- ANALYTICS -->
+                <VerticalStackLayout HorizontalOptions="Center">
+                    <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#FFF3E0">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnAnalyticsClicked"/>
+                        </Frame.GestureRecognizers>
+                        <Label Text="📊" FontSize="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    <Label Text="Thống kê" FontSize="12" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+            </HorizontalStackLayout>
+
+            <!-- FEATURED -->
+            <Frame CornerRadius="20" Padding="0">
+                <Grid HeightRequest="160">
+                    <Image Source="tour1.jpg" Aspect="AspectFill"/>
+                    <BoxView BackgroundColor="#66000000"/>
+
+                    <VerticalStackLayout Padding="15" VerticalOptions="End">
+                        <Label Text="Tour Linh Ứng"
+                               TextColor="White"
+                               FontSize="18"
+                               FontAttributes="Bold"/>
+                        <Label Text="Khám phá chùa Linh Ứng"
+                               TextColor="White"
+                               FontSize="12"/>
+                    </VerticalStackLayout>
+                </Grid>
+            </Frame>
+
+            <!-- TITLE -->
+            <Label Text="Địa điểm nổi bật"
+                   FontSize="18"
+                   FontAttributes="Bold"/>
+
+            <!-- ITEM -->
+            <Frame CornerRadius="15" Padding="10">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLocationTapped"/>
+                </Frame.GestureRecognizers>
+
+                <HorizontalStackLayout Spacing="10">
+                    <Image Source="tour2.jpg"
+                           WidthRequest="90"
+                           HeightRequest="90"
+                           Aspect="AspectFill"/>
+
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Chánh điện" FontAttributes="Bold"/>
+                        <Label Text="📍 Cách 500m" FontSize="12" TextColor="Gray"/>
+                        <Label Text="⭐ 4.8" FontSize="12" TextColor="#ff8c6b"/>
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
+            </Frame>
+
+            <!-- BUTTON -->
+            <Button
+                Text="Tạo Tour mới"
+                BackgroundColor="#ff8c6b"
+                TextColor="White"
+                CornerRadius="25"
+                HeightRequest="50"
+                Clicked="OnCreateTourClicked"/>
 
         </VerticalStackLayout>
 

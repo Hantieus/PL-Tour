@@ -1,23 +1,25 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Mapsui.UI.Maui.Extensions; // <--- Namespace chứa .UseMapsui()
+using Microsoft.Extensions.Logging;
 using PLTourApp.Database;
 using PLTourApp.Engines;
 using PLTourApp.Services;
 using PLTourApp.ViewModels;
+using SkiaSharp.Views.Maui.Controls.Hosting; // <--- Namespace chứa .UseSkiaSharp()
 
 namespace PLTourApp;
 
 public static class MauiProgram
 {
-    public static MauiApp CreateMauiApp()
+    public static MauiApp CreateMauiApp()   
     {
         var builder = MauiApp.CreateBuilder();
 
         builder
             .UseMauiApp<App>()
+            .UseSkiaSharp() // Cần thiết để Mapsui vẽ được trên MAUI
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
         // ===== DATABASE =====
@@ -26,10 +28,10 @@ public static class MauiProgram
         // ===== SERVICES =====
         builder.Services.AddSingleton<AudioService>();
         builder.Services.AddSingleton<TTSService>();
-        builder.Services.AddSingleton<NarrationEngine>();
         builder.Services.AddSingleton<LocationService>();
 
-        // ===== ENGINES (THÊM QUAN TRỌNG) =====
+        // ===== ENGINES =====
+        builder.Services.AddSingleton<NarrationEngine>();
         builder.Services.AddSingleton<GeofenceEngine>();
         builder.Services.AddSingleton<LocationManager>();
 

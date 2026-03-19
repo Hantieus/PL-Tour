@@ -5,9 +5,8 @@ namespace PLTourApp.Views;
 
 public partial class PoiDetailPage : ContentPage
 {
-    Poi poi;
-
-    NarrationEngine narration;
+    private Poi poi;
+    private NarrationEngine narration;
 
     public PoiDetailPage(Poi p, NarrationEngine engine)
     {
@@ -16,14 +15,25 @@ public partial class PoiDetailPage : ContentPage
         poi = p;
         narration = engine;
 
+        LoadData();
+    }
+
+    private void LoadData()
+    {
         PoiName.Text = poi.Name;
         PoiDescription.Text = poi.Description;
-
         PoiImage.Source = poi.Image;
     }
 
-    async void PlayAudio(object sender, EventArgs e)
+    private async void PlayAudio(object sender, EventArgs e)
     {
-        await narration.Enqueue(poi);
+        try
+        {
+            await narration.Enqueue(poi);
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Lỗi", ex.Message, "OK");
+        }
     }
 }

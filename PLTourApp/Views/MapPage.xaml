@@ -3,39 +3,84 @@
 <ContentPage
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
-    x:Class="PLTourApp.Views.MapPage">
+    xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+    x:Class="PLTourApp.Views.MapPage"
+    BackgroundColor="#F6F6F6"
+    Title="Bản đồ">
 
-	<Grid>
+    <Grid>
 
-		<maps:Map
-            x:Name="TourMap"
-            IsShowingUser="True"
-            MapType="Street"/>
+        <!-- MAP -->
+        <mapsui:MapControl x:Name="MyMap" />
 
-		<Frame
-            BackgroundColor="White"
+        <!-- SEARCH -->
+        <Frame
+            Margin="20,50,20,0"
+            VerticalOptions="Start"
+            CornerRadius="15"
             Padding="10"
+            BackgroundColor="White">
+
+            <HorizontalStackLayout>
+                <Label Text="🔍" FontSize="18"/>
+                <Entry Placeholder="Tìm địa điểm..." />
+            </HorizontalStackLayout>
+
+        </Frame>
+
+        <!-- BUTTON ĐỊNH VỊ -->
+        <Frame
+            WidthRequest="55"
+            HeightRequest="55"
+            CornerRadius="30"
+            BackgroundColor="#ff8c6b"
             VerticalOptions="End"
-            Margin="20"
-            HasShadow="True">
+            HorizontalOptions="End"
+            Margin="20,0,20,120">
 
-			<VerticalStackLayout Spacing="5">
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnLocateClicked"/>
+            </Frame.GestureRecognizers>
 
-				<Label
+            <Label 
+                Text="📍"
+                FontSize="24"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"/>
+        </Frame>
+
+        <!-- BOTTOM INFO -->
+        <Frame
+            BackgroundColor="White"
+            CornerRadius="20"
+            Padding="15"
+            VerticalOptions="End"
+            Margin="15">
+
+            <VerticalStackLayout Spacing="10">
+
+                <Label
                     Text="Điểm gần nhất"
                     FontAttributes="Bold"
                     FontSize="18"/>
 
-				<Label
+                <Label
                     x:Name="NearestPoiLabel"
-                    FontSize="16"
-                    Text="Chưa xác định"/>
+                    Text="Chưa xác định"
+                    FontSize="16"/>
 
-			</VerticalStackLayout>
+                <Button
+                    Text="Xem chi tiết"
+                    BackgroundColor="#ff8c6b"
+                    TextColor="White"
+                    CornerRadius="15"
+                    HeightRequest="40"
+                    Clicked="OnViewDetailClicked"/>
 
-		</Frame>
+            </VerticalStackLayout>
 
-	</Grid>
+        </Frame>
+
+    </Grid>
 
 </ContentPage>
