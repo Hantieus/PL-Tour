@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="PLTourApp.Views.AnalyticsPage">
+
+	<ScrollView>
+
+		<VerticalStackLayout Padding="20" Spacing="10">
+
+			<Label
+                Text="Analytics"
+                FontSize="26"
+                FontAttributes="Bold" />
+
+			<Label
+                x:Name="TotalListening"
+                FontSize="18"
+                Text="Total Listening Time" />
+
+			<Label
+                Text="Top PoI"
+                FontAttributes="Bold"
+                Margin="0,10,0,0" />
+
+			<CollectionView x:Name="TopPoiList">
+
+				<CollectionView.ItemTemplate>
+					<DataTemplate>
+
+						<Label
+                            FontSize="16"
+                            Text="{Binding}" />
+
+					</DataTemplate>
+				</CollectionView.ItemTemplate>
+
+			</CollectionView>
+
+		</VerticalStackLayout>
+
+	</ScrollView>
+
+</ContentPage>

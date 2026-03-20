@@ -1,0 +1,69 @@
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="PLTourApp.Views.PoiDetailPage"
+    BackgroundColor="#F6F6F6"
+    Title="Chi tiết">
+
+    <ScrollView>
+
+        <VerticalStackLayout Spacing="15">
+
+            <!-- IMAGE -->
+            <Grid HeightRequest="250">
+                <Image
+                    x:Name="PoiImage"
+                    Aspect="AspectFill"/>
+
+                <BoxView BackgroundColor="#55000000"/>
+
+                <Label
+                    x:Name="PoiName"
+                    TextColor="White"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Margin="15"
+                    VerticalOptions="End"/>
+            </Grid>
+
+            <!-- INFO -->
+            <VerticalStackLayout Padding="20" Spacing="10">
+
+                <Label
+                    Text="Thông tin"
+                    FontSize="18"
+                    FontAttributes="Bold"/>
+
+                <Label
+                    x:Name="PoiDescription"
+                    FontSize="15"
+                    TextColor="#444"/>
+
+                <!-- EXTRA -->
+                <Label
+                    Text="📍 Địa điểm nổi tiếng"
+                    FontSize="13"
+                    TextColor="Gray"/>
+
+                <Label
+                    Text="⭐ 4.8 đánh giá"
+                    FontSize="13"
+                    TextColor="#ff8c6b"/>
+
+            </VerticalStackLayout>
+
+            <!-- BUTTON -->
+            <Button
+                Text="🔊 Nghe thuyết minh"
+                Clicked="PlayAudio"
+                BackgroundColor="#ff8c6b"
+                TextColor="White"
+                CornerRadius="25"
+                HeightRequest="50"
+                Margin="20"/>
+
+        </VerticalStackLayout>
+
+    </ScrollView>
+
+</ContentPage>
