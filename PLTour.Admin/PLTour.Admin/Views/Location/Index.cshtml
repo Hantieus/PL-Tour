@@ -1,0 +1,182 @@
+﻿@model IEnumerable<PLTour.Admin.Models.Entities.Location>
+
+@{
+    ViewData["Title"] = "Quản lý địa điểm";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-1"></i>Thêm địa điểm mới
+        </a>
+    </div>
+
+    <!-- Form tìm kiếm -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="searchString" value="@ViewBag.SearchString" class="form-control" placeholder="Tìm theo tên, mô tả..." />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="categoryId" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "CategoryId", "Name", ViewBag.SelectedCategory))">
+                        <option value="">-- Tất cả danh mục --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i>Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-redo me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng danh sách -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Hình ảnh</th>
+                            <th>Tên địa điểm</th>
+                            <th>Danh mục</th>
+                            <th>Bài thuyết minh</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            int index = (ViewBag.CurrentPage - 1) * 10 + 1;
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@(index++)</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                        {
+                                            <img src="@item.ImageUrl" alt="@item.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@item.Name</strong>
+                                        <br />
+                                        <small class="text-muted">@item.Address</small>
+                                    </td>
+                                    <td>@item.Category?.Name</td>
+                                    <td>
+                                        @if (item.Narrations != null && item.Narrations.Any(n => n.IsActive))
+                                        {
+                                            <span class="badge bg-success">@item.Narrations.Count(n => n.IsActive) ngôn ngữ</span>
+                                            <br />
+                                            <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@item.LocationId"
+                                               class="btn btn-sm btn-link p-0">Quản lý</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Chưa có</span>
+                                            <br />
+                                            <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@item.LocationId"
+                                               class="btn btn-sm btn-link p-0">Thêm mới</a>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tạm dừng</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Edit" asp-route-id="@item.LocationId" class="btn btn-sm btn-warning" title="Sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a asp-action="Details" asp-route-id="@item.LocationId" class="btn btn-sm btn-info" title="Chi tiết">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.LocationId, '@item.Name')" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Chưa có địa điểm nào</p>
+                                    <a asp-action="Create" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-plus me-1"></i>Thêm mới
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận xóa -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn xóa địa điểm <strong id="deleteLocationName"></strong>?</p>
+                <p class="text-danger small">Hành động này không thể hoàn tác!</p>
+            </div>
+            <div class="modal-footer">
+                <form asp-action="Delete" method="post" id="deleteForm">
+                    <input type="hidden" name="id" id="deleteLocationId" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Hủy
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Xóa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            document.getElementById('deleteLocationId').value = id;
+            document.getElementById('deleteLocationName').innerText = name;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}
