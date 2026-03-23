@@ -1,3 +1,6 @@
 <Solution>
-  <Project Path="PLTourApp/PLTourApp.csproj" Id="dd6fbc7a-3422-4721-ba28-0ecc2a661d20" />
+  <Project Path="PLTour.Admin/PLTour.Admin/PLTour.Admin.csproj" />
+  <Project Path="PLTourApp/PLTourApp.csproj" Id="dd6fbc7a-3422-4721-ba28-0ecc2a661d20">
+    <Deploy Solution="Debug|*" />
+  </Project>
 </Solution>
