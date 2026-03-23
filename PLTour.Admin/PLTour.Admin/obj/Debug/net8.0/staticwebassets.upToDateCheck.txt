@@ -60,8 +60,10 @@ wwwroot\lib\jquery\dist\jquery.min.map
 wwwroot\lib\jquery\LICENSE.txt
 wwwroot\uploads\audio\1d65e828-de77-4138-b8c2-1fd57c4d1492_dangbandungcodo.mp3
 wwwroot\uploads\audio\ea80924f-d0df-46f2-a349-50b1bf837047_dangbandungcodo.mp3
-wwwroot\uploads\audio\f1d0113e-4389-4373-9b11-eba7fb95e373_dangbandungcodo.mp3
 wwwroot\uploads\locations\05954e4d-a26c-4ebf-a10b-b8d777660aff_BT.webp
 wwwroot\uploads\locations\1a14d51b-2f63-40e9-a221-e43362b4a200_unnamed.jpg
 wwwroot\uploads\locations\457e5f2f-9df8-45fb-b4e5-be50c595d544_unnamed.jpg
 wwwroot\uploads\locations\b61fa0ee-9f10-433c-a8b3-0f81dfe2db58_BT.webp
+wwwroot\uploads\audio\f1d0113e-4389-4373-9b11-eba7fb95e373_dangbandungcodo.mp3
+wwwroot\uploads\audio\e8e39aa6-d00f-4562-a281-ead2b257b134_dangbandungcodo.mp3
+wwwroot\uploads\locations\d5401bc9-7376-4c96-9680-b8b1305d248f_417766896_383280877424676_5018622496439163386_n.jpg
