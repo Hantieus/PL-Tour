@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.Admin.Models.DbContext;
-using PLTour.Admin.Models.Entities;
+using PLTour.Shared.Models;
 using PLTour.Admin.Models.DbContext;
-using PLTour.Admin.Models.Entities;
+
 
 namespace PLTour.API.Controllers
 {
