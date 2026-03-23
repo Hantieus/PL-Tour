@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PLTour.Admin.Models.Entities;
+using PLTour.Shared.Models;
 
 namespace PLTour.Admin.Models.DbContext
 {

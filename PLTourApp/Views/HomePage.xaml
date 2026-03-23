@@ -41,7 +41,6 @@
             <!-- QUICK ACTION -->
             <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
 
-                <!-- MAP -->
                 <VerticalStackLayout HorizontalOptions="Center">
                     <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#FFE5DD">
                         <Frame.GestureRecognizers>
@@ -52,7 +51,6 @@
                     <Label Text="Bản đồ" FontSize="12" HorizontalOptions="Center"/>
                 </VerticalStackLayout>
 
-                <!-- POI -->
                 <VerticalStackLayout HorizontalOptions="Center">
                     <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#E0F7FA">
                         <Frame.GestureRecognizers>
@@ -63,7 +61,6 @@
                     <Label Text="Địa điểm" FontSize="12" HorizontalOptions="Center"/>
                 </VerticalStackLayout>
 
-                <!-- QR -->
                 <VerticalStackLayout HorizontalOptions="Center">
                     <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#E8F5E9">
                         <Frame.GestureRecognizers>
@@ -74,7 +71,6 @@
                     <Label Text="QR" FontSize="12" HorizontalOptions="Center"/>
                 </VerticalStackLayout>
 
-                <!-- ANALYTICS -->
                 <VerticalStackLayout HorizontalOptions="Center">
                     <Frame CornerRadius="30" WidthRequest="60" HeightRequest="60" BackgroundColor="#FFF3E0">
                         <Frame.GestureRecognizers>
@@ -106,29 +102,35 @@
             </Frame>
 
             <!-- TITLE -->
-            <Label Text="Địa điểm nổi bật"
+            <Label Text="Danh sách Tour (API)"
                    FontSize="18"
                    FontAttributes="Bold"/>
 
-            <!-- ITEM -->
-            <Frame CornerRadius="15" Padding="10">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnLocationTapped"/>
-                </Frame.GestureRecognizers>
+            <!-- 🔥 LIST TOUR TỪ API -->
+            <CollectionView x:Name="TourListView">
 
-                <HorizontalStackLayout Spacing="10">
-                    <Image Source="tour2.jpg"
-                           WidthRequest="90"
-                           HeightRequest="90"
-                           Aspect="AspectFill"/>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame CornerRadius="15" Padding="10" Margin="0,5">
+                            <HorizontalStackLayout Spacing="10">
 
-                    <VerticalStackLayout Spacing="5">
-                        <Label Text="Chánh điện" FontAttributes="Bold"/>
-                        <Label Text="📍 Cách 500m" FontSize="12" TextColor="Gray"/>
-                        <Label Text="⭐ 4.8" FontSize="12" TextColor="#ff8c6b"/>
-                    </VerticalStackLayout>
-                </HorizontalStackLayout>
-            </Frame>
+                                <Image Source="tour2.jpg"
+                                       WidthRequest="90"
+                                       HeightRequest="90"
+                                       Aspect="AspectFill"/>
+
+                                <VerticalStackLayout Spacing="5">
+                                    <Label Text="{Binding name}" FontAttributes="Bold"/>
+                                    <Label Text="{Binding location}" FontSize="12" TextColor="Gray"/>
+                                    <Label Text="{Binding price}" FontSize="12" TextColor="#ff8c6b"/>
+                                </VerticalStackLayout>
+
+                            </HorizontalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
 
             <!-- BUTTON -->
             <Button

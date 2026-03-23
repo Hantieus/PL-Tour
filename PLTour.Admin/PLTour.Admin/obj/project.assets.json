@@ -1922,6 +1922,16 @@
             "rid": "win"
           }
         }
+      },
+      "PLTour.Shared/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/PLTour.Shared.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/PLTour.Shared.dll": {}
+        }
       }
     }
   },
@@ -4928,6 +4938,11 @@
         "system.windows.extensions.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "PLTour.Shared/1.0.0": {
+      "type": "project",
+      "path": "../../PLTour.Shared/PLTour.Shared.csproj",
+      "msbuildProject": "../../PLTour.Shared/PLTour.Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -4936,7 +4951,8 @@
       "Microsoft.AspNetCore.Authentication.Cookies >= 2.3.9",
       "Microsoft.EntityFrameworkCore.Design >= 8.0.0",
       "Microsoft.EntityFrameworkCore.SqlServer >= 8.0.0",
-      "Microsoft.EntityFrameworkCore.Tools >= 8.0.0"
+      "Microsoft.EntityFrameworkCore.Tools >= 8.0.0",
+      "PLTour.Shared >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -4971,7 +4987,11 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "D:\\DoAncsharp\\DoAnGit\\PLTour\\PLTour.Shared\\PLTour.Shared.csproj": {
+              "projectPath": "D:\\DoAncsharp\\DoAnGit\\PLTour\\PLTour.Shared\\PLTour.Shared.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

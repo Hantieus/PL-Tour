@@ -86,5 +86,9 @@
 		<PackageReference Include="ZXing.Net.Maui" Version="0.7.4" />
 		<PackageReference Include="ZXing.Net.Maui.Controls" Version="0.7.4" />
 	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\PLTour.Shared\PLTour.Shared.csproj" />
+	</ItemGroup>
 
 </Project>
