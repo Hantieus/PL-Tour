@@ -274,6 +274,8 @@ D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\runtimes
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
+D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\PLTour.Shared.dll
+D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\bin\Debug\net8.0\PLTour.Shared.pdb
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\obj\Debug\net8.0\PLTour.Admin.csproj.AssemblyReference.cache
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\obj\Debug\net8.0\rpswa.dswa.cache.json
 D:\DoAncsharp\DoAnGit\PLTour\PLTour.Admin\PLTour.Admin\obj\Debug\net8.0\PLTour.Admin.GeneratedMSBuildEditorConfig.editorconfig
