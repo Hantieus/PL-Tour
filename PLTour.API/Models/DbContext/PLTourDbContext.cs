@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PLTour.Shared.Models;
 
-namespace PLTour.Admin.Models.DbContext
+namespace PLTour.API.Models.DbContext
 {
     public class PLTourDbContext : Microsoft.EntityFrameworkCore.DbContext
     {

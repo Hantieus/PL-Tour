@@ -50,6 +50,7 @@
                             <th>Hình ảnh</th>
                             <th>Tên địa điểm</th>
                             <th>Danh mục</th>
+                            <th>Bán kính</th>
                             <th>Bài thuyết minh</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
@@ -59,21 +60,26 @@
                         @if (Model.Any())
                         {
                             int index = (ViewBag.CurrentPage - 1) * 10 + 1;
-                            @foreach (var item in Model)
+                            foreach (var item in Model)
                             {
                                 <tr>
                                     <td>@(index++)</td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(item.ImageUrl))
                                         {
-                                            <img src="@item.ImageUrl" alt="@item.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />
+                                        <img src="@item.ImageUrl" alt="@item.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />
                                         }
                                         else
                                         {
-                                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
-                                                <i class="fas fa-image"></i>
-                                            </div>
+                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
+                                            <i class="fas fa-image"></i>
+                                        </div>
                                         }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-ruler-combined me-1"></i>@item.Radius m
+                                        </span>
                                     </td>
                                     <td>
                                         <strong>@item.Name</strong>
@@ -84,27 +90,27 @@
                                     <td>
                                         @if (item.Narrations != null && item.Narrations.Any(n => n.IsActive))
                                         {
-                                            <span class="badge bg-success">@item.Narrations.Count(n => n.IsActive) ngôn ngữ</span>
-                                            <br />
-                                            <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@item.LocationId"
-                                               class="btn btn-sm btn-link p-0">Quản lý</a>
+                                        <span class="badge bg-success">@item.Narrations.Count(n => n.IsActive) ngôn ngữ</span>
+                                        <br />
+                                        <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@item.LocationId"
+                                           class="btn btn-sm btn-link p-0">Quản lý</a>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">Chưa có</span>
-                                            <br />
-                                            <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@item.LocationId"
-                                               class="btn btn-sm btn-link p-0">Thêm mới</a>
+                                        <span class="badge bg-secondary">Chưa có</span>
+                                        <br />
+                                        <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@item.LocationId"
+                                           class="btn btn-sm btn-link p-0">Thêm mới</a>
                                         }
                                     </td>
                                     <td>
                                         @if (item.IsActive)
                                         {
-                                            <span class="badge bg-success">Hoạt động</span>
+                                        <span class="badge bg-success">Hoạt động</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">Tạm dừng</span>
+                                        <span class="badge bg-secondary">Tạm dừng</span>
                                         }
                                     </td>
                                     <td>

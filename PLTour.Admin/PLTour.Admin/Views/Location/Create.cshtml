@@ -43,6 +43,19 @@
                                     <span asp-validation-for="OrderIndex" class="text-danger"></span>
                                 </div>
                             </div>
+                            <div class="mb-3">
+                                <label asp-for="Radius" class="form-label fw-bold">
+                                    <i class="fas fa-ruler-combined me-1"></i>Bán kính kích hoạt (mét)
+                                </label>
+                                <div class="input-group">
+                                    <input asp-for="Radius" class="form-control" type="number" min="10" max="500" value="50" />
+                                    <span class="input-group-text">mét</span>
+                                </div>
+                                <small class="text-muted">
+                                    Khi người dùng vào trong bán kính này, app sẽ tự động phát thuyết minh
+                                </small>
+                                <span asp-validation-for="Radius" class="text-danger"></span>
+                            </div>
                         </div>
 
                         <div class="mb-3">

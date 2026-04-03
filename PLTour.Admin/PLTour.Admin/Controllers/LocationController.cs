@@ -113,7 +113,7 @@ namespace PLTour.Admin.Controllers
 
                     // Set thời gian tạo
                     location.CreatedDate = DateTime.Now;
-
+                    location.Radius = location.Radius > 0 ? location.Radius : 50;
                     // Thêm vào database
                     _context.Add(location);
                     await _context.SaveChangesAsync();
@@ -212,11 +212,11 @@ namespace PLTour.Admin.Controllers
                     existingLocation.Longitude = location.Longitude;
                     existingLocation.Address = location.Address;
                     existingLocation.CategoryId = location.CategoryId;
-                
+            
                     existingLocation.OrderIndex = location.OrderIndex;
                     existingLocation.IsActive = location.IsActive;
                     existingLocation.UpdatedDate = DateTime.Now;
-
+                    existingLocation.Radius = location.Radius;
                     // XỬ LÝ UPLOAD ẢNH MỚI
                     if (imageFile != null && imageFile.Length > 0)
                     {

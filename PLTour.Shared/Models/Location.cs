@@ -30,6 +30,10 @@ public class Location
 
     public int OrderIndex { get; set; }
 
+    [Range(10, 500, ErrorMessage = "Bán kính phải từ 10 đến 500 mét")]
+    [Display(Name = "Bán kính kích hoạt (mét)")]
+    public int Radius { get; set; } = 50;
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedDate { get; set; }

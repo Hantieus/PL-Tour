@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using PLTour.Admin.Models.DbContext;
 using PLTour.Shared.Models;
-using PLTour.Admin.Models.DbContext;
+using PLTour.API.Models.DbContext;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;

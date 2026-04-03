@@ -2,8 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using PLTour.Admin.Models.DbContext;
-using PLTour.Admin.Models.DbContext;
+using PLTour.API.Models.DbContext;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
