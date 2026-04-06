@@ -52,47 +52,34 @@ namespace PLTour.API.Models.DbContext
 
             // SỬA LẠI PHẦN NÀY - thêm Description cho mỗi category
             modelBuilder.Entity<Category>().HasData(
-                new Category
-                {
-                    CategoryId = 1,
-                    Name = "Ẩm thực đường phố",
-                    Description = "Các quán ăn vỉa hè, đồ ăn đường phố đặc sắc",
-                    Icon = "fa-utensils",
-                    DisplayOrder = 1
-                },
-                new Category
-                {
-                    CategoryId = 2,
-                    Name = "Nhà hàng",
-                    Description = "Nhà hàng, quán ăn cao cấp",
-                    Icon = "fa-restaurant",
-                    DisplayOrder = 2
-                },
-                new Category
-                {
-                    CategoryId = 3,
-                    Name = "Quán cà phê",
-                    Description = "Các quán cà phê, trà sữa, đồ uống",
-                    Icon = "fa-coffee",
-                    DisplayOrder = 3
-                },
-                new Category
-                {
-                    CategoryId = 4,
-                    Name = "Điểm tham quan",
-                    Description = "Các điểm tham quan, du lịch trong khu vực",
-                    Icon = "fa-camera",
-                    DisplayOrder = 4
-                },
-                new Category
-                {
-                    CategoryId = 5,
-                    Name = "Sự kiện",
-                    Description = "Các sự kiện, lễ hội ẩm thực",
-                    Icon = "fa-calendar",
-                    DisplayOrder = 5
-                }
-            );
+        new Category
+        {
+            CategoryId = 1,
+            Name = "Điểm tham quan",
+            Description = "Các điểm tham quan, di tích lịch sử, bảo tàng, công viên...",
+            Icon = "fa-landmark",
+            DisplayOrder = 1,
+            IsActive = true
+        },
+        new Category
+        {
+            CategoryId = 2,
+            Name = "Địa điểm ăn uống",
+            Description = "Nhà hàng, quán ăn, đồ ăn đường phố, quán cà phê...",
+            Icon = "fa-utensils",
+            DisplayOrder = 2,
+            IsActive = true
+        },
+        new Category
+        {
+            CategoryId = 3,
+            Name = "Sự kiện",
+            Description = "Các sự kiện, lễ hội, hoạt động đặc biệt",
+            Icon = "fa-calendar-alt",
+            DisplayOrder = 3,
+            IsActive = true
+        }
+    );
 
 
             // Seed dữ liệu admin mặc định

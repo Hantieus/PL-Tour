@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PLTour.Admin")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c28a7ab26b00206e39b0b8105ac16ac5df38d73")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eb201fda53d1fbad278046009b905629b1cdeff3")]
 [assembly: System.Reflection.AssemblyProductAttribute("PLTour.Admin")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PLTour.Admin")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

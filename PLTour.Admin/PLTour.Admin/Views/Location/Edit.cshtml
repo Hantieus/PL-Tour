@@ -34,7 +34,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="CategoryId" class="form-label fw-bold"></label>
+                                    <label asp-for="CategoryId" class="form-label fw-bold">Danh mục</label>
                                     <select asp-for="CategoryId" class="form-select" asp-items="@(new SelectList(ViewBag.Categories, "CategoryId", "Name"))">
                                         <option value="">-- Chọn danh mục --</option>
                                     </select>
