@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PLTour.App.Pages.LoadingPage"
+             Shell.NavBarIsVisible="False">
+    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="20">
+        <ActivityIndicator IsRunning="True" Color="#2A9D8F" />
+        <Label x:Name="lblStatus" Text="Đang tìm vị trí của bạn..." FontSize="18" TextColor="Gray" />
+    </VerticalStackLayout>
+</ContentPage>

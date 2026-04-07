@@ -1,0 +1,81 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PLTour.App.Pages.HomePage"
+             Title="Trang chủ"
+             BackgroundColor="#F5F5F5">
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="20">
+                <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                    <Border StrokeShape="RoundRectangle 25" HeightRequest="50" WidthRequest="50" Padding="0">
+                        <Image Source="user_avatar.png" Aspect="AspectFill"/>
+                    </Border>
+                    <VerticalStackLayout>
+                        <Label Text="Chào bạn," FontSize="14" TextColor="Gray"/>
+                        <Label Text="Khám phá Việt Nam cùng PL Tour" FontSize="18" FontAttributes="Bold" TextColor="#2A9D8F"/>
+                    </VerticalStackLayout>
+                </HorizontalStackLayout>
+
+                <Button Text="🔊 Nghe giới thiệu về ứng dụng" 
+                        Clicked="IntroApp_Clicked" 
+                        BackgroundColor="White" 
+                        TextColor="#2A9D8F" 
+                        CornerRadius="15"
+                        HeightRequest="50">
+                    <Button.Shadow>
+                        <Shadow Brush="Black" Opacity="0.1" Offset="0,2"/>
+                    </Button.Shadow>
+                </Button>
+
+                <Border StrokeShape="RoundRectangle 20" Padding="20" BackgroundColor="#2A9D8F">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="5">
+                            <Label Text="Bạn muốn đi tự do?" TextColor="White" FontAttributes="Bold" FontSize="18"/>
+                            <Label Text="Xem các điểm tham quan quanh đây trên bản đồ" TextColor="#E0E0E0" FontSize="12"/>
+                            <Button Text="Mở Bản Đồ" Margin="0,10,0,0" WidthRequest="120" HorizontalOptions="Start"
+                                    BackgroundColor="#E76F51" Clicked="GoToMap_Clicked" HeightRequest="35" Padding="0"/>
+                        </VerticalStackLayout>
+                        <Label Grid.Column="1" Text="📍" FontSize="50" VerticalOptions="Center"/>
+                    </Grid>
+                </Border>
+
+                <Label Text="Tour gợi ý gần bạn nhất" FontAttributes="Bold" FontSize="20" Margin="0,10,0,0"/>
+
+                <CollectionView x:Name="TourListView" SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="15"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeShape="RoundRectangle 15" Padding="0" BackgroundColor="White">
+                                <Border.Shadow>
+                                    <Shadow Brush="Gray" Opacity="0.2" Offset="0,4"/>
+                                </Border.Shadow>
+                                <Grid RowDefinitions="150, Auto">
+                                    <Image Grid.Row="0" Source="tour_thumb.jpg" Aspect="AspectFill"/>
+                                    <VerticalStackLayout Grid.Row="1" Padding="15" Spacing="5">
+                                        <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="18"/>
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding Duration, StringFormat='⏳ {0}'}" TextColor="Gray" FontSize="13"/>
+                                            <Label Text="•" TextColor="Gray"/>
+                                            <Label Text="{Binding DistanceDisplay}" TextColor="#E76F51" FontAttributes="Bold" FontSize="13"/>
+                                        </HorizontalStackLayout>
+                                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,10,0,0">
+                                            <Button Grid.Column="0" Text="🔊 Nghe" Clicked="SpeakTour_Clicked" CommandParameter="{Binding IntroText}" 
+                                                    BackgroundColor="#F8F9FA" TextColor="Black" HeightRequest="40"/>
+                                            <Button Grid.Column="1" Text="Chi tiết" Clicked="ViewTourDetail_Clicked" CommandParameter="{Binding .}"
+                                                    BackgroundColor="#2A9D8F" HeightRequest="40"/>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <ActivityIndicator x:Name="LoadingIndicator" IsRunning="False" VerticalOptions="Center" HorizontalOptions="Center" Color="#2A9D8F"/>
+    </Grid>
+</ContentPage>
