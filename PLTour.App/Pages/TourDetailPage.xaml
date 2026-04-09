@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PLTour.App.Pages.TourDetailPage"
+             Title="Chi tiết Tour"
+             Shell.NavBarIsVisible="False">
+
+    <Grid x:Name="MainGrid" RowDefinitions="4*, 6*">
+
+        <Grid x:Name="MapSection" Grid.Row="0" ZIndex="1">
+            <Grid x:Name="MapContainer" BackgroundColor="#E0E0E0" />
+
+            <Button Text="🔙" HorizontalOptions="Start" VerticalOptions="Start" Margin="15,40,0,0"
+                    WidthRequest="45" HeightRequest="45" CornerRadius="22" BackgroundColor="White" TextColor="Black"
+                    Clicked="Back_Clicked" ZIndex="10" />
+
+            <Button x:Name="BtnToggleMap" Text="Full 🔲" HorizontalOptions="Start" VerticalOptions="End" Margin="15,0,0,25"
+                    WidthRequest="85" HeightRequest="40" CornerRadius="20" BackgroundColor="White" TextColor="#2A9D8F" 
+                    FontAttributes="Bold" Clicked="ToggleMapSize_Clicked" ZIndex="10" />
+
+            <Button Text="🎯" HorizontalOptions="End" VerticalOptions="End" Margin="0,0,30,20"
+WidthRequest="55" HeightRequest="55" CornerRadius="27" BackgroundColor="White" TextColor="#2A9D8F" 
+FontSize="22" Clicked="CurrentLocation_Clicked" ZIndex="10">
+                <Button.Shadow>
+                    <Shadow Brush="Black" Opacity="0.4" Offset="0,3" Radius="5"/>
+                </Button.Shadow>
+            </Button>
+        </Grid>
+
+        <Border x:Name="InfoPanel" Grid.Row="1" StrokeShape="RoundRectangle 30,30,0,0" 
+                BackgroundColor="#F8F9FA" StrokeThickness="0" ZIndex="2">
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.15" Offset="0,-5" Radius="10"/>
+            </Border.Shadow>
+
+            <Grid RowDefinitions="Auto, Auto, Auto, *" Padding="20" RowSpacing="12">
+                <Label Grid.Row="0" x:Name="lblTourName" FontAttributes="Bold" FontSize="22" TextColor="#2A9D8F" />
+
+                <Button Grid.Row="1" x:Name="btnSpeakIntro" Text="🔊 Nghe giới thiệu Tour" Clicked="SpeakIntro_Clicked"
+                        BackgroundColor="#E9ECEF" TextColor="Black" CornerRadius="12" HeightRequest="45" FontAttributes="Bold" />
+
+                <Label Grid.Row="2" Text="Các địa điểm gần bạn nhất:" FontAttributes="Bold" TextColor="Gray" FontSize="14" />
+
+                <CollectionView Grid.Row="3" x:Name="PoiList" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,12" Padding="15" StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="White">
+                                <VerticalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*, Auto">
+                                        <Label Grid.Column="0" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" TextColor="#222222"/>
+
+                                        <Label Grid.Column="1" Text="{Binding Address}" 
+                                               TextColor="#E76F51" FontAttributes="Bold" FontSize="13" VerticalOptions="Center"/>
+                                    </Grid>
+
+                                    <Label Text="{Binding Category}" FontSize="11" TextColor="#2A9D8F" FontAttributes="Italic"/>
+                                    <Label Text="{Binding Description}" FontSize="13" TextColor="Gray" MaxLines="2" LineBreakMode="TailTruncation"/>
+
+                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,5,0,0">
+                                        <Button Grid.Column="0" Text="📍 Map" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
+                                                BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnViewMap_Clicked" />
+                                        <Button Grid.Column="1" Text="🔊 Nghe" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
+                                                BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnSpeakPoi_Clicked" />
+                                        <Button Grid.Column="2" Text="🧭 Đi" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
+                                                BackgroundColor="#007BFF" TextColor="White" CommandParameter="{Binding .}" Clicked="BtnRoute_Clicked" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

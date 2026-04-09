@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PLTour.App.Pages.QrScannerPage"
+             Title="QR Scan">
+
+    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="20" Padding="30">
+        <Label Text="📷" FontSize="80" HorizontalOptions="Center"/>
+        <Label Text="Quét Mã QR" FontSize="26" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#2A9D8F"/>
+        <Label Text="Tính năng này đang được phát triển. Sau này bạn có thể dùng để quét mã QR tại các trạm dừng chân để mở khóa nội dung thuyết minh." 
+               HorizontalTextAlignment="Center" 
+               TextColor="Gray"
+               FontSize="16"/>
+        <Button x:Name="btnDemoScan" 
+                Text="Mở Camera (Demo)" 
+                Clicked="BtnDemoScan_Clicked" 
+                BackgroundColor="#2A9D8F"
+                CornerRadius="10"
+                Margin="0,20,0,0"/>
+    </VerticalStackLayout>
+</ContentPage>
