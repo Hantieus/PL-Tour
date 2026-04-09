@@ -1,0 +1,150 @@
+﻿@model IEnumerable<PLTour.Shared.Models.Entities.Narration>
+
+@{
+    ViewData["Title"] = "Quản lý bài thuyết minh";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+    </div>
+
+    <!-- Form tìm kiếm -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="searchString" value="@ViewBag.SearchString"
+                               class="form-control" placeholder="Tìm theo tiêu đề, nội dung, tên địa điểm..." />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="languageId" class="form-select" asp-items="@(new SelectList(ViewBag.Languages, "LanguageId", "Name", ViewBag.SelectedLanguage))">
+                        <option value="">-- Tất cả ngôn ngữ --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i>Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng danh sách -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Địa điểm</th>
+                            <th>Ngôn ngữ</th>
+                            <th>Tiêu đề</th>
+                            <th>Audio</th>
+                            <th>Mặc định</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.Location?.Name</strong>
+                                        <br />
+                                        <small class="text-muted">@item.Location?.Address</small>
+                                    </td>
+                                    <td>
+                                        <span class="flag-icon @item.Language?.FlagIcon me-1"></span>
+                                        @item.Language?.Name
+                                    </td>
+                                    <td>
+                                        <strong>@item.Title</strong>
+                                        <br />
+                                        <small class="text-muted">@(item.Content.Length > 50 ? item.Content.Substring(0, 50) + "..." : item.Content)</small>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!string.IsNullOrEmpty(item.AudioUrl))
+                                        {
+                                            <i class="fas fa-check-circle text-success fa-lg" title="Có audio"></i>
+                                            <br />
+                                            <small>@item.Duration giây</small>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-times-circle text-danger" title="Chưa có audio"></i>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.IsDefault)
+                                        {
+                                            <span class="badge bg-warning">Mặc định</span>
+                                        }
+                                    </td>
+                                    <td>@item.CreatedDate.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Edit" asp-route-id="@item.NarrationId" class="btn btn-sm btn-warning" title="Sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a asp-controller="Location" asp-action="Details" asp-route-id="@item.LocationId"
+                                               class="btn btn-sm btn-info" title="Xem địa điểm">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="fas fa-headphones fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Chưa có bài thuyết minh nào</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Phân trang -->
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="card-footer">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage - 1)"
+                               asp-route-searchString="@ViewBag.SearchString" asp-route-languageId="@ViewBag.SelectedLanguage">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Index" asp-route-page="@i"
+                                   asp-route-searchString="@ViewBag.SearchString" asp-route-languageId="@ViewBag.SelectedLanguage">@i</a>
+                            </li>
+                        }
+                        <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage + 1)"
+                               asp-route-searchString="@ViewBag.SearchString" asp-route-languageId="@ViewBag.SelectedLanguage">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>

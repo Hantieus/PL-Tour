@@ -1,0 +1,145 @@
+﻿@model PLTour.Shared.Models.Entities.Vendor
+
+@{
+    ViewData["Title"] = "Chi tiết người bán";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.VendorId" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Sửa
+            </a>
+            <a asp-action="Approve" asp-route-id="@Model.VendorId" class="btn btn-success">
+                <i class="fas fa-check me-1"></i>Duyệt
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-store me-2"></i>Logo</h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    {
+                        <img src="@Model.LogoUrl" alt="@Model.ShopName" class="img-fluid rounded" style="max-height: 200px;" />
+                    }
+                    else
+                    {
+                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 150px; border-radius: 8px;">
+                            <i class="fas fa-store fa-3x"></i>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (Model.Latitude.HasValue && Model.Longitude.HasValue)
+            {
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Vị trí</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Vĩ độ:</strong> @Model.Latitude</p>
+                        <p><strong>Kinh độ:</strong> @Model.Longitude</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin chi tiết</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 150px;">Tên cửa hàng</th>
+                            <td>@Model.ShopName</td>
+                        </tr>
+                        <tr>
+                            <th>Chủ cửa hàng</th>
+                            <td>@Model.OwnerName</td>
+                        </tr>
+                        <tr>
+                            <th>Email</th>
+                            <td>@Model.Email</td>
+                        </tr>
+                        <tr>
+                            <th>Số điện thoại</th>
+                            <td>@Model.Phone</td>
+                        </tr>
+                        <tr>
+                            <th>Địa chỉ</th>
+                            <td>@Model.Address</td>
+                        </tr>
+                        <tr>
+                            <th>Danh mục</th>
+                            <td>@(ViewBag.CategoryName ?? "Chưa có")</td>
+                        </tr>
+                        <tr>
+                            <th>Mô tả</th>
+                            <td>@Model.Description</td>
+                        </tr>
+                        <tr>
+                            <th>Trạng thái</th>
+                            <td>
+                                @if (Model.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                                }
+                                else if (Model.Status == "Approved")
+                                {
+                                    <span class="badge bg-success">Đã duyệt</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Từ chối</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Kích hoạt</th>
+                            <td>
+                                @if (Model.IsActive)
+                                {
+                                    <span class="badge bg-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Khóa</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Ngày đăng ký</th>
+                            <td>@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                        @if (Model.ApprovedDate.HasValue)
+                        {
+                            <tr>
+                                <th>Ngày duyệt</th>
+                                <td>@Model.ApprovedDate.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Notes))
+                        {
+                            <tr>
+                                <th>Ghi chú</th>
+                                <td class="text-danger">@Model.Notes</td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

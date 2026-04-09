@@ -1,0 +1,241 @@
+﻿@model PLTour.Shared.Models.Entities.Location
+
+@{
+    ViewData["Title"] = "Chi tiết địa điểm";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.LocationId" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Sửa
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <i class="fas fa-image me-1"></i>Hình ảnh
+                        </div>
+                        <div class="card-body text-center">
+                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                            {
+                                <img src="@Model.ImageUrl" alt="@Model.Name" class="img-fluid rounded" style="max-height: 300px;" />
+                            }
+                            else
+                            {
+                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px; border-radius: 4px;">
+                                    <i class="fas fa-image fa-3x"></i>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 150px;">Tên địa điểm</th>
+                                    <td>@Model.Name</td>
+                                </tr>
+                                <tr>
+                                    <th>Danh mục</th>
+                                    <td>@Model.Category?.Name</td>
+                                </tr>
+                                <tr>
+                                    <th>Địa chỉ</th>
+                                    <td>@Model.Address</td>
+                                </tr>
+                                <tr>
+                                    <th>Tọa độ</th>
+                                    <td>@Model.Latitude, @Model.Longitude</td>
+                                </tr>
+                                <tr>
+                                    <th>Thứ tự</th>
+                                    <td><span class="badge bg-info">@Model.OrderIndex</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 150px;">Trạng thái</th>
+                                    <td>
+                                        @if (Model.IsActive)
+                                        {
+                                            <span class="badge bg-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Tạm dừng</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày tạo</th>
+                                    <td>@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                                <tr>
+                                    <th>Cập nhật</th>
+                                    <td>@(Model.UpdatedDate?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa cập nhật")</td>
+                                </tr>
+                                
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle me-1"></i>Mô tả
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">@Model.Description</p>
+                        </div>
+                    </div>
+
+                    <!-- Thay vì hiển thị audio trực tiếp, hiển thị link đến trang quản lý narration -->
+                    @if (Model.Narrations != null && Model.Narrations.Any())
+                    {
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <i class="fas fa-headphones me-1"></i>Bài thuyết minh
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group">
+                                    @foreach (var narration in Model.Narrations.Where(n => n.IsActive))
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="flag-icon @narration.Language?.FlagIcon me-2"></span>
+                                                    <strong>@narration.Language?.Name:</strong> @narration.Title
+                                                    @if (narration.IsDefault)
+                                                    {
+                                                        <span class="badge bg-warning ms-2">Mặc định</span>
+                                                    }
+                                                </div>
+                                                <a asp-controller="Narration" asp-action="Edit" asp-route-id="@narration.NarrationId"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(narration.AudioUrl))
+                                            {
+                                                <audio controls class="w-100 mt-2">
+                                                    <source src="@narration.AudioUrl" type="audio/mpeg">
+                                                </audio>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@Model.LocationId"
+                                   class="btn btn-sm btn-primary mt-3">
+                                    <i class="fas fa-cog me-1"></i>Quản lý bài thuyết minh
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <i class="fas fa-headphones me-1"></i>Bài thuyết minh
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="text-muted">Chưa có bài thuyết minh nào</p>
+                                <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@Model.LocationId"
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus-circle me-1"></i>Thêm bài thuyết minh
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Phần bài thuyết minh -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-headphones me-2"></i>Bài thuyết minh đa ngôn ngữ
+            </h5>
+            <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@Model.LocationId"
+               class="btn btn-sm btn-light">
+                <i class="fas fa-plus-circle me-1"></i>Thêm mới
+            </a>
+        </div>
+        <div class="card-body">
+            @if (Model.Narrations != null && Model.Narrations.Any(n => n.IsActive))
+            {
+                <div class="row">
+                    @foreach (var narration in Model.Narrations.Where(n => n.IsActive).OrderByDescending(n => n.IsDefault).ThenBy(n => n.Language.DisplayOrder))
+                    {
+                        <div class="col-md-6 mb-3">
+                            <div class="card @(narration.IsDefault ? "border-warning" : "") h-100">
+                                <div class="card-header @(narration.IsDefault ? "bg-warning text-dark" : "bg-light")">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <span class="flag-icon @narration.Language?.FlagIcon me-2"></span>
+                                            <strong>@narration.Language?.Name</strong>
+                                            @if (narration.IsDefault)
+                                            {
+                                                <span class="badge bg-dark text-white ms-2">Mặc định</span>
+                                            }
+                                        </span>
+                                        <div>
+                                            <a asp-controller="Narration" asp-action="Edit" asp-route-id="@narration.NarrationId"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title">@narration.Title</h6>
+                                    <p class="card-text small text-muted" style="max-height: 80px; overflow-y: auto;">
+                                        @narration.Content
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(narration.AudioUrl))
+                                    {
+                                        <audio controls class="w-100 mt-2">
+                                            <source src="@narration.AudioUrl" type="audio/mpeg">
+                                        </audio>
+                                        <small class="text-muted">Thời lượng: @narration.Duration giây</small>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info py-2 mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Chưa có file audio, app sẽ dùng Text-to-Speech
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-headphones fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Địa điểm này chưa có bài thuyết minh nào</p>
+                    <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@Model.LocationId"
+                       class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i>Thêm bài thuyết minh đầu tiên
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>

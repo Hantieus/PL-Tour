@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PLTour.Shared.Models;
+using PLTour.Shared.Models.Entities;
 
 namespace PLTour.API.Models.DbContext
 {
@@ -17,6 +17,8 @@ namespace PLTour.API.Models.DbContext
         public DbSet<Vendor> Vendors { get; set; }
         public DbSet<Product> Products { get; set; } // THÊM DÒNG NÀY
         public DbSet<Language> Languages { get; set; } // THÊM MỚI
+        public DbSet<VendorImage> VendorImages { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -129,6 +131,12 @@ namespace PLTour.API.Models.DbContext
                 .WithMany() // Category không cần có ICollection<Product> nếu không muốn
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<VendorImage>()
+                .HasOne(vi => vi.Vendor)
+                .WithMany()
+                .HasForeignKey(vi => vi.VendorId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

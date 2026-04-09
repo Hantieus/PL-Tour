@@ -1,0 +1,152 @@
+﻿@model PLTour.Shared.Models.Entities.Narration
+
+@{
+    ViewData["Title"] = "Thêm bài thuyết minh mới";
+    var location = ViewBag.Location as PLTour.Shared.Models.Entities.Location;
+    var locationName = location?.Name ?? "Không xác định";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"] - @locationName</h1>
+        <a asp-action="ByLocation" asp-route-locationId="@Model.LocationId" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+
+    <!-- Hiển thị lỗi tổng quát -->
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <strong><i class="fas fa-exclamation-triangle me-2"></i>Vui lòng sửa các lỗi sau:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach (var modelState in ViewData.ModelState.Values)
+                {
+                    foreach (var error in modelState.Errors)
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- Hidden fields QUAN TRỌNG -->
+                <input type="hidden" asp-for="LocationId" value="@ViewBag.Location?.LocationId" />
+                <input type="hidden" asp-for="Version" value="1" />
+
+                <!-- Hiển thị lỗi -->
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger">
+                        <strong>Vui lòng sửa các lỗi sau:</strong>
+                        <ul class="mb-0 mt-2">
+                            @foreach (var modelState in ViewData.ModelState.Values)
+                            {
+                                foreach (var error in modelState.Errors)
+                                {
+                                    <li>@error.ErrorMessage</li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Tên địa điểm (chỉ hiển thị) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Địa điểm</label>
+                    <input type="text" class="form-control" value="@ViewBag.Location?.Name" readonly />
+                </div>
+
+                <!-- Chọn ngôn ngữ -->
+                <div class="mb-3">
+                    <label asp-for="LanguageId" class="form-label fw-bold">Ngôn ngữ <span class="text-danger">*</span></label>
+                    <select asp-for="LanguageId" class="form-select" asp-items="@(ViewBag.Languages as SelectList)" id="LanguageId">
+                        <option value="">-- Chọn ngôn ngữ --</option>
+                    </select>
+                    <span asp-validation-for="LanguageId" class="text-danger"></span>
+                </div>
+
+                <!-- Tiêu đề -->
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label fw-bold">Tiêu đề <span class="text-danger">*</span></label>
+                    <input asp-for="Title" class="form-control" value="@Model?.Title" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <!-- Nội dung -->
+                <div class="mb-3">
+                    <label asp-for="Content" class="form-label fw-bold">Nội dung thuyết minh</label>
+                    <textarea asp-for="Content" class="form-control" rows="5">@Model?.Content</textarea>
+                </div>
+
+                <!-- File audio -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">File audio</label>
+                    <input type="file" name="audioFile" class="form-control" accept="audio/*" />
+                    <small class="text-muted">Hỗ trợ: .mp3, .wav, .m4a (không bắt buộc)</small>
+                </div>
+
+                <!-- Thời lượng -->
+                <div class="mb-3">
+                    <label asp-for="Duration" class="form-label">Thời lượng (giây)</label>
+                    <input asp-for="Duration" class="form-control" type="number" min="0" value="0" />
+                </div>
+
+                <!-- Tùy chọn -->
+                <div class="form-check mb-2">
+                    <input asp-for="IsDefault" class="form-check-input" />
+                    <label asp-for="IsDefault" class="form-check-label">Đặt làm mặc định</label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input asp-for="IsActive" class="form-check-input" checked />
+                    <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
+                </div>
+
+                <!-- Nút submit -->
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>Lưu
+                </button>
+                <a asp-action="ByLocation" asp-route-locationId="@ViewBag.Location?.LocationId" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Hủy
+                </a>
+            </form>
+            <script>
+                // Đảm bảo giá trị LanguageId được cập nhật
+                document.getElementById('languageSelect').addEventListener('change', function() {
+                    document.getElementById('hiddenLanguageId').value = this.value;
+                });
+
+                // Khi trang load, set giá trị ban đầu
+                window.onload = function() {
+                    var select = document.getElementById('languageSelect');
+                    if (select.value) {
+                        document.getElementById('hiddenLanguageId').value = select.value;
+                    }
+                };
+            </script>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            $('input[name="audioFile"]').change(function() {
+                const file = this.files[0];
+                if (file) {
+                    // Hiển thị tên file
+                    $('.audio-file-name').remove();
+                    $(this).after('<small class="audio-file-name text-success d-block mt-1"><i class="fas fa-check-circle me-1"></i>Đã chọn: ' + file.name + '</small>');
+                }
+            });
+        });
+    </script>
+}

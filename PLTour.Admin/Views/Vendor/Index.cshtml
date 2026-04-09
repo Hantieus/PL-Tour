@@ -1,0 +1,164 @@
+﻿@model IEnumerable<PLTour.Shared.Models.Entities.Vendor>
+
+@{
+    ViewData["Title"] = "Quản lý người bán";
+    var statusCounts = ViewBag.StatusCounts as Dictionary<string, int>;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+    </div>
+
+    <!-- Thống kê nhanh -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6>Tổng số</h6>
+                    <h2 class="mb-0">@(statusCounts?.Sum(x => x.Value) ?? 0)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6>Chờ duyệt</h6>
+                    <h2 class="mb-0">@(statusCounts?.GetValueOrDefault("Pending", 0))</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6>Đã duyệt</h6>
+                    <h2 class="mb-0">@(statusCounts?.GetValueOrDefault("Approved", 0))</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6>Từ chối</h6>
+                    <h2 class="mb-0">@(statusCounts?.GetValueOrDefault("Rejected", 0))</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form tìm kiếm -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="searchString" value="@ViewBag.SearchString"
+                           class="form-control" placeholder="Tìm theo tên cửa hàng, chủ cửa hàng, email..." />
+                </div>
+                <div class="col-md-4">
+                    <select name="status" class="form-select">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="Pending" selected="@(ViewBag.SelectedStatus == "Pending")">Chờ duyệt</option>
+                        <option value="Approved" selected="@(ViewBag.SelectedStatus == "Approved")">Đã duyệt</option>
+                        <option value="Rejected" selected="@(ViewBag.SelectedStatus == "Rejected")">Từ chối</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Lọc</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng danh sách -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Logo</th>
+                            <th>Tên cửa hàng</th>
+                            <th>Chủ cửa hàng</th>
+                            <th>Liên hệ</th>
+                            <th>Danh mục</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đăng ký</th>
+                            <th>Thao tác</th>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            int index = (ViewBag.CurrentPage - 1) * 10 + 1;
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.LogoUrl))
+                                        {
+                                            <img src="@item.LogoUrl" alt="@item.ShopName" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; border-radius: 8px;">
+                                                <i class="fas fa-store"></i>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td><strong>@item.ShopName</strong><br /><small class="text-muted">@item.Address</small></td>
+                                    <td>@item.OwnerName</td>
+                                    <td>
+                                        <div><i class="fas fa-envelope me-1"></i>@item.Email</div>
+                                        <div><i class="fas fa-phone me-1"></i>@item.Phone</div>
+                                    </td>
+                                    <td>@item.Category?.Name</td>
+                                    <td>
+                                        @if (item.Status == "Pending")
+                                        {
+                                            <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                                        }
+                                        else if (item.Status == "Approved")
+                                        {
+                                            <span class="badge bg-success">Đã duyệt</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Từ chối</span>
+                                        }
+                                    </td>
+                                    <td>@item.CreatedDate.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@item.VendorId" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                            <a asp-action="Approve" asp-route-id="@item.VendorId" class="btn btn-sm btn-success"><i class="fas fa-check"></i></a>
+                                            <a asp-action="Edit" asp-route-id="@item.VendorId" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.VendorId, '@item.ShopName')"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4">Chưa có cửa hàng nào đăng ký</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            if (confirm(`Bạn có chắc muốn xóa cửa hàng "${name}"?`)) {
+                $.post('@Url.Action("Delete", "Vendor")', { id: id }, function() {
+                    location.reload();
+                });
+            }
+        }
+    </script>
+}
