@@ -336,19 +336,18 @@ namespace PLTour.Admin.Controllers
             {
                 _logger.LogInformation($"AutoTranslate called: locationId={locationId}, sourceLanguageId={sourceLanguageId}");
 
-                // Lấy nội dung gốc - phải lấy từ database
+                // Lấy nội dung gốc
                 var sourceNarration = await _context.Narrations
+                    .Include(n => n.Language)
                     .FirstOrDefaultAsync(n => n.LocationId == locationId && n.LanguageId == sourceLanguageId);
 
                 if (sourceNarration == null)
                 {
-                    _logger.LogWarning($"Không tìm thấy narration: locationId={locationId}, languageId={sourceLanguageId}");
-                    return Json(new { success = false, message = "Không tìm thấy bài thuyết minh gốc. Vui lòng lưu bài thuyết minh gốc trước." });
+                    return Json(new { success = false, message = "Không tìm thấy bài thuyết minh gốc. Vui lòng lưu trước." });
                 }
 
                 if (string.IsNullOrWhiteSpace(sourceNarration.Content))
                 {
-                    _logger.LogWarning($"Nội dung rỗng: {sourceNarration.NarrationId}");
                     return Json(new { success = false, message = "Nội dung gốc đang trống. Vui lòng nhập nội dung trước khi dịch." });
                 }
 
@@ -363,6 +362,8 @@ namespace PLTour.Admin.Controllers
                 }
 
                 var translationService = HttpContext.RequestServices.GetRequiredService<ITranslationService>();
+
+                // Dịch nội dung
                 var translations = await translationService.TranslateToAllLanguages(sourceNarration.Content);
 
                 var createdCount = 0;
@@ -377,7 +378,7 @@ namespace PLTour.Admin.Controllers
 
                         if (existing == null)
                         {
-                            // Tạo mới
+                            // Tạo mới bản dịch
                             var newNarration = new Narration
                             {
                                 LocationId = locationId,
@@ -393,9 +394,9 @@ namespace PLTour.Admin.Controllers
                             _context.Narrations.Add(newNarration);
                             createdCount++;
                         }
-                        else if (string.IsNullOrEmpty(existing.Content))
+                        else if (string.IsNullOrEmpty(existing.Content) || existing.Content == sourceNarration.Content)
                         {
-                            // Cập nhật nếu chưa có nội dung
+                            // Cập nhật nội dung đã dịch
                             existing.Content = translations[target.Code];
                             existing.Title = $"{sourceNarration.Title} ({target.Name})";
                             existing.UpdatedDate = DateTime.Now;
