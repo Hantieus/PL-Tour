@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
 
@@ -11,11 +13,12 @@ namespace PLTour.Admin.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
-
-        public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        private readonly ILogger<NarrationController> _logger;
+        public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ILogger<NarrationController> logger)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _logger = logger;
         }
 
         // GET: Narration
@@ -174,27 +177,20 @@ namespace PLTour.Admin.Controllers
         }
 
         // GET: Narration/Edit/5
+        [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var narration = await _context.Narrations
                 .Include(n => n.Location)
                 .Include(n => n.Language)
                 .FirstOrDefaultAsync(n => n.NarrationId == id);
 
-            if (narration == null)
-            {
-                return NotFound();
-            }
+            if (narration == null) return NotFound();
 
             ViewBag.Location = narration.Location;
-            ViewBag.Languages = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
-                await _context.Languages.Where(l => l.IsActive).ToListAsync(),
-                "LanguageId", "Name", narration.LanguageId);
+            ViewBag.LanguageName = narration.Language?.Name ?? "Không xác định";  // ✅ QUAN TRỌNG
 
             return View(narration);
         }
@@ -328,6 +324,96 @@ namespace PLTour.Admin.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        //ACTION: Dịch tự động bằng AI 
+        // POST: Narration/AutoTranslate
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AutoTranslate(int locationId, int sourceLanguageId)
+        {
+            try
+            {
+                _logger.LogInformation($"AutoTranslate called: locationId={locationId}, sourceLanguageId={sourceLanguageId}");
+
+                // Lấy nội dung gốc - phải lấy từ database
+                var sourceNarration = await _context.Narrations
+                    .FirstOrDefaultAsync(n => n.LocationId == locationId && n.LanguageId == sourceLanguageId);
+
+                if (sourceNarration == null)
+                {
+                    _logger.LogWarning($"Không tìm thấy narration: locationId={locationId}, languageId={sourceLanguageId}");
+                    return Json(new { success = false, message = "Không tìm thấy bài thuyết minh gốc. Vui lòng lưu bài thuyết minh gốc trước." });
+                }
+
+                if (string.IsNullOrWhiteSpace(sourceNarration.Content))
+                {
+                    _logger.LogWarning($"Nội dung rỗng: {sourceNarration.NarrationId}");
+                    return Json(new { success = false, message = "Nội dung gốc đang trống. Vui lòng nhập nội dung trước khi dịch." });
+                }
+
+                // Lấy danh sách ngôn ngữ cần dịch
+                var targetLanguages = await _context.Languages
+                    .Where(l => l.IsActive && l.LanguageId != sourceLanguageId)
+                    .ToListAsync();
+
+                if (!targetLanguages.Any())
+                {
+                    return Json(new { success = false, message = "Không có ngôn ngữ đích nào để dịch" });
+                }
+
+                var translationService = HttpContext.RequestServices.GetRequiredService<ITranslationService>();
+                var translations = await translationService.TranslateToAllLanguages(sourceNarration.Content);
+
+                var createdCount = 0;
+                var updatedCount = 0;
+
+                foreach (var target in targetLanguages)
+                {
+                    if (translations.ContainsKey(target.Code))
+                    {
+                        var existing = await _context.Narrations
+                            .FirstOrDefaultAsync(n => n.LocationId == locationId && n.LanguageId == target.LanguageId);
+
+                        if (existing == null)
+                        {
+                            // Tạo mới
+                            var newNarration = new Narration
+                            {
+                                LocationId = locationId,
+                                LanguageId = target.LanguageId,
+                                Title = $"{sourceNarration.Title} ({target.Name})",
+                                Content = translations[target.Code],
+                                Duration = sourceNarration.Duration,
+                                IsDefault = false,
+                                IsActive = true,
+                                Version = 1,
+                                CreatedDate = DateTime.Now
+                            };
+                            _context.Narrations.Add(newNarration);
+                            createdCount++;
+                        }
+                        else if (string.IsNullOrEmpty(existing.Content))
+                        {
+                            // Cập nhật nếu chưa có nội dung
+                            existing.Content = translations[target.Code];
+                            existing.Title = $"{sourceNarration.Title} ({target.Name})";
+                            existing.UpdatedDate = DateTime.Now;
+                            updatedCount++;
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                var message = $"Đã tạo {createdCount} bản dịch mới, cập nhật {updatedCount} bản";
+                return Json(new { success = true, message = message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi dịch tự động");
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
         }
 
         private bool NarrationExists(int id)
