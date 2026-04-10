@@ -9,6 +9,7 @@ using Microsoft.Maui.ApplicationModel;
 using PLTour.App.Models;
 using PLTour.App.Services;
 using System.Collections.ObjectModel;
+using Plugin.Maui.Audio;
 
 namespace PLTour.App.Pages;
 
@@ -20,23 +21,100 @@ public partial class MapPage : ContentPage
     List<PoiModel> _allPois = new List<PoiModel>();
     public ObservableCollection<PoiModel> SortedPois { get; set; } = new();
 
-    bool isSpeaking = false;
     bool _isFirstLocation = true;
     bool isMapExpanded = false;
     string _currentCategory = "Tất cả";
 
+    private IAudioPlayer _audioPlayer;
+    private CancellationTokenSource _ttsCts;
+
     private readonly ApiService _apiService = new ApiService();
     private readonly LocationService _locationService;
+    private readonly IAudioManager _audioManager;
 
-    public MapPage(LocationService locationService)
+    public MapPage(LocationService locationService, IAudioManager audioManager)
     {
         InitializeComponent();
         _locationService = locationService;
+        _audioManager = audioManager;
+
         PoiListView.ItemsSource = SortedPois;
 
         InitializeMap();
         StartTracking();
-        _ = LoadDataFromApiAsync();
+        // Đã xóa gọi hàm LoadData ở đây để đưa xuống OnAppearing
+    }
+
+    // THÊM MỚI: Tự động tải lại bản đồ mỗi khi mở tab (để cập nhật đa ngôn ngữ)
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        await LoadDataFromApiAsync();
+    }
+
+    private async void BtnSpeak_Clicked(object sender, EventArgs e)
+    {
+        var poi = (sender as Button)?.CommandParameter as PoiModel;
+        if (poi == null) return;
+
+        if (poi.IsPlaying)
+        {
+            StopPlayback(poi);
+            return;
+        }
+
+        poi.IsPlaying = true;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(poi.AudioUrl))
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var stream = await httpClient.GetStreamAsync(poi.AudioUrl);
+                    _audioPlayer = _audioManager.CreatePlayer(stream);
+
+                    _audioPlayer.PlaybackEnded += (s, args) =>
+                        MainThread.BeginInvokeOnMainThread(() => poi.IsPlaying = false);
+
+                    _audioPlayer.Play();
+                }
+            }
+            else
+            {
+                _ttsCts = new CancellationTokenSource();
+                string content = string.IsNullOrEmpty(poi.FullContent) ? poi.Description : poi.FullContent;
+
+                await TextToSpeech.SpeakAsync($"{poi.Name}. {content}", _ttsCts.Token);
+
+                poi.IsPlaying = false;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Lỗi âm thanh: {ex.Message}");
+            poi.IsPlaying = false;
+        }
+    }
+
+    private void StopPlayback(PoiModel poi)
+    {
+        poi.IsPlaying = false;
+
+        if (_audioPlayer != null)
+        {
+            if (_audioPlayer.IsPlaying) _audioPlayer.Stop();
+            _audioPlayer.Dispose();
+            _audioPlayer = null;
+        }
+
+        if (_ttsCts != null)
+        {
+            _ttsCts.Cancel();
+            _ttsCts.Dispose();
+            _ttsCts = null;
+        }
     }
 
     private void InitializeMap()
@@ -48,13 +126,10 @@ public partial class MapPage : ContentPage
             mapView.Map = new Mapsui.Map();
             mapView.Map.Widgets.Clear();
             mapView.Map.Layers.Add(OpenStreetMap.CreateTileLayer());
-
             _userLocationLayer = new MemoryLayer { Name = "User" };
             mapView.Map.Layers.Add(_userLocationLayer);
-
             _poiLayer = new MemoryLayer { Name = "POIs" };
             mapView.Map.Layers.Add(_poiLayer);
-
             MapContainer.Children.Add(mapView);
         });
     }
@@ -77,18 +152,15 @@ public partial class MapPage : ContentPage
         }
     }
 
-    private void UpdateUserLocationOnMap(Location location)
+    private void UpdateUserLocationOnMap(Microsoft.Maui.Devices.Sensors.Location location)
     {
         if (mapView == null) return;
         var proj = SphericalMercator.FromLonLat(location.Longitude, location.Latitude);
         var mapPoint = new MPoint(proj.x, proj.y);
-
         var userFeature = new PointFeature(mapPoint);
         userFeature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(Mapsui.Styles.Color.Blue), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 3), SymbolScale = 0.6 });
-
         _userLocationLayer.Features = new List<IFeature> { userFeature };
         _userLocationLayer.DataHasChanged();
-
         if (_isFirstLocation)
         {
             mapView.Map.Navigator.CenterOn(mapPoint);
@@ -102,20 +174,17 @@ public partial class MapPage : ContentPage
     {
         var userLoc = _locationService.CurrentLocation;
         if (userLoc == null || _allPois == null) return;
-
         foreach (var poi in _allPois)
         {
             double dist = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
             poi.DistanceMeters = dist;
             poi.Address = dist < 1000 ? $"{Math.Round(dist)} m" : $"{(dist / 1000.0):F1} km";
         }
-
         var filtered = _currentCategory == "Tất cả"
             ? _allPois.OrderBy(p => p.DistanceMeters).ToList()
             : _allPois.Where(p => p.Category == _currentCategory).OrderBy(p => p.DistanceMeters).ToList();
-
         MainThread.BeginInvokeOnMainThread(() => {
-            if (SortedPois.Count == 0 || SortedPois[0].Name != filtered[0].Name)
+            if (SortedPois.Count == 0 || (filtered.Count > 0 && SortedPois[0].Name != filtered[0].Name))
             {
                 SortedPois.Clear();
                 foreach (var p in filtered) SortedPois.Add(p);
@@ -133,33 +202,20 @@ public partial class MapPage : ContentPage
     {
         var btn = sender as Button;
         _currentCategory = btn.CommandParameter.ToString();
-
         TabTatCa.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
         TabThamQuan.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
         TabAnUong.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
         TabSuKien.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
-
         btn.TextColor = Microsoft.Maui.Graphics.Colors.White;
         btn.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#2A9D8F");
-
         UpdateDistancesAndSort();
     }
 
     private void ToggleMapSize_Clicked(object sender, EventArgs e)
     {
         isMapExpanded = !isMapExpanded;
-        if (isMapExpanded)
-        {
-            Grid.SetRowSpan(MapSection, 2);
-            InfoPanel.IsVisible = false;
-            BtnToggleMap.Text = "Small 📂";
-        }
-        else
-        {
-            Grid.SetRowSpan(MapSection, 1);
-            InfoPanel.IsVisible = true;
-            BtnToggleMap.Text = "Full 🔲";
-        }
+        if (isMapExpanded) { Grid.SetRowSpan(MapSection, 2); InfoPanel.IsVisible = false; BtnToggleMap.Text = "Small 📂"; }
+        else { Grid.SetRowSpan(MapSection, 1); InfoPanel.IsVisible = true; BtnToggleMap.Text = "Full 🔲"; }
     }
 
     private void CurrentLocation_Clicked(object sender, EventArgs e)
@@ -185,17 +241,59 @@ public partial class MapPage : ContentPage
     private async void Back_Clicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("//home");
     private void VoiceSearch_Clicked(object sender, EventArgs e) => txtSearch.Text = "Đang nghe...";
 
+    // =================================================================
+    // ĐÃ SỬA: Gọi hàm GetAllLocationsAsync() thay vì gọi Tour
+    // =================================================================
     async Task LoadDataFromApiAsync()
     {
-        var tours = await _apiService.GetMockToursAsync();
-        _allPois.Clear();
-        foreach (var tour in tours) if (tour.Pois != null) _allPois.AddRange(tour.Pois);
-        MainThread.BeginInvokeOnMainThread(() => { DrawPoisOnMap(); UpdateDistancesAndSort(); });
+        try
+        {
+            // Đi tự do: Gọi trực tiếp lấy toàn bộ POI hiện có
+            var pois = await _apiService.GetAllLocationsAsync();
+            if (pois != null)
+            {
+                _allPois.Clear();
+                _allPois.AddRange(pois);
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    DrawPoisOnMap();
+                    UpdateDistancesAndSort();
+                });
+            }
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex.Message}"); }
     }
+
+    //async Task LoadDataFromApiAsync()
+    //{
+    //    try
+    //    {
+    //        var pois = await _apiService.GetAllLocationsAsync();
+
+    //        // --- THÊM DÒNG NÀY ĐỂ KHÁM BỆNH ---
+    //        await MainThread.InvokeOnMainThreadAsync(async () =>
+    //        {
+    //            await DisplayAlert("Kiểm tra API", $"Lấy được: {pois.Count} địa điểm", "OK");
+    //        });
+
+    //        if (pois != null && pois.Count > 0)
+    //        {
+    //            _allPois.Clear();
+    //            _allPois.AddRange(pois);
+
+    //            MainThread.BeginInvokeOnMainThread(() => {
+    //                DrawPoisOnMap();
+    //                UpdateDistancesAndSort();
+    //            });
+    //        }
+    //    }
+    //    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi: {ex.Message}"); }
+    //}
 
     void DrawPoisOnMap()
     {
-        if (mapView == null) return;
+        if (mapView == null || _allPois == null) return;
         var poiFeatures = new List<IFeature>();
         foreach (var poi in _allPois)
         {
@@ -221,21 +319,12 @@ public partial class MapPage : ContentPage
         }
     }
 
-    private async void BtnSpeak_Clicked(object sender, EventArgs e)
-    {
-        var poi = (sender as Button)?.CommandParameter as PoiModel;
-        if (poi != null && !isSpeaking)
-        {
-            isSpeaking = true;
-            try { await TextToSpeech.SpeakAsync($"{poi.Name}. {poi.Description}"); } finally { isSpeaking = false; }
-        }
-    }
-
     private async void BtnRoute_Clicked(object sender, EventArgs e)
     {
         var poi = (sender as Button)?.CommandParameter as PoiModel;
-        if (poi != null) await Microsoft.Maui.ApplicationModel.Map.OpenAsync(new Location(poi.Lat, poi.Lng), new MapLaunchOptions { Name = poi.Name, NavigationMode = NavigationMode.Driving });
+        if (poi != null)
+            await Microsoft.Maui.ApplicationModel.Map.OpenAsync(
+                new Microsoft.Maui.Devices.Sensors.Location(poi.Lat, poi.Lng),
+                new MapLaunchOptions { Name = poi.Name, NavigationMode = NavigationMode.Driving });
     }
-
-    // Đã xóa phần Load giọng nói vì sẽ chuyển sang trang Setting
 }

@@ -59,8 +59,14 @@ FontSize="22" Clicked="CurrentLocation_Clicked" ZIndex="10">
                                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,5,0,0">
                                         <Button Grid.Column="0" Text="📍 Map" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
                                                 BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnViewMap_Clicked" />
-                                        <Button Grid.Column="1" Text="🔊 Nghe" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
-                                                BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnSpeakPoi_Clicked" />
+                                        <Button Grid.Column="1" 
+        Text="{Binding PlayButtonText}" 
+        BackgroundColor="{Binding PlayButtonColor}" 
+        Clicked="BtnSpeakPoi_Clicked" 
+        CommandParameter="{Binding .}" 
+        HeightRequest="35" 
+        TextColor="Black" 
+        FontSize="11" />
                                         <Button Grid.Column="2" Text="🧭 Đi" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
                                                 BackgroundColor="#007BFF" TextColor="White" CommandParameter="{Binding .}" Clicked="BtnRoute_Clicked" />
                                     </Grid>

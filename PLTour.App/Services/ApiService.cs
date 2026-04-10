@@ -1,167 +1,149 @@
-﻿using PLTour.App.Models;
+﻿using System.Net.Http.Json;
+using PLTour.App.Models;
+using PLTour.Shared.Models.DTO;
 using Mapsui.Styles;
-// Tạo alias giống như bên PoiModel để dùng màu sắc của Mapsui
 using MapsuiColor = Mapsui.Styles.Color;
+using Microsoft.Maui.Storage;
+using Microsoft.Maui.Devices;
 
 namespace PLTour.App.Services;
 
 public class ApiService
 {
-    public async Task<List<TourModel>> GetMockToursAsync()
-    {
-        await Task.Delay(500); // Giả lập độ trễ mạng
+    private readonly HttpClient _httpClient;
 
-        return new List<TourModel>
+    public ApiService()
+    {
+        string httpPort = "5229";
+        string apiUrl = "";
+
+        // CHIẾN THUẬT: SỬ DỤNG LOCALHOST CHO TẤT CẢ (KẾT HỢP ADB REVERSE)
+        if (DeviceInfo.Platform == DevicePlatform.Android)
         {
-            new TourModel
+            // Nếu là máy ảo: Dùng 10.0.2.2 (vốn trỏ về localhost của máy tính)
+            if (DeviceInfo.DeviceType == DeviceType.Virtual)
             {
-                Id = "T01",
-                Name = "Tour Khám Phá Trung Tâm",
-                Duration = "3 tiếng 30 phút",
-                IntroText = "Chào mừng đến với tour trung tâm, nơi bạn sẽ trải nghiệm văn hóa và lịch sử độc đáo của thành phố.",
-                ImageUrl = "tour_central.jpg",
-                Latitude = 10.779785,
-                Longitude = 106.699019,
-                Pois = new List<PoiModel>
-                {
-                    new PoiModel
-                    {
-                        Name = "Nhà Thờ Đức Bà",
-                        Lat = 10.779785,
-                        Lng = 106.699019,
-                        Radius = 200,
-                        Description = "Nhà thờ cổ kính mang kiến trúc Roman, biểu tượng của thành phố.",
-                        Address = "01 Công xã Paris, Bến Nghé, Quận 1",
-                        Category = PoiCategories.ThamQuan,
-                        PinColor = MapsuiColor.Red
-                    },
-                    new PoiModel
-                    {
-                        Name = "Bưu Điện Thành Phố",
-                        Lat = 10.779872,
-                        Lng = 106.700028,
-                        Radius = 150,
-                        Description = "Công trình kiến trúc Pháp tuyệt đẹp được xây dựng từ thế kỷ 19.",
-                        Address = "02 Công xã Paris, Bến Nghé, Quận 1",
-                        Category = PoiCategories.ThamQuan,
-                        PinColor = MapsuiColor.Blue
-                    },
-                    new PoiModel
-                    {
-                        Name = "Dinh Độc Lập",
-                        Lat = 10.777089,
-                        Lng = 106.695325,
-                        Radius = 300,
-                        Description = "Di tích lịch sử nổi tiếng, nơi lưu giữ nhiều hiện vật quý giá.",
-                        Address = "135 Nam Kỳ Khởi Nghĩa, Bến Thành, Quận 1",
-                        Category = PoiCategories.ThamQuan,
-                        PinColor = MapsuiColor.Orange
-                    },
-                    new PoiModel
-                    {
-                        Name = "Bảo tàng Chứng tích Chiến tranh",
-                        Lat = 10.779435,
-                        Lng = 106.692223,
-                        Radius = 250,
-                        Description = "Bảo tàng lưu giữ những chứng tích anh hùng và bi tráng của dân tộc.",
-                        Address = "28 Võ Văn Tần, Phường 6, Quận 3",
-                        Category = PoiCategories.ThamQuan,
-                        PinColor = MapsuiColor.DarkRed
-                    }
-                }
-            },
-            new TourModel
-            {
-                Id = "T02",
-                Name = "Tour Ẩm Thực Về Đêm",
-                Duration = "2 tiếng 30 phút",
-                IntroText = "Cùng thưởng thức những món ăn đường phố ngon nhất Sài Gòn.",
-                ImageUrl = "tour_food.jpg",
-                Latitude = 10.773534,
-                Longitude = 106.703273,
-                Pois = new List<PoiModel>
-                {
-                    new PoiModel
-                    {
-                        Name = "Phố Đi Bộ Nguyễn Huệ",
-                        Lat = 10.773534,
-                        Lng = 106.703273,
-                        Radius = 400,
-                        Description = "Không gian sôi động về đêm với nhiều món ăn vặt và trà sữa.",
-                        Address = "Nguyễn Huệ, Bến Nghé, Quận 1",
-                        Category = PoiCategories.AnUong,
-                        PinColor = MapsuiColor.Green
-                    },
-                    new PoiModel
-                    {
-                        Name = "Phố Tây Bùi Viện",
-                        Lat = 10.767439,
-                        Lng = 106.694017,
-                        Radius = 300,
-                        Description = "Khu phố nhộn nhịp xuyên đêm với các quán bar, pub và đồ nướng.",
-                        Address = "Bùi Viện, Phạm Ngũ Lão, Quận 1",
-                        Category = PoiCategories.AnUong,
-                        PinColor = MapsuiColor.Green
-                    },
-                    new PoiModel
-                    {
-                        Name = "Khu Ẩm Thực Chợ Hồ Thị Kỷ",
-                        Lat = 10.765662,
-                        Lng = 106.678077,
-                        Radius = 200,
-                        Description = "Thiên đường ẩm thực đường phố với hàng trăm món ngon các vùng miền.",
-                        Address = "Hồ Thị Kỷ, Phường 1, Quận 10",
-                        Category = PoiCategories.AnUong,
-                        PinColor = MapsuiColor.Yellow
-                    }
-                }
-            },
-            new TourModel
-            {
-                Id = "T03",
-                Name = "Tour Giải Trí & Sự Kiện",
-                Duration = "4 tiếng",
-                IntroText = "Tham gia các hoạt động giải trí và sự kiện văn hóa nghệ thuật đặc sắc.",
-                ImageUrl = "tour_event.jpg",
-                Latitude = 10.776615,
-                Longitude = 106.703144,
-                Pois = new List<PoiModel>
-                {
-                    new PoiModel
-                    {
-                        Name = "Nhà Hát Thành Phố",
-                        Lat = 10.776615,
-                        Lng = 106.703144,
-                        Radius = 150,
-                        Description = "Nơi tổ chức các buổi hòa nhạc, múa ballet và sự kiện nghệ thuật lớn.",
-                        Address = "07 Công Trường Lam Sơn, Bến Nghé, Quận 1",
-                        Category = PoiCategories.SuKien,
-                        PinColor = MapsuiColor.Purple
-                    },
-                    new PoiModel
-                    {
-                        Name = "Sân vận động Thống Nhất",
-                        Lat = 10.760183,
-                        Lng = 106.659972,
-                        Radius = 500,
-                        Description = "Địa điểm diễn ra các trận bóng đá nảy lửa và các đại nhạc hội ngoài trời.",
-                        Address = "138 Đào Duy Từ, Phường 6, Quận 10",
-                        Category = PoiCategories.SuKien,
-                        PinColor = MapsuiColor.Purple
-                    },
-                    new PoiModel
-                    {
-                        Name = "Landmark 81",
-                        Lat = 10.795051,
-                        Lng = 106.721832,
-                        Radius = 600,
-                        Description = "Tòa nhà cao nhất Việt Nam, nơi có trượt băng và rạp chiếu phim IMAX.",
-                        Address = "720A Điện Biên Phủ, Vinhomes Tân Cảng, Bình Thạnh",
-                        Category = PoiCategories.SuKien,
-                        PinColor = MapsuiColor.Cyan
-                    }
-                }
+                apiUrl = $"http://10.0.2.2:{httpPort}/";
             }
+            // Nếu là điện thoại thật: Dùng localhost (kết hợp với lệnh adb reverse tcp:5229 tcp:5229)
+            else
+            {
+                apiUrl = $"http://localhost:{httpPort}/";
+            }
+        }
+        else
+        {
+            // Chạy trực tiếp trên Windows
+            apiUrl = $"http://localhost:{httpPort}/";
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {apiUrl}");
+
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+        };
+
+        _httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(apiUrl),
+            Timeout = TimeSpan.FromSeconds(15)
         };
     }
+
+    public async Task<List<TourModel>> GetToursAsync()
+    {
+        try
+        {
+            var tourDtos = await _httpClient.GetFromJsonAsync<List<TourDto>>("api/tours");
+            if (tourDtos == null || !tourDtos.Any()) return new List<TourModel>();
+
+            var tours = new List<TourModel>();
+            foreach (var dto in tourDtos)
+            {
+                var tour = new TourModel
+                {
+                    Id = dto.TourId.ToString(),
+                    Name = dto.Name,
+                    Duration = dto.Duration,
+                    IntroText = dto.IntroText,
+                    ImageUrl = dto.ImageUrl ?? "tour_thumb.jpg",
+                    Pois = dto.Locations.Select(loc => MapToPoiModel(loc)).ToList()
+                };
+
+                if (tour.Pois.Any())
+                {
+                    tour.Latitude = tour.Pois.First().Lat;
+                    tour.Longitude = tour.Pois.First().Lng;
+                }
+                tours.Add(tour);
+            }
+            return tours;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetTours: {ex.Message}");
+            return new List<TourModel>();
+        }
+    }
+
+    public async Task<List<PoiModel>> GetAllLocationsAsync()
+    {
+        try
+        {
+            // Gọi endpoint lấy toàn bộ POI
+            var locDtos = await _httpClient.GetFromJsonAsync<List<PLTour.Shared.Models.DTO.LocationDto>>("api/Locations");
+
+            if (locDtos == null || !locDtos.Any())
+                return new List<PoiModel>();
+
+            return locDtos.Select(loc => MapToPoiModel(loc)).ToList();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetAllLocations: {ex.Message}");
+            return new List<PoiModel>();
+        }
+    }
+
+    private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
+    {
+        string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
+        var narration = loc.Narrations?.FirstOrDefault(n => n.LanguageCode == selectedLangCode)
+                        ?? loc.Narrations?.FirstOrDefault(n => n.IsDefault)
+                        ?? loc.Narrations?.FirstOrDefault();
+
+        return new PoiModel
+        {
+            Id = loc.LocationId,
+            ImageUrl = string.IsNullOrEmpty(loc.ImageUrl) ? "tour_thumb.jpg" : loc.ImageUrl,
+            AudioUrl = narration?.AudioUrl,
+            FullContent = narration?.Content,
+            LanguageName = narration?.LanguageName ?? "Chưa xác định",
+            Name = loc.Name,
+            Lat = loc.Latitude,
+            Lng = loc.Longitude,
+            Radius = loc.Radius > 0 ? loc.Radius : 150,
+            Description = loc.Description ?? "",
+            Address = loc.Address ?? "",
+            Category = MapCategoryName(loc.CategoryId),
+            PinColor = GetPinColor(loc.CategoryId)
+        };
+    }
+
+    private string MapCategoryName(int categoryId) => categoryId switch
+    {
+        1 => PoiCategories.ThamQuan,
+        2 => PoiCategories.AnUong,
+        3 => PoiCategories.SuKien,
+        _ => PoiCategories.ThamQuan
+    };
+
+    private MapsuiColor GetPinColor(int categoryId) => categoryId switch
+    {
+        1 => MapsuiColor.Red,
+        2 => MapsuiColor.Orange,
+        3 => MapsuiColor.Purple,
+        _ => MapsuiColor.Blue
+    };
 }

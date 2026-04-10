@@ -8,6 +8,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- 1. CẤU HÌNH ĐỂ LẮNG NGHE TỪ ĐIỆN THOẠI THẬT (IP BẤT KỲ) ---
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Lắng nghe trên cổng 5229 cho tất cả các IP (điện thoại thật gọi vào được)
+    options.ListenAnyIP(5229);
+    // Nếu bạn vẫn muốn dùng HTTPS trên máy tính thì thêm dòng dưới (tùy chọn)
+    options.ListenAnyIP(7291, listenOptions => listenOptions.UseHttps());
+});
+
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -82,10 +91,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// LƯU Ý: Khi test với điện thoại thật qua HTTP, bạn có thể tạm tắt HttpsRedirection 
+// nếu gặp lỗi chặn chứng chỉ không hợp lệ.
+// app.UseHttpsRedirection(); 
+
+app.UseRouting(); // Thêm routing rõ ràng
+
+// CORS PHẢI NẰM TRƯỚC Authentication/Authorization
 app.UseCors("AllowAll");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

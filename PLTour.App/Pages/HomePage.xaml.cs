@@ -11,7 +11,7 @@ public partial class HomePage : ContentPage
     // 1. Khai báo biến LocationService
     private readonly LocationService _locationService;
 
-    // 2. Truyền LocationService qua Constructor (DI sẽ tự động làm việc này)
+    // 2. Truyền LocationService qua Constructor
     public HomePage(LocationService locationService)
     {
         InitializeComponent();
@@ -30,34 +30,41 @@ public partial class HomePage : ContentPage
         {
             LoadingIndicator.IsRunning = true;
 
-            // 1. Lấy danh sách Tour từ API
-            var tours = await _apiService.GetMockToursAsync();
+            // --- SỬA TẠI ĐÂY: Lấy danh sách Tour từ API thật ---
+            var tours = await _apiService.GetToursAsync();
 
             // 2. Lấy vị trí người dùng từ "Kho lưu trữ" LocationService
             var userLoc = _locationService.GetSavedLocation();
 
             // 3. Tính toán khoảng cách cho từng tour
-            foreach (var tour in tours)
+            if (tours != null)
             {
-                // Nếu lấy được vị trí (khác null), tiến hành tính khoảng cách
-                if (userLoc != null)
+                foreach (var tour in tours)
                 {
-                    Location tourLoc = new Location(tour.Latitude, tour.Longitude);
-                    double distance = Location.CalculateDistance(userLoc, tourLoc, DistanceUnits.Kilometers);
-                    tour.DistanceDisplay = $"Cách bạn: {distance:F1} km";
-                }
-                else
-                {
-                    tour.DistanceDisplay = "Vị trí chưa xác định";
-                }
-            }
+                    // Nếu lấy được vị trí người dùng, tiến hành tính khoảng cách
+                    if (userLoc != null)
+                    {
+                        // Sử dụng Microsoft.Maui.Devices.Sensors.Location để tính toán
+                        var tourLoc = new Microsoft.Maui.Devices.Sensors.Location(tour.Latitude, tour.Longitude);
+                        double distance = Microsoft.Maui.Devices.Sensors.Location.CalculateDistance(userLoc, tourLoc, DistanceUnits.Kilometers);
 
-            // Cập nhật danh sách lên giao diện
-            TourListView.ItemsSource = tours;
+                        tour.DistanceDisplay = $"Cách bạn: {distance:F1} km";
+                    }
+                    else
+                    {
+                        tour.DistanceDisplay = "Vị trí chưa xác định";
+                    }
+                }
+
+                // Cập nhật danh sách lên giao diện
+                TourListView.ItemsSource = tours;
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            await DisplayAlert("Lỗi", "Không thể tải dữ liệu tour.", "OK");
+            // In ra debug để bạn dễ theo dõi nếu API lỗi
+            System.Diagnostics.Debug.WriteLine($"Lỗi LoadTours: {ex.Message}");
+            await DisplayAlert("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
         }
         finally
         {
@@ -85,6 +92,7 @@ public partial class HomePage : ContentPage
 
     private async void ViewTourDetail_Clicked(object sender, EventArgs e)
     {
+        // Lưu ý: Đảm bảo class trong Models tên là TourModel hoặc Tour tùy theo Project của bạn
         var tour = (sender as Button)?.CommandParameter as TourModel;
         if (tour == null) return;
 
