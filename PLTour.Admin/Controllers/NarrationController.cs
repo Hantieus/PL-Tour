@@ -363,51 +363,54 @@ namespace PLTour.Admin.Controllers
 
                 var translationService = HttpContext.RequestServices.GetRequiredService<ITranslationService>();
 
+                // Dịch tiêu đề
+                var titleTranslations = await translationService.TranslateToAllLanguages(sourceNarration.Title);
+
                 // Dịch nội dung
-                var translations = await translationService.TranslateToAllLanguages(sourceNarration.Content);
+                var contentTranslations = await translationService.TranslateToAllLanguages(sourceNarration.Content);
 
                 var createdCount = 0;
                 var updatedCount = 0;
 
                 foreach (var target in targetLanguages)
                 {
-                    if (translations.ContainsKey(target.Code))
-                    {
-                        var existing = await _context.Narrations
-                            .FirstOrDefaultAsync(n => n.LocationId == locationId && n.LanguageId == target.LanguageId);
+                    var translatedTitle = titleTranslations.ContainsKey(target.Code) ? titleTranslations[target.Code] : sourceNarration.Title;
+                    var translatedContent = contentTranslations.ContainsKey(target.Code) ? contentTranslations[target.Code] : sourceNarration.Content;
 
-                        if (existing == null)
+                    var existing = await _context.Narrations
+                        .FirstOrDefaultAsync(n => n.LocationId == locationId && n.LanguageId == target.LanguageId);
+
+                    if (existing == null)
+                    {
+                        // Tạo mới bản dịch
+                        var newNarration = new Narration
                         {
-                            // Tạo mới bản dịch
-                            var newNarration = new Narration
-                            {
-                                LocationId = locationId,
-                                LanguageId = target.LanguageId,
-                                Title = $"{sourceNarration.Title} ({target.Name})",
-                                Content = translations[target.Code],
-                                Duration = sourceNarration.Duration,
-                                IsDefault = false,
-                                IsActive = true,
-                                Version = 1,
-                                CreatedDate = DateTime.Now
-                            };
-                            _context.Narrations.Add(newNarration);
-                            createdCount++;
-                        }
-                        else if (string.IsNullOrEmpty(existing.Content) || existing.Content == sourceNarration.Content)
-                        {
-                            // Cập nhật nội dung đã dịch
-                            existing.Content = translations[target.Code];
-                            existing.Title = $"{sourceNarration.Title} ({target.Name})";
-                            existing.UpdatedDate = DateTime.Now;
-                            updatedCount++;
-                        }
+                            LocationId = locationId,
+                            LanguageId = target.LanguageId,
+                            Title = translatedTitle,
+                            Content = translatedContent,
+                            Duration = sourceNarration.Duration,
+                            IsDefault = false,
+                            IsActive = true,
+                            Version = 1,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.Narrations.Add(newNarration);
+                        createdCount++;
+                    }
+                    else if (string.IsNullOrEmpty(existing.Content) || existing.Content == sourceNarration.Content)
+                    {
+                        // Cập nhật cả tiêu đề và nội dung
+                        existing.Title = translatedTitle;
+                        existing.Content = translatedContent;
+                        existing.UpdatedDate = DateTime.Now;
+                        updatedCount++;
                     }
                 }
 
                 await _context.SaveChangesAsync();
 
-                var message = $"Đã tạo {createdCount} bản dịch mới, cập nhật {updatedCount} bản";
+                var message = $"Đã tạo {createdCount} bản dịch mới, cập nhật {updatedCount} bản (bao gồm tiêu đề và nội dung)";
                 return Json(new { success = true, message = message });
             }
             catch (Exception ex)

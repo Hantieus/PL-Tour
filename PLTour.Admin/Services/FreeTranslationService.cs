@@ -43,10 +43,9 @@ namespace PLTour.Admin.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Lỗi dịch sang {target.Name}");
-                    translations[target.Code] = sourceText; // Fallback: giữ nguyên text gốc
+                    translations[target.Code] = sourceText;
                 }
 
-                // Tránh rate limit
                 await Task.Delay(500);
             }
 
@@ -58,6 +57,8 @@ namespace PLTour.Admin.Services
         /// </summary>
         private async Task<string> TranslateViaGoogle(string text, string sourceLang, string targetLang)
         {
+            if (string.IsNullOrWhiteSpace(text)) return text;
+
             var url = $"https://translate.googleapis.com/translate_a/single?client=gtx&sl={sourceLang}&tl={targetLang}&dt=t&q={Uri.EscapeDataString(text)}";
 
             var response = await _httpClient.GetAsync(url);
@@ -66,7 +67,6 @@ namespace PLTour.Admin.Services
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
 
-            // Parse kết quả Google Translate
             var translated = doc.RootElement[0][0][0].GetString();
 
             return translated ?? text;
