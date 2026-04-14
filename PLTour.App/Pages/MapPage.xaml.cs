@@ -32,6 +32,9 @@ public partial class MapPage : ContentPage
     private readonly LocationService _locationService;
     private readonly IAudioManager _audioManager;
 
+    // THÊM: Dùng chung một HttpClient để tải file Audio mượt hơn, tránh lỗi ngắt stream
+    private static readonly HttpClient _sharedHttpClient = new HttpClient();
+
     public MapPage(LocationService locationService, IAudioManager audioManager)
     {
         InitializeComponent();
@@ -55,7 +58,16 @@ public partial class MapPage : ContentPage
     private async void BtnSpeak_Clicked(object sender, EventArgs e)
     {
         var poi = (sender as Button)?.CommandParameter as PoiModel;
-        if (poi == null) return;
+        if (poi == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[LỖI NẶNG] Nút bấm không nhận được PoiModel. Hãy kiểm tra CommandParameter trong file XAML!");
+            return;
+        }
+
+        // --- LOG KIỂM TRA ---
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] Đang phát: {poi.Name}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] AudioUrl: {poi.AudioUrl}");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] FullContent: {poi.FullContent}");
 
         if (poi.IsPlaying)
         {
@@ -67,23 +79,26 @@ public partial class MapPage : ContentPage
 
         try
         {
+            // 1. ƯU TIÊN PHÁT FILE AUDIO (Nếu có Url)
             if (!string.IsNullOrEmpty(poi.AudioUrl))
             {
-                using (var httpClient = new HttpClient())
-                {
-                    var stream = await httpClient.GetStreamAsync(poi.AudioUrl);
-                    _audioPlayer = _audioManager.CreatePlayer(stream);
+                // Dùng _sharedHttpClient thay vì tạo mới để tránh lỗi stream
+                var stream = await _sharedHttpClient.GetStreamAsync(poi.AudioUrl);
+                _audioPlayer = _audioManager.CreatePlayer(stream);
 
-                    _audioPlayer.PlaybackEnded += (s, args) =>
-                        MainThread.BeginInvokeOnMainThread(() => poi.IsPlaying = false);
+                _audioPlayer.PlaybackEnded += (s, args) =>
+                    MainThread.BeginInvokeOnMainThread(() => poi.IsPlaying = false);
 
-                    _audioPlayer.Play();
-                }
+                _audioPlayer.Play();
             }
+            // 2. NẾU KHÔNG CÓ AUDIO THÌ MỚI ĐỌC TTS
             else
             {
                 _ttsCts = new CancellationTokenSource();
-                string content = string.IsNullOrEmpty(poi.FullContent) ? poi.Description : poi.FullContent;
+                // Ưu tiên FullContent, nếu rỗng mới lấy Description
+                string content = string.IsNullOrWhiteSpace(poi.FullContent) ? poi.Description : poi.FullContent;
+
+                if (string.IsNullOrWhiteSpace(content)) content = "Không có thông tin thuyết minh.";
 
                 await TextToSpeech.SpeakAsync($"{poi.Name}. {content}", _ttsCts.Token);
 
@@ -180,9 +195,13 @@ public partial class MapPage : ContentPage
             poi.DistanceMeters = dist;
             poi.Address = dist < 1000 ? $"{Math.Round(dist)} m" : $"{(dist / 1000.0):F1} km";
         }
+
+        // ĐÃ SỬA: Lọc Category bỏ qua viết hoa/viết thường và khoảng trắng thừa để không bị lỗi 0 kết quả
         var filtered = _currentCategory == "Tất cả"
             ? _allPois.OrderBy(p => p.DistanceMeters).ToList()
-            : _allPois.Where(p => p.Category == _currentCategory).OrderBy(p => p.DistanceMeters).ToList();
+            : _allPois.Where(p => p.Category?.Trim().ToLower() == _currentCategory.Trim().ToLower())
+                      .OrderBy(p => p.DistanceMeters).ToList();
+
         MainThread.BeginInvokeOnMainThread(() => {
             if (SortedPois.Count == 0 || (filtered.Count > 0 && SortedPois[0].Name != filtered[0].Name))
             {
@@ -264,32 +283,6 @@ public partial class MapPage : ContentPage
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex.Message}"); }
     }
-
-    //async Task LoadDataFromApiAsync()
-    //{
-    //    try
-    //    {
-    //        var pois = await _apiService.GetAllLocationsAsync();
-
-    //        // --- THÊM DÒNG NÀY ĐỂ KHÁM BỆNH ---
-    //        await MainThread.InvokeOnMainThreadAsync(async () =>
-    //        {
-    //            await DisplayAlert("Kiểm tra API", $"Lấy được: {pois.Count} địa điểm", "OK");
-    //        });
-
-    //        if (pois != null && pois.Count > 0)
-    //        {
-    //            _allPois.Clear();
-    //            _allPois.AddRange(pois);
-
-    //            MainThread.BeginInvokeOnMainThread(() => {
-    //                DrawPoisOnMap();
-    //                UpdateDistancesAndSort();
-    //            });
-    //        }
-    //    }
-    //    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi: {ex.Message}"); }
-    //}
 
     void DrawPoisOnMap()
     {
