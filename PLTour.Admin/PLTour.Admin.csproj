@@ -7,9 +7,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Views\NewFolder1\**" />
+	  <Content Remove="Views\NewFolder1\**" />
+	  <EmbeddedResource Remove="Views\NewFolder1\**" />
+	  <None Remove="Views\NewFolder1\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Folder Include="wwwroot\images\" />
 		<Folder Include="wwwroot\uploads\locations\" />
 		<Folder Include="wwwroot\uploads\audio\" />
+		<Folder Include="wwwroot\uploads\tours\" />
 	</ItemGroup>
 
 	<ItemGroup>

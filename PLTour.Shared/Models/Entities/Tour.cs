@@ -1,27 +1,32 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace PLTour.Shared.Models.Entities;
-
-public class Tour
+namespace PLTour.Shared.Models.Entities
 {
-    [Key]
-    public int TourId { get; set; }
+    public class Tour
+    {
+        [Key]
+        public int TourId { get; set; }
 
-    [Required]
-    [StringLength(200)]
-    public string Name { get; set; }
+        [Required(ErrorMessage = "Tên tour không được để trống")]
+        [StringLength(200, ErrorMessage = "Tên tour không quá 200 ký tự")]
+        public string Name { get; set; } = string.Empty;
 
-    [StringLength(100)]
-    public string Duration { get; set; } // VD: "3 tiếng 30 phút"
+        [Range(0, 1000, ErrorMessage = "Thời lượng từ 0 đến 1000 phút")]
+        public int Duration { get; set; } // phút
 
-    public string IntroText { get; set; }
+        [StringLength(1000, ErrorMessage = "Giới thiệu không quá 1000 ký tự")]
+        public string? IntroText { get; set; }
 
-    [StringLength(500)]
-    public string ImageUrl { get; set; }
+        [StringLength(500)]
+        public string? ImageUrl { get; set; }
 
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public bool IsActive { get; set; } = true;
 
-    // Navigation property: Mối quan hệ n-n với Location thông qua bảng trung gian
-    public virtual ICollection<TourLocation> TourLocations { get; set; }
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+
+        public DateTime? UpdatedDate { get; set; }
+
+        // Navigation
+        public virtual ICollection<TourLocation> TourLocations { get; set; } = new List<TourLocation>();
+    }
 }

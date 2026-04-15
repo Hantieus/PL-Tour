@@ -1,0 +1,101 @@
+﻿@model PLTour.Shared.Models.Entities.Tour
+
+@{
+    ViewData["Title"] = "Chi tiết tour";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.TourId" class="btn btn-warning">Sửa</a>
+            <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Hình ảnh</h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    {
+                    <img src="@Model.ImageUrl" class="img-fluid rounded" />
+                    }
+                    else
+                    {
+                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-map fa-3x"></i>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Thông tin tour</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 150px;">Tên tour</th>
+                            <td>@Model.Name</td>
+                        </tr>
+                        <tr>
+                            <th>Thời lượng</th>
+                            <td>@Model.Duration phút</td>
+                        </tr>
+                        <tr>
+                            <th>Trạng thái</th>
+                            <td>
+                                @if (Model.IsActive)
+                                {
+                                <span class="badge bg-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                <span class="badge bg-secondary">Tạm dừng</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Ngày tạo</th>
+                            <td>@Model.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                        <tr>
+                            <th>Giới thiệu</th>
+                            <td>@Model.IntroText</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Các điểm đến trong tour</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        @foreach (var tl in Model.TourLocations.OrderBy(t => t.OrderIndex))
+                        {
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <span class="badge bg-primary rounded-circle">@(tl.OrderIndex + 1)</span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">@tl.Location?.Name</h6>
+                                    <small class="text-muted">@tl.Location?.Address</small>
+                                </div>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

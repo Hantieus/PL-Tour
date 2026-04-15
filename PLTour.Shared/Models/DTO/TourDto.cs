@@ -4,7 +4,7 @@ public class TourDto
 {
     public int TourId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Duration { get; set; } = string.Empty;
+    public int Duration { get; set; } 
     public string IntroText { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
 

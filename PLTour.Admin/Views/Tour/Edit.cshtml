@@ -1,0 +1,106 @@
+﻿@model PLTour.Shared.Models.Entities.Tour
+
+@{
+    ViewData["Title"] = "Sửa tour";
+}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">@ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="TourId" />
+                        <input type="hidden" asp-for="CreatedDate" />
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label fw-bold">Tên tour</label>
+                                    <input asp-for="Name" class="form-control" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Duration" class="form-label fw-bold">Thời lượng (phút)</label>
+                                            <input asp-for="Duration" class="form-control" type="number" min="0" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Hình ảnh</label>
+                                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                                            {
+                                                <div class="mb-2">
+                                                    <img src="@Model.ImageUrl" style="max-height: 100px;" />
+                                                </div>
+                                            }
+                                            <input type="file" name="imageFile" class="form-control" accept="image/*" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="IntroText" class="form-label fw-bold">Giới thiệu tour</label>
+                                    <textarea asp-for="IntroText" class="form-control" rows="5"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-header">
+                                        <i class="fas fa-map-marker-alt me-1"></i>Chọn địa điểm
+                                    </div>
+                                    <div class="card-body">
+                                        @if (ViewBag.Locations != null)
+                                        {
+                                            <select name="selectedLocationIds" class="form-select" multiple size="10" style="height: 300px;">
+                                                @foreach (var loc in ViewBag.Locations as MultiSelectList)
+                                                {
+                                                    if (loc.Selected)
+                                                    {
+                                                        <option value="@loc.Value" selected>@loc.Text</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@loc.Value">@loc.Text</option>
+                                                    }
+                                                }
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-danger">Không có địa điểm nào</div>
+                                        }
+                                        <small class="text-muted">Giữ Ctrl để chọn nhiều</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
+                        </div>
+
+                        <hr />
+                        <div class="text-end">
+                            <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                            <button type="submit" class="btn btn-primary">Cập nhật</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
