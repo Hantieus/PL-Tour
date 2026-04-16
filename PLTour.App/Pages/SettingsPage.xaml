@@ -14,11 +14,14 @@
         </HorizontalStackLayout>
 
         <Label Text="Ngôn ngữ &amp; Thuyết minh" FontAttributes="Bold"/>
-        <Picker x:Name="LangPicker" Title="Chọn ngôn ngữ">
+        <Picker x:Name="LangPicker" Title="Chọn ngôn ngữ thuyết minh">
             <Picker.ItemsSource>
                 <x:Array Type="{x:Type x:String}">
                     <x:String>Tiếng Việt</x:String>
                     <x:String>English</x:String>
+                    <x:String>中文</x:String>
+                    <x:String>한국어</x:String>
+                    <x:String>日本語</x:String>
                 </x:Array>
             </Picker.ItemsSource>
         </Picker>

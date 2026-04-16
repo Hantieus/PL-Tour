@@ -2,7 +2,7 @@
 using PLTour.App.Pages;
 using PLTour.App.Services;
 using SkiaSharp.Views.Maui.Controls.Hosting;
-using Plugin.Maui.Audio; // Thư viện âm thanh bạn vừa cài
+using CommunityToolkit.Maui; // 1. Thêm namespace mới này
 
 namespace PLTour.App
 {
@@ -14,6 +14,10 @@ namespace PLTour.App
             builder
                 .UseMauiApp<App>()
                 .UseSkiaSharp()
+                // SỬA DÒNG NÀY: 
+                // true: Cho phép nhạc tiếp tục phát khi thoát app/tắt màn hình (Android)
+                // false: Tắt nhạc khi thoát app
+                .UseMauiCommunityToolkitMediaElement(true)
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -28,11 +32,12 @@ namespace PLTour.App
             // ĐĂNG KÝ DEPENDENCY INJECTION (DI)
             // ==========================================
 
-            // 1. Đăng ký Service (Dùng chung 1 bản sao duy nhất cho toàn bộ App)
+            // 1. Đăng ký Service
             builder.Services.AddSingleton<LocationService>();
+            builder.Services.AddSingleton<ApiService>(); // Đảm bảo đã đăng ký ApiService
 
-            // ĐĂNG KÝ TRÌNH QUẢN LÝ ÂM THANH (Dòng quan trọng nhất)
-            builder.Services.AddSingleton(AudioManager.Current);
+            // LƯU Ý: Với MediaElement, bạn không cần dòng builder.Services.AddSingleton(AudioManager.Current) 
+            // vì MediaElement là một Control trên giao diện XAML, nó tự quản lý trình phát.
 
             // 2. Đăng ký các Pages
             builder.Services.AddTransient<LoadingPage>();

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="PLTour.App.Pages.MapPage"
              Title="Map"
              Shell.NavBarIsVisible="False">
 
     <Grid x:Name="MainGrid" RowDefinitions="Auto, *, 380">
+
+        <toolkit:MediaElement x:Name="AudioPlayer" 
+                              IsVisible="False" 
+                              MediaEnded="AudioPlayer_MediaEnded" />
 
         <Border Grid.Row="0" BackgroundColor="White" Padding="10" StrokeThickness="0" ZIndex="5">
             <Border.Shadow>
@@ -52,23 +57,24 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,12" Padding="15" StrokeShape="RoundRectangle 15" StrokeThickness="0" BackgroundColor="White">
-                                <VerticalStackLayout Spacing="5">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="PoiItem_Tapped" CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+
+                                <VerticalStackLayout Spacing="10">
+                                    <Border StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                                        <Image Source="{Binding ImageUrl}" HeightRequest="120" Aspect="AspectFill" />
+                                    </Border>
+
                                     <Grid ColumnDefinitions="*, Auto">
                                         <Label Grid.Column="0" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" TextColor="#222222" />
                                         <Label Grid.Column="1" Text="{Binding Address}" FontAttributes="Bold" FontSize="13" TextColor="#E76F51" VerticalOptions="Center" />
                                     </Grid>
-                                    <Label Text="{Binding Description}" FontSize="13" TextColor="Gray" MaxLines="2" />
-                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,5,0,0">
-                                        <Button Grid.Column="0" Text="📍 Map" Clicked="BtnViewMap_Clicked" CommandParameter="{Binding .}" HeightRequest="35" BackgroundColor="#E9ECEF" TextColor="Black" FontSize="11" />
-                                        <Button Grid.Column="1" 
-        Text="{Binding PlayButtonText}" 
-        BackgroundColor="{Binding PlayButtonColor}" 
-        Clicked="BtnSpeak_Clicked" 
-        CommandParameter="{Binding .}" 
-        HeightRequest="35" 
-        TextColor="Black" 
-        FontSize="11" />
-                                        <Button Grid.Column="2" Text="🧭 Đi" Clicked="BtnRoute_Clicked" CommandParameter="{Binding .}" HeightRequest="35" BackgroundColor="#007BFF" TextColor="White" FontSize="11" />
+
+                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5" Margin="0,5,0,0">
+                                        <Button Grid.Column="0" Text="📍 Map" Clicked="BtnViewMap_Clicked" CommandParameter="{Binding .}" HeightRequest="35" BackgroundColor="#E9ECEF" TextColor="Black" FontSize="11" Padding="0"/>
+                                        <Button Grid.Column="1" Text="{Binding PlayButtonText}" BackgroundColor="{Binding PlayButtonColor}" Clicked="BtnSpeak_Clicked" CommandParameter="{Binding .}" HeightRequest="35" TextColor="Black" FontSize="11" Padding="0"/>
+                                        <Button Grid.Column="2" Text="🧭 Đi" Clicked="BtnRoute_Clicked" CommandParameter="{Binding .}" HeightRequest="35" BackgroundColor="#007BFF" TextColor="White" FontSize="11" Padding="0"/>
                                     </Grid>
                                 </VerticalStackLayout>
                             </Border>
@@ -77,5 +83,38 @@
                 </CollectionView>
             </Grid>
         </Border>
+
+        <ContentView x:Name="PoiDetailPopup" IsVisible="False" BackgroundColor="#99000000" ZIndex="100" Grid.RowSpan="3">
+            <Border BackgroundColor="White" StrokeShape="RoundRectangle 20" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="350" MaximumHeightRequest="650" Padding="0" Margin="20">
+                <Grid RowDefinitions="Auto, *, Auto">
+
+                    <Grid Grid.Row="0">
+                        <Image Source="{Binding ImageUrl}" HeightRequest="200" Aspect="AspectFill" />
+                        <Button Text="❌" BackgroundColor="#80000000" TextColor="White" CornerRadius="15" WidthRequest="30" HeightRequest="30" HorizontalOptions="End" VerticalOptions="Start" Margin="10" Padding="0" Clicked="ClosePopup_Clicked" />
+                    </Grid>
+
+                    <ScrollView Grid.Row="1" Padding="20">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="22" TextColor="Black" />
+                            <Label Text="{Binding Address}" FontSize="14" TextColor="#E76F51" FontAttributes="Italic" />
+
+                            <Label Text="📌 Mô tả ngắn:" FontAttributes="Bold" FontSize="15" TextColor="#2A9D8F" Margin="0,10,0,0"/>
+                            <Label Text="{Binding Description}" FontSize="14" TextColor="DarkGray" />
+
+                            <Label Text="📖 Nội dung chi tiết:" FontAttributes="Bold" FontSize="15" TextColor="#2A9D8F" Margin="0,10,0,0"/>
+                            <Label Text="{Binding FullContent}" FontSize="14" TextColor="Black" />
+
+                            <VerticalStackLayout IsVisible="{Binding IsRestaurant}" Margin="0,15,0,0" Spacing="5" BackgroundColor="#FFF3E0" Padding="15">
+                                <Label Text="🍽️ Thực đơn (Menu):" FontAttributes="Bold" FontSize="16" TextColor="#D84315" />
+                                <Label Text="• Phở bò Kobe - 65,000đ&#10;• Bún chả Hà Nội - 45,000đ&#10;• Trà đá - 5,000đ" FontSize="14" TextColor="Black" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Button Grid.Row="2" Text="{Binding PlayButtonText}" BackgroundColor="{Binding PlayButtonColor}" Clicked="BtnSpeak_Clicked" CommandParameter="{Binding .}" HeightRequest="50" TextColor="Black" FontAttributes="Bold" FontSize="15" Margin="20,10,20,20" CornerRadius="10" />
+                </Grid>
+            </Border>
+        </ContentView>
+
     </Grid>
 </ContentPage>
