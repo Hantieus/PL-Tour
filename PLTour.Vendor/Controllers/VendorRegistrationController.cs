@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using BCrypt.Net;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PLTour.Vendor.ViewModels;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using BCrypt.Net;
+using PLTour.Vendor.ViewModels;
+using System.Net.Http;
+using System.Text.Json;
 
 
 namespace PLTour.Vendor.Controllers
@@ -12,11 +14,13 @@ namespace PLTour.Vendor.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;
 
         public VendorRegistrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();
         }
 
         // GET: /vendor-registration
@@ -49,22 +53,21 @@ namespace PLTour.Vendor.Controllers
                         return View(model);
                     }
 
-                    // Xử lý upload logo
+                    // Xử lý upload logo qua API
                     string? logoUrl = null;
                     if (model.LogoFile != null && model.LogoFile.Length > 0)
                     {
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/vendors");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.LogoFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        using (var content = new MultipartFormDataContent())
                         {
-                            await model.LogoFile.CopyToAsync(stream);
-                        }
+                            content.Add(new StreamContent(model.LogoFile.OpenReadStream()), "file", model.LogoFile.FileName);
 
-                        logoUrl = "/uploads/vendors/" + uniqueFileName;
+                            var response = await _httpClient.PostAsync("...", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+                            using (var doc = JsonDocument.Parse(responseJson))
+                            {
+                                logoUrl = doc.RootElement.GetProperty("url").GetString();
+                            }
+                        }
                     }
 
                     // Tạo vendor mới

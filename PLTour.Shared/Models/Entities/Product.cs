@@ -9,18 +9,20 @@ public class Product
     [Key]
     public int ProductId { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "Tên món ăn không được để trống")]
     [StringLength(200)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string Description { get; set; }
+    public string? Description { get; set; }
 
+    [Required(ErrorMessage = "Giá không được để trống")]
+    [Range(0, double.MaxValue, ErrorMessage = "Giá phải lớn hơn hoặc bằng 0")]
     [Column(TypeName = "decimal(18,2)")]
     public decimal Price { get; set; }
 
     [StringLength(200)]
-    public string ImageUrl { get; set; }
+    public string? ImageUrl { get; set; }
 
     public int VendorId { get; set; }
 
@@ -36,8 +38,8 @@ public class Product
 
     // Navigation properties
     [ForeignKey("VendorId")]
-    public virtual Vendor Vendor { get; set; }
+    public virtual Vendor? Vendor { get; set; }
 
     [ForeignKey("CategoryId")]
-    public virtual Category Category { get; set; }
+    public virtual Category? Category { get; set; }
 }

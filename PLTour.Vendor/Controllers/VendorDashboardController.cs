@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
 using PLTour.Vendor.ViewModels;
+using System.Text.Json;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -13,11 +14,13 @@ namespace PLTour.Vendor.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;
 
         public VendorDashboardController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();
         }
 
         // Lấy VendorId từ session
@@ -62,21 +65,20 @@ namespace PLTour.Vendor.Controllers
 
             if (existingVendor == null) return NotFound();
 
-            // Upload logo mới
+            // Upload logo mới qua API
             if (logoFile != null && logoFile.Length > 0)
             {
-                var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/vendors");
-                Directory.CreateDirectory(uploadsFolder);
-
-                var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(logoFile.FileName);
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                using (var content = new MultipartFormDataContent())
                 {
-                    await logoFile.CopyToAsync(stream);
-                }
+                    content.Add(new StreamContent(logoFile.OpenReadStream()), "file", logoFile.FileName);
 
-                existingVendor.LogoUrl = "/uploads/vendors/" + uniqueFileName;
+                    var response = await _httpClient.PostAsync("...", content);
+                    var responseJson = await response.Content.ReadAsStringAsync();
+                    using (var doc = JsonDocument.Parse(responseJson))
+                    {
+                        existingVendor.LogoUrl = doc.RootElement.GetProperty("url").GetString();
+                    }
+                }
             }
 
             existingVendor.ShopName = vendor.ShopName;

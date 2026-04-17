@@ -14,7 +14,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form asp-action="Edit" method="post">
+            <form asp-action="Edit" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="VendorId" />
                 <input type="hidden" asp-for="PasswordHash" />
@@ -86,19 +86,26 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label asp-for="Latitude" class="form-label">Vĩ độ</label>
-                            <input asp-for="Latitude" class="form-control" type="number" step="0.000001" />
+                <!-- Logo hiện tại -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Logo hiện tại</label>
+                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    {
+                        <div>
+                            <img src="@Model.LogoUrl" alt="Logo" style="max-height: 100px; border-radius: 8px;" />
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label asp-for="Longitude" class="form-label">Kinh độ</label>
-                            <input asp-for="Longitude" class="form-control" type="number" step="0.000001" />
-                        </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Chưa có logo</p>
+                    }
+                </div>
+
+                <!-- Upload logo mới -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Thay đổi logo</label>
+                    <input type="file" name="logoFile" class="form-control" accept="image/*" />
+                    <small class="text-muted">Chấp nhận .jpg, .png, .gif (tối đa 2MB)</small>
                 </div>
 
                 <div class="form-check mb-3">

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;  // ✅ THÊM DÒNG NÀY
 
 namespace PLTour.Admin.Controllers
 {
@@ -11,11 +12,13 @@ namespace PLTour.Admin.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;  // ✅ THÊM DÒNG NÀY
 
         public LocationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();  // ✅ THÊM DÒNG NÀY
         }
 
         // GET: Location
@@ -25,7 +28,7 @@ namespace PLTour.Admin.Controllers
 
             var query = _context.Locations
                 .Include(l => l.Category)
-                .Include(l => l.Narrations) // THÊM DÒNG NÀY ĐỂ LOAD NARRATIONS
+                .Include(l => l.Narrations)
                     .ThenInclude(n => n.Language)
                 .AsQueryable();
 
@@ -79,10 +82,9 @@ namespace PLTour.Admin.Controllers
             {
                 try
                 {
-                    // Xử lý upload ảnh
+                    // ✅ SỬA: Upload ảnh qua API
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        // Kiểm tra định dạng ảnh
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
                         var fileExtension = Path.GetExtension(imageFile.FileName).ToLower();
 
@@ -93,28 +95,24 @@ namespace PLTour.Admin.Controllers
                             return View(location);
                         }
 
-                        // Tạo thư mục uploads nếu chưa có
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/locations");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        // Tạo tên file duy nhất
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        // Gọi API upload
+                        using (var content = new MultipartFormDataContent())
                         {
-                            await imageFile.CopyToAsync(stream);
-                        }
+                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                        location.ImageUrl = "/uploads/locations/" + uniqueFileName;
+                            // Trong các controller, chỉ lấy url, không lấy fullUrl
+                            var response = await _httpClient.PostAsync("...", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+                            using (var doc = JsonDocument.Parse(responseJson))
+                            {
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                location.ImageUrl = url;  // Lưu "/uploads/locations/abc.jpg"
+                            }
+                        }
                     }
 
-                    
-
-                    // Set thời gian tạo
                     location.CreatedDate = DateTime.Now;
                     location.Radius = location.Radius > 0 ? location.Radius : 50;
-                    // Thêm vào database
                     _context.Add(location);
                     await _context.SaveChangesAsync();
 
@@ -127,10 +125,8 @@ namespace PLTour.Admin.Controllers
                 }
             }
 
-            // Nếu có lỗi, hiển thị lại form với dữ liệu đã nhập
             ViewBag.Categories = await _context.Categories.ToListAsync();
 
-            // Log lỗi để debug
             var errors = ModelState.Values.SelectMany(v => v.Errors);
             foreach (var error in errors)
             {
@@ -139,7 +135,6 @@ namespace PLTour.Admin.Controllers
 
             return View(location);
         }
-
 
         // GET: Location/Edit/5
         public async Task<IActionResult> Edit(int? id)
@@ -171,7 +166,6 @@ namespace PLTour.Admin.Controllers
                 return NotFound();
             }
 
-            // Loại bỏ validation cho navigation property
             if (location.Category != null)
             {
                 ModelState.Remove("Category");
@@ -181,7 +175,6 @@ namespace PLTour.Admin.Controllers
             {
                 try
                 {
-                    // Lấy đối tượng hiện tại từ database
                     var existingLocation = await _context.Locations.FindAsync(id);
                     if (existingLocation == null)
                     {
@@ -193,17 +186,10 @@ namespace PLTour.Admin.Controllers
                     {
                         if (!string.IsNullOrEmpty(existingLocation.ImageUrl))
                         {
-                            var oldImagePath = Path.Combine(_hostEnvironment.WebRootPath, existingLocation.ImageUrl.TrimStart('/'));
-                            if (System.IO.File.Exists(oldImagePath))
-                            {
-                                System.IO.File.Delete(oldImagePath);
-                            }
+                            // Xóa file cũ qua API? Hoặc bỏ qua vì file sẽ được xóa khi upload mới
                             existingLocation.ImageUrl = null;
                         }
                     }
-
-                    
-
 
                     // Cập nhật các trường cơ bản
                     existingLocation.Name = location.Name;
@@ -212,15 +198,14 @@ namespace PLTour.Admin.Controllers
                     existingLocation.Longitude = location.Longitude;
                     existingLocation.Address = location.Address;
                     existingLocation.CategoryId = location.CategoryId;
-            
                     existingLocation.OrderIndex = location.OrderIndex;
                     existingLocation.IsActive = location.IsActive;
                     existingLocation.UpdatedDate = DateTime.Now;
                     existingLocation.Radius = location.Radius;
-                    // XỬ LÝ UPLOAD ẢNH MỚI
+
+                    // ✅ SỬA: Upload ảnh mới qua API
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        // Kiểm tra định dạng ảnh
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
                         var fileExtension = Path.GetExtension(imageFile.FileName).ToLower();
 
@@ -231,34 +216,20 @@ namespace PLTour.Admin.Controllers
                             return View(location);
                         }
 
-                        // Xóa ảnh cũ nếu có
-                        if (!string.IsNullOrEmpty(existingLocation.ImageUrl))
+                        using (var content = new MultipartFormDataContent())
                         {
-                            var oldImagePath = Path.Combine(_hostEnvironment.WebRootPath, existingLocation.ImageUrl.TrimStart('/'));
-                            if (System.IO.File.Exists(oldImagePath))
+                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
+
+                            var response = await _httpClient.PostAsync("...", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+                            using (var doc = JsonDocument.Parse(responseJson))
                             {
-                                System.IO.File.Delete(oldImagePath);
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                existingLocation.ImageUrl = url;
                             }
                         }
-
-                        // Upload ảnh mới
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/locations");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await imageFile.CopyToAsync(stream);
-                        }
-
-                        existingLocation.ImageUrl = "/uploads/locations/" + uniqueFileName;
                     }
 
-                
-
-                    // Cập nhật database
                     _context.Update(existingLocation);
                     await _context.SaveChangesAsync();
 
@@ -282,10 +253,8 @@ namespace PLTour.Admin.Controllers
                 }
             }
 
-            // Nếu có lỗi, hiển thị lại form
             ViewBag.Categories = await _context.Categories.ToListAsync();
 
-            // Log lỗi để debug
             var errors = ModelState.Values.SelectMany(v => v.Errors);
             foreach (var error in errors)
             {
@@ -305,7 +274,7 @@ namespace PLTour.Admin.Controllers
 
             var location = await _context.Locations
                 .Include(l => l.Category)
-                .Include(l => l.Narrations) // THÊM DÒNG NÀY
+                .Include(l => l.Narrations)
                     .ThenInclude(n => n.Language)
                 .FirstOrDefaultAsync(m => m.LocationId == id);
 
@@ -325,18 +294,7 @@ namespace PLTour.Admin.Controllers
             var location = await _context.Locations.FindAsync(id);
             if (location != null)
             {
-                // Xóa file ảnh và audio
-                if (!string.IsNullOrEmpty(location.ImageUrl))
-                {
-                    var imagePath = Path.Combine(_hostEnvironment.WebRootPath, location.ImageUrl.TrimStart('/'));
-                    if (System.IO.File.Exists(imagePath))
-                    {
-                        System.IO.File.Delete(imagePath);
-                    }
-                }
-
-              
-
+                // Chỉ xóa record trong DB, không xóa file vật lý (hoặc có thể xóa sau)
                 _context.Locations.Remove(location);
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Xóa địa điểm thành công!";

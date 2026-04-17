@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;
 
 namespace PLTour.Admin.Controllers
 {
@@ -12,11 +13,13 @@ namespace PLTour.Admin.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;
 
         public TourController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();
         }
 
         // GET: Tour
@@ -48,18 +51,21 @@ namespace PLTour.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Upload ảnh
+                // Upload ảnh qua API
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/tours");
-                    Directory.CreateDirectory(uploadsFolder);
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    using (var content = new MultipartFormDataContent())
                     {
-                        await imageFile.CopyToAsync(stream);
+                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
+
+                        var response = await _httpClient.PostAsync("...", content);
+                        var responseJson = await response.Content.ReadAsStringAsync();
+                        using (var doc = JsonDocument.Parse(responseJson))
+                        {
+                            var url = doc.RootElement.GetProperty("url").GetString();
+                            tour.ImageUrl = url;
+                        }
                     }
-                    tour.ImageUrl = "/uploads/tours/" + uniqueFileName;
                 }
 
                 tour.CreatedDate = DateTime.Now;
@@ -142,22 +148,21 @@ namespace PLTour.Admin.Controllers
             if (ModelState.IsValid)
             {
                 // Upload ảnh mới
+                // Upload ảnh qua API
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    if (!string.IsNullOrEmpty(existingTour.ImageUrl))
+                    using (var content = new MultipartFormDataContent())
                     {
-                        var oldPath = Path.Combine(_hostEnvironment.WebRootPath, existingTour.ImageUrl.TrimStart('/'));
-                        if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
+
+                        var response = await _httpClient.PostAsync("...", content);
+                        var responseJson = await response.Content.ReadAsStringAsync();
+                        using (var doc = JsonDocument.Parse(responseJson))
+                        {
+                            var url = doc.RootElement.GetProperty("url").GetString();
+                            existingTour.ImageUrl = url;
+                        }
                     }
-                    var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/tours");
-                    Directory.CreateDirectory(uploadsFolder);
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imageFile.CopyToAsync(stream);
-                    }
-                    existingTour.ImageUrl = "/uploads/tours/" + uniqueFileName;
                 }
 
                 existingTour.Name = tour.Name;

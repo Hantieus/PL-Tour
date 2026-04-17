@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -11,11 +12,13 @@ namespace PLTour.Vendor.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;
 
         public VendorProductController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();
         }
 
         private int GetVendorId()
@@ -41,36 +44,54 @@ namespace PLTour.Vendor.Controllers
             return View();
         }
 
+        // POST: VendorProduct/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Product product, IFormFile? imageFile)
         {
             var vendorId = GetVendorId();
+
+            // Xóa validation không cần thiết
+            ModelState.Remove("Vendor");
+            ModelState.Remove("Category");
+
             product.VendorId = vendorId;
 
             if (ModelState.IsValid)
             {
-                if (imageFile != null && imageFile.Length > 0)
+                try
                 {
-                    var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/products");
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    // Upload ảnh qua API
+                    if (imageFile != null && imageFile.Length > 0)
                     {
-                        await imageFile.CopyToAsync(stream);
-                    }
-                    product.ImageUrl = "/uploads/products/" + uniqueFileName;
-                }
+                        using (var content = new MultipartFormDataContent())
+                        {
+                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                product.CreatedDate = DateTime.Now;
-                _context.Products.Add(product);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Thêm món ăn thành công!";
-                return RedirectToAction(nameof(Index));
+                            var response = await _httpClient.PostAsync("...", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+                            using (var doc = JsonDocument.Parse(responseJson))
+                            {
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                product.ImageUrl = url;
+                            }
+                        }
+                    }
+
+                    product.CreatedDate = DateTime.Now;
+                    _context.Products.Add(product);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Thêm món ăn thành công!";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", "Lỗi: " + ex.Message);
+                }
             }
+
+            // Nếu có lỗi, trả về form
             return View(product);
         }
 
@@ -98,19 +119,21 @@ namespace PLTour.Vendor.Controllers
 
             if (ModelState.IsValid)
             {
+                // Upload ảnh qua API
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/products");
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    using (var content = new MultipartFormDataContent())
                     {
-                        await imageFile.CopyToAsync(stream);
+                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
+
+                        var response = await _httpClient.PostAsync("...", content);
+                        var responseJson = await response.Content.ReadAsStringAsync();
+                        using (var doc = JsonDocument.Parse(responseJson))
+                        {
+                            var url = doc.RootElement.GetProperty("url").GetString();
+                            existingProduct.ImageUrl = url;
+                        }
                     }
-                    existingProduct.ImageUrl = "/uploads/products/" + uniqueFileName;
                 }
 
                 existingProduct.Name = product.Name;

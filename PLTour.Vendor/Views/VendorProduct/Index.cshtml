@@ -1,18 +1,19 @@
-@model IEnumerable<PLTour.Shared.Models.Entities.Product>
-    @{
-    ViewData["Title"] = "Qu?n l� m�n ?n";
+﻿@model IEnumerable<PLTour.Shared.Models.Entities.Product>
+
+@{
+    ViewData["Title"] = "Quản lý món ăn";
     Layout = "_VendorLayout";
-    }
+}
 
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="h3">@ViewData["Title"]</h1>
-            <a href="/vendor/products/create" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-1"></i>Th�m m�n ?n
-            </a>
-        </div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <a asp-controller="VendorProduct" asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-1"></i>Thêm món ăn
+        </a>
+    </div>
 
-        @if (TempData["SuccessMessage"] != null)
+    @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show">
             <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
@@ -20,50 +21,50 @@
         </div>
     }
 
-        @if (Model.Any())
+    @if (Model.Any())
     {
         <div class="row">
             @foreach (var item in Model)
             {
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        @if (!string.IsNullOrEmpty(item.ImageUrl))
                         {
-                    <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 180px; object-fit: cover;" />
+                            <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 180px; object-fit: cover;" />
                         }
                         else
                         {
-                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 180px;">
-                        <i class="fas fa-utensils fa-3x"></i>
-                    </div>
+                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 180px;">
+                                <i class="fas fa-utensils fa-3x"></i>
+                            </div>
                         }
-                    <div class="card-body">
-                        <h5 class="card-title">@item.Name</h5>
-                        <p class="card-text text-muted small">@(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-primary fs-6">@item.Price.ToString("N0") ?</span>
-                            @if (item.IsAvailable)
+                        <div class="card-body">
+                            <h5 class="card-title">@item.Name</h5>
+                            <p class="card-text text-muted small">@(item.Description?.Length > 100 ? item.Description.Substring(0, 100) + "..." : item.Description)</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-primary fs-6">@item.Price.ToString("N0") đ</span>
+                                @if (item.IsAvailable)
                                 {
-                            <span class="badge bg-success">C�n h�ng</span>
+                                    <span class="badge bg-success">Còn hàng</span>
                                 }
                                 else
                                 {
-                            <span class="badge bg-secondary">H?t h�ng</span>
+                                    <span class="badge bg-secondary">Hết hàng</span>
                                 }
+                            </div>
                         </div>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="btn-group w-100">
-                            <a href="/vendor/products/edit/@item.ProductId" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i> S?a
-                            </a>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.ProductId, '@item.Name')">
-                                <i class="fas fa-trash"></i> X�a
-                            </button>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <a asp-controller="VendorProduct" asp-action="Edit" asp-route-id="@item.ProductId" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Sửa
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.ProductId, '@item.Name')">
+                                    <i class="fas fa-trash"></i> Xóa
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             }
         </div>
     }
@@ -71,26 +72,26 @@
     {
         <div class="text-center py-5">
             <i class="fas fa-utensils fa-4x text-muted mb-3"></i>
-            <h5 class="text-muted">Ch?a c� m�n ?n n�o</h5>
-            <p>H�y th�m m�n ?n ??u ti�n ?? gi?i thi?u ??n kh�ch h�ng</p>
-            <a href="/vendor/products/create" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-1"></i>Th�m m�n ?n
+            <h5 class="text-muted">Chưa có món ăn nào</h5>
+            <p>Hãy thêm món ăn đầu tiên để giới thiệu đến khách hàng</p>
+            <a asp-controller="VendorProduct" asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i>Thêm món ăn
             </a>
         </div>
     }
-    </div>
+</div>
 
-    <form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
-        <input type="hidden" name="id" id="deleteId" />
-    </form>
+<form id="deleteForm" asp-action="Delete" asp-controller="VendorProduct" method="post" style="display:none;">
+    <input type="hidden" name="id" id="deleteId" />
+</form>
 
-    @section Scripts {
-        <script>
+@section Scripts {
+    <script>
         function confirmDelete(id, name) {
-            if (confirm(`B?n c� ch?c mu?n x�a m�n "${name}"?`)) {
+            if (confirm(`Bạn có chắc muốn xóa món "${name}"?`)) {
                 document.getElementById('deleteId').value = id;
                 document.getElementById('deleteForm').submit();
             }
         }
-        </script>
-    }
+    </script>
+}

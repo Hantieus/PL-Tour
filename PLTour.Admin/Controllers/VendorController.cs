@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;
 
 namespace PLTour.Admin.Controllers
 {
@@ -10,10 +11,12 @@ namespace PLTour.Admin.Controllers
     public class VendorController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly HttpClient _httpClient;
 
         public VendorController(PLTourDbContext context)
         {
             _context = context;
+            _httpClient = new HttpClient();
         }
 
         // GET: Vendor
@@ -120,15 +123,21 @@ namespace PLTour.Admin.Controllers
             if (vendor == null) return NotFound();
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
+            ViewBag.CurrentLogo = vendor.LogoUrl; // Thêm dòng này để hiển thị logo cũ
             return View(vendor);
         }
 
         // POST: Vendor/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Vendor vendor)
+        public async Task<IActionResult> Edit(int id, [Bind("VendorId,ShopName,OwnerName,Email,Phone,Address,CategoryId,Description,Status,IsActive,Latitude,Longitude")] Vendor vendor, IFormFile? logoFile)
         {
             if (id != vendor.VendorId) return NotFound();
+
+            // Xóa validation không cần thiết
+            ModelState.Remove("Category");
+            ModelState.Remove("Products");
+            ModelState.Remove("PasswordHash");
 
             if (ModelState.IsValid)
             {
@@ -137,6 +146,26 @@ namespace PLTour.Admin.Controllers
                     var existingVendor = await _context.Vendors.FindAsync(id);
                     if (existingVendor == null) return NotFound();
 
+                    // Xử lý upload logo mới qua API
+                    if (logoFile != null && logoFile.Length > 0)
+                    {
+                        using (var client = new HttpClient())
+                        using (var content = new MultipartFormDataContent())
+                        {
+                            content.Add(new StreamContent(logoFile.OpenReadStream()), "file", logoFile.FileName);
+
+                            var response = await client.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+
+                            using (var doc = JsonDocument.Parse(responseJson))
+                            {
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                existingVendor.LogoUrl = url;
+                            }
+                        }
+                    }
+
+                    // Cập nhật các trường
                     existingVendor.ShopName = vendor.ShopName;
                     existingVendor.OwnerName = vendor.OwnerName;
                     existingVendor.Email = vendor.Email;
@@ -146,18 +175,18 @@ namespace PLTour.Admin.Controllers
                     existingVendor.Description = vendor.Description;
                     existingVendor.Status = vendor.Status;
                     existingVendor.IsActive = vendor.IsActive;
+                    existingVendor.Latitude = vendor.Latitude;
+                    existingVendor.Longitude = vendor.Longitude;
                     existingVendor.UpdatedDate = DateTime.Now;
 
-                    _context.Update(existingVendor);
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Cập nhật vendor thành công!";
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (Exception ex)
                 {
-                    if (!VendorExists(vendor.VendorId)) return NotFound();
-                    else throw;
+                    ModelState.AddModelError("", "Lỗi: " + ex.Message);
                 }
-                return RedirectToAction(nameof(Index));
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();

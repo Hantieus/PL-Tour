@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;
 
 namespace PLTour.Admin.Controllers
 {
@@ -14,11 +15,13 @@ namespace PLTour.Admin.Controllers
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly ILogger<NarrationController> _logger;
+        private readonly HttpClient _httpClient;
         public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ILogger<NarrationController> logger)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
             _logger = logger;
+            _httpClient = new HttpClient();
         }
 
         // GET: Narration
@@ -125,21 +128,22 @@ namespace PLTour.Admin.Controllers
                         return View(narration);
                     }
 
-                    // Handle audio upload
+                    // Handle audio upload qua API
                     if (audioFile != null && audioFile.Length > 0)
                     {
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/audio");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(audioFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        using (var content = new MultipartFormDataContent())
                         {
-                            await audioFile.CopyToAsync(stream);
-                        }
+                            content.Add(new StreamContent(audioFile.OpenReadStream()), "file", audioFile.FileName);
 
-                        narration.AudioUrl = "/uploads/audio/" + uniqueFileName;
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/audio?folder=audio", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+
+                            using (var doc = JsonDocument.Parse(responseJson))
+                            {
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                narration.AudioUrl = url;
+                            }
+                        }
                     }
 
                     // Handle default language
@@ -229,30 +233,22 @@ namespace PLTour.Admin.Controllers
                         existingNarration.AudioUrl = null;
                     }
 
-                    // Handle new audio upload
+                    // Handle audio upload qua API
                     if (audioFile != null && audioFile.Length > 0)
                     {
-                        if (!string.IsNullOrEmpty(existingNarration.AudioUrl))
+                        using (var content = new MultipartFormDataContent())
                         {
-                            var oldAudioPath = Path.Combine(_hostEnvironment.WebRootPath, existingNarration.AudioUrl.TrimStart('/'));
-                            if (System.IO.File.Exists(oldAudioPath))
+                            content.Add(new StreamContent(audioFile.OpenReadStream()), "file", audioFile.FileName);
+
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/audio?folder=audio", content);
+                            var responseJson = await response.Content.ReadAsStringAsync();
+
+                            using (var doc = JsonDocument.Parse(responseJson))
                             {
-                                System.IO.File.Delete(oldAudioPath);
+                                var url = doc.RootElement.GetProperty("url").GetString();
+                                existingNarration.AudioUrl = url;
                             }
                         }
-
-                        var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/audio");
-                        Directory.CreateDirectory(uploadsFolder);
-
-                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(audioFile.FileName);
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await audioFile.CopyToAsync(stream);
-                        }
-
-                        existingNarration.AudioUrl = "/uploads/audio/" + uniqueFileName;
                     }
 
                     // Handle default language

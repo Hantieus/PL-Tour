@@ -88,7 +88,6 @@
                     <tbody>
                         @if (Model.Any())
                         {
-                            int index = (ViewBag.CurrentPage - 1) * 10 + 1;
                             foreach (var item in Model)
                             {
                                 <tr>
@@ -135,7 +134,6 @@
                                         </div>
                                     </td>
                                 </tr>
-                                index++;
                             }
                         }
                         else
@@ -151,13 +149,18 @@
     </div>
 </div>
 
+<!-- Form xóa ẩn -->
+<form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
 @section Scripts {
     <script>
         function confirmDelete(id, name) {
             if (confirm(`Bạn có chắc muốn xóa cửa hàng "${name}"?`)) {
-                $.post('@Url.Action("Delete", "Vendor")', { id: id }, function() {
-                    location.reload();
-                });
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
             }
         }
     </script>
