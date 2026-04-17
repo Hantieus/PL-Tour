@@ -4,7 +4,6 @@ using PLTour.Shared.Models.DTO;
 using Mapsui.Styles;
 using MapsuiColor = Mapsui.Styles.Color;
 using Microsoft.Maui.Storage;
-using Microsoft.Maui.Devices;
 
 namespace PLTour.App.Services;
 
@@ -12,32 +11,12 @@ public class ApiService
 {
     private readonly HttpClient _httpClient;
 
+    // Base URL của Backend (Server)
+    private readonly string _baseUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
+
     public ApiService()
     {
-        string httpPort = "5229";
-        string apiUrl = "";
-
-        // CHIẾN THUẬT: SỬ DỤNG LOCALHOST CHO TẤT CẢ (KẾT HỢP ADB REVERSE)
-        if (DeviceInfo.Platform == DevicePlatform.Android)
-        {
-            // Nếu là máy ảo: Dùng 10.0.2.2 (vốn trỏ về localhost của máy tính)
-            if (DeviceInfo.DeviceType == DeviceType.Virtual)
-            {
-                apiUrl = $"http://10.0.2.2:{httpPort}/";
-            }
-            // Nếu là điện thoại thật: Dùng localhost (kết hợp với lệnh adb reverse tcp:5229 tcp:5229)
-            else
-            {
-                apiUrl = $"http://localhost:{httpPort}/";
-            }
-        }
-        else
-        {
-            // Chạy trực tiếp trên Windows
-            apiUrl = $"http://localhost:{httpPort}/";
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {apiUrl}");
+        System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {_baseUrl}");
 
         var handler = new HttpClientHandler
         {
@@ -46,7 +25,7 @@ public class ApiService
 
         _httpClient = new HttpClient(handler)
         {
-            BaseAddress = new Uri(apiUrl),
+            BaseAddress = new Uri(_baseUrl),
             Timeout = TimeSpan.FromSeconds(15)
         };
     }
@@ -67,7 +46,8 @@ public class ApiService
                     Name = dto.Name,
                     Duration = dto.Duration,
                     IntroText = dto.IntroText,
-                    ImageUrl = dto.ImageUrl ?? "tour_thumb.jpg",
+                    // Sử dụng hàm xử lý ảnh dùng chung
+                    ImageUrl = FormatImageUrl(dto.ImageUrl),
                     Pois = dto.Locations.Select(loc => MapToPoiModel(loc)).ToList()
                 };
 
@@ -91,11 +71,8 @@ public class ApiService
     {
         try
         {
-            // Gọi endpoint lấy toàn bộ POI
             var locDtos = await _httpClient.GetFromJsonAsync<List<PLTour.Shared.Models.DTO.LocationDto>>("api/Locations");
-
-            if (locDtos == null || !locDtos.Any())
-                return new List<PoiModel>();
+            if (locDtos == null || !locDtos.Any()) return new List<PoiModel>();
 
             return locDtos.Select(loc => MapToPoiModel(loc)).ToList();
         }
@@ -106,20 +83,58 @@ public class ApiService
         }
     }
 
+    public async Task<string> GetAudioLinkAsync(string text, string langCode, int narrationId)
+    {
+        try
+        {
+            string url = $"api/Audio/generate?text={Uri.EscapeDataString(text)}&langCode={langCode}&narrationId={narrationId}";
+            var response = await _httpClient.GetFromJsonAsync<AudioResponseDto>(url);
+            return response?.Url;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] Lỗi gọi API tạo Audio: {ex.Message}");
+            return null;
+        }
+    }
+
+    // --- Hàm bổ trợ để Map dữ liệu ---
     private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
     {
         string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
+
         var narration = loc.Narrations?.FirstOrDefault(n => n.LanguageCode == selectedLangCode)
-                        ?? loc.Narrations?.FirstOrDefault(n => n.IsDefault)
+                        ?? loc.Narrations?.FirstOrDefault(n => n.LanguageId == 1)
                         ?? loc.Narrations?.FirstOrDefault();
+
+        string poiImageUrl = "tour_thumb.jpg";
+        if (!string.IsNullOrEmpty(loc.ImageUrl))
+        {
+            if (loc.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                poiImageUrl = loc.ImageUrl;
+            }
+            else
+            {
+                // Tối ưu việc nối chuỗi để tránh lỗi //
+                var cleanPath = loc.ImageUrl.Replace("\\", "/").TrimStart('/');
+                poiImageUrl = $"{_baseUrl.TrimEnd('/')}/{cleanPath}";
+            }
+        }
+
+        // LOG để kiểm tra link cuối cùng có chạy được không
+        System.Diagnostics.Debug.WriteLine($"[DEBUG_IMAGE] Link ảnh cuối cùng: {poiImageUrl}");
 
         return new PoiModel
         {
             Id = loc.LocationId,
-            ImageUrl = string.IsNullOrEmpty(loc.ImageUrl) ? "tour_thumb.jpg" : loc.ImageUrl,
+            ImageUrl = poiImageUrl,
+            NarrationId = narration?.NarrationId ?? 0,
             AudioUrl = narration?.AudioUrl,
             FullContent = narration?.Content,
-            LanguageName = narration?.LanguageName ?? "Chưa xác định",
+            LanguageName = narration?.LanguageName ?? "Tiếng Việt",
+            LanguageId = narration?.LanguageId ?? 1,
+            LanguageCode = narration?.LanguageCode ?? "vi",
             Name = loc.Name,
             Lat = loc.Latitude,
             Lng = loc.Longitude,
@@ -131,12 +146,28 @@ public class ApiService
         };
     }
 
+    /// <summary>
+    /// Hàm xử lý logic nối chuỗi URL hình ảnh
+    /// </summary>
+    private string FormatImageUrl(string rawUrl)
+    {
+        if (string.IsNullOrEmpty(rawUrl))
+            return "tour_thumb.jpg"; // Ảnh fallback nếu data trống
+
+        if (rawUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return rawUrl;
+
+        // Xử lý trường hợp DB trả về "/uploads/locations/..."
+        // Đảm bảo không bị dư dấu "/" khi nối với _baseUrl
+        return $"{_baseUrl.TrimEnd('/')}/{rawUrl.TrimStart('/')}";
+    }
+
     private string MapCategoryName(int categoryId) => categoryId switch
     {
-        1 => PoiCategories.ThamQuan,
-        2 => PoiCategories.AnUong,
-        3 => PoiCategories.SuKien,
-        _ => PoiCategories.ThamQuan
+        1 => "Tham quan",
+        2 => "Ăn uống",
+        3 => "Sự kiện",
+        _ => "Tham quan"
     };
 
     private MapsuiColor GetPinColor(int categoryId) => categoryId switch
@@ -146,4 +177,9 @@ public class ApiService
         3 => MapsuiColor.Purple,
         _ => MapsuiColor.Blue
     };
+}
+
+public class AudioResponseDto
+{
+    public string Url { get; set; }
 }

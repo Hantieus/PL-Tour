@@ -7,8 +7,8 @@ namespace PLTour.App.Models;
 // Quy định sẵn các danh mục chuẩn để lọc dữ liệu trên bản đồ
 public static class PoiCategories
 {
-    public const string ThamQuan = "Tham quan";
-    public const string AnUong = "Ăn uống";
+    public const string ThamQuan = "Điểm tham quan";
+    public const string AnUong = "Địa điểm ăn uống";
     public const string SuKien = "Sự kiện";
 }
 
@@ -26,9 +26,14 @@ public class PoiModel : INotifyPropertyChanged
     public MapsuiColor PinColor { get; set; }
 
     // --- DỮ LIỆU THUYẾT MINH (Lọc từ NarrationDto theo Ngôn ngữ) ---
+    public int NarrationId { get; set; }
     public string AudioUrl { get; set; }    // Link MP3 từ Admin (Ưu tiên 1)
     public string FullContent { get; set; }  // Nội dung chi tiết để đọc TTS (Ưu tiên 2)
     public string LanguageName { get; set; } // Tên ngôn ngữ đang dùng (Ví dụ: Tiếng Việt)
+
+    // THÊM MỚI: Lấy thêm ID và Code của ngôn ngữ
+    public int LanguageId { get; set; }
+    public string LanguageCode { get; set; }
 
     // 2. --- LOGIC XỬ LÝ KHOẢNG CÁCH (Tự động cập nhật giao diện) ---
     private double _distanceMeters;
