@@ -58,7 +58,7 @@ namespace PLTour.Admin.Controllers
                     {
                         content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                        var response = await _httpClient.PostAsync("...", content);
+                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=tours", content);
                         var responseJson = await response.Content.ReadAsStringAsync();
                         using (var doc = JsonDocument.Parse(responseJson))
                         {
@@ -68,7 +68,7 @@ namespace PLTour.Admin.Controllers
                     }
                 }
 
-                tour.CreatedDate = DateTime.Now;
+                tour.CreatedDate = DateTime.UtcNow;
                 _context.Tours.Add(tour);
                 await _context.SaveChangesAsync();
 
@@ -155,7 +155,7 @@ namespace PLTour.Admin.Controllers
                     {
                         content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                        var response = await _httpClient.PostAsync("...", content);
+                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=tours", content);
                         var responseJson = await response.Content.ReadAsStringAsync();
                         using (var doc = JsonDocument.Parse(responseJson))
                         {
@@ -169,7 +169,7 @@ namespace PLTour.Admin.Controllers
                 existingTour.Duration = tour.Duration;
                 existingTour.IntroText = tour.IntroText;
                 existingTour.IsActive = tour.IsActive;
-                existingTour.UpdatedDate = DateTime.Now;
+                existingTour.UpdatedDate = DateTime.UtcNow;
 
                 // Cập nhật danh sách địa điểm
                 _context.TourLocations.RemoveRange(existingTour.TourLocations);

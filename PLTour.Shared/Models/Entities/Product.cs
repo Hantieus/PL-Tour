@@ -32,7 +32,7 @@ public class Product
 
     public int StockQuantity { get; set; } = 0;
 
-    public DateTime CreatedDate { get; set; } = DateTime.Now;
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedDate { get; set; }
 

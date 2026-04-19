@@ -101,7 +101,7 @@ namespace PLTour.Admin.Controllers
                             content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
                             // Trong các controller, chỉ lấy url, không lấy fullUrl
-                            var response = await _httpClient.PostAsync("...", content);
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=locations", content);
                             var responseJson = await response.Content.ReadAsStringAsync();
                             using (var doc = JsonDocument.Parse(responseJson))
                             {
@@ -111,7 +111,7 @@ namespace PLTour.Admin.Controllers
                         }
                     }
 
-                    location.CreatedDate = DateTime.Now;
+                    location.CreatedDate = DateTime.UtcNow;
                     location.Radius = location.Radius > 0 ? location.Radius : 50;
                     _context.Add(location);
                     await _context.SaveChangesAsync();
@@ -200,7 +200,7 @@ namespace PLTour.Admin.Controllers
                     existingLocation.CategoryId = location.CategoryId;
                     existingLocation.OrderIndex = location.OrderIndex;
                     existingLocation.IsActive = location.IsActive;
-                    existingLocation.UpdatedDate = DateTime.Now;
+                    existingLocation.UpdatedDate = DateTime.UtcNow;
                     existingLocation.Radius = location.Radius;
 
                     // ✅ SỬA: Upload ảnh mới qua API
@@ -220,7 +220,7 @@ namespace PLTour.Admin.Controllers
                         {
                             content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                            var response = await _httpClient.PostAsync("...", content);
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=locations", content);
                             var responseJson = await response.Content.ReadAsStringAsync();
                             using (var doc = JsonDocument.Parse(responseJson))
                             {

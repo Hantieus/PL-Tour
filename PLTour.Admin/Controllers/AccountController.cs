@@ -80,7 +80,7 @@ namespace PLTour.Admin.Controllers
                 authProperties);
 
             // Cập nhật thời gian đăng nhập cuối
-            user.LastLoginDate = DateTime.Now;
+            user.LastLoginDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return RedirectToAction("Index", "Dashboard");

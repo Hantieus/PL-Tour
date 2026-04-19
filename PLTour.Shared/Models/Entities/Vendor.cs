@@ -48,7 +48,7 @@ public class Vendor
 
     public bool IsActive { get; set; } = false;
 
-    public DateTime CreatedDate { get; set; } = DateTime.Now;
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime? ApprovedDate { get; set; }
 

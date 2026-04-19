@@ -68,7 +68,7 @@ namespace PLTour.Vendor.Controllers
                         {
                             content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                            var response = await _httpClient.PostAsync("...", content);
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=products", content);
                             var responseJson = await response.Content.ReadAsStringAsync();
                             using (var doc = JsonDocument.Parse(responseJson))
                             {
@@ -78,7 +78,7 @@ namespace PLTour.Vendor.Controllers
                         }
                     }
 
-                    product.CreatedDate = DateTime.Now;
+                    product.CreatedDate = DateTime.UtcNow;
                     _context.Products.Add(product);
                     await _context.SaveChangesAsync();
 
@@ -126,7 +126,7 @@ namespace PLTour.Vendor.Controllers
                     {
                         content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                        var response = await _httpClient.PostAsync("...", content);
+                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=products", content);
                         var responseJson = await response.Content.ReadAsStringAsync();
                         using (var doc = JsonDocument.Parse(responseJson))
                         {
@@ -141,7 +141,7 @@ namespace PLTour.Vendor.Controllers
                 existingProduct.Price = product.Price;
                 existingProduct.IsAvailable = product.IsAvailable;
                 existingProduct.StockQuantity = product.StockQuantity;
-                existingProduct.UpdatedDate = DateTime.Now;
+                existingProduct.UpdatedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Cập nhật món ăn thành công!";

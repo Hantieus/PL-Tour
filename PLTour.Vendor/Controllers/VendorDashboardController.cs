@@ -72,7 +72,7 @@ namespace PLTour.Vendor.Controllers
                 {
                     content.Add(new StreamContent(logoFile.OpenReadStream()), "file", logoFile.FileName);
 
-                    var response = await _httpClient.PostAsync("...", content);
+                    var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
                     var responseJson = await response.Content.ReadAsStringAsync();
                     using (var doc = JsonDocument.Parse(responseJson))
                     {
@@ -87,7 +87,7 @@ namespace PLTour.Vendor.Controllers
             existingVendor.Phone = vendor.Phone;
             existingVendor.Latitude = vendor.Latitude;
             existingVendor.Longitude = vendor.Longitude;
-            existingVendor.UpdatedDate = DateTime.Now;
+            existingVendor.UpdatedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Cập nhật thông tin thành công!";
@@ -120,7 +120,7 @@ namespace PLTour.Vendor.Controllers
             }
 
             vendor.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
-            vendor.UpdatedDate = DateTime.Now;
+            vendor.UpdatedDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";

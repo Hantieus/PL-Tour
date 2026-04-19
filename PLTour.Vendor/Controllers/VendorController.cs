@@ -96,7 +96,7 @@ namespace PLTour.Vendor.Controllers
 
             if (status == "Approved")
             {
-                vendor.ApprovedDate = DateTime.Now;
+                vendor.ApprovedDate = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync();
@@ -130,7 +130,7 @@ namespace PLTour.Vendor.Controllers
             {
                 try
                 {
-                    vendor.UpdatedDate = DateTime.Now;
+                    vendor.UpdatedDate = DateTime.UtcNow;
                     _context.Update(vendor);
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Cập nhật vendor thành công!";

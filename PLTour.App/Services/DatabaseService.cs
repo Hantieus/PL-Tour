@@ -23,7 +23,7 @@ public class DatabaseService
             Name = name,
             Lat = lat,
             Lng = lng,
-            Time = DateTime.Now
+            Time = DateTime.UtcNow
         };
         await _db.InsertAsync(history);
     }

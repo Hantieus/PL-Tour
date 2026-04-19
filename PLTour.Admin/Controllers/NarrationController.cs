@@ -158,7 +158,7 @@ namespace PLTour.Admin.Controllers
                         }
                     }
 
-                    narration.CreatedDate = DateTime.Now;
+                    narration.CreatedDate = DateTime.UtcNow;
                     narration.Version = 1;
 
                     _context.Add(narration);
@@ -271,7 +271,7 @@ namespace PLTour.Admin.Controllers
                     existingNarration.Duration = narration.Duration;
                     existingNarration.IsDefault = narration.IsDefault;
                     existingNarration.IsActive = narration.IsActive;
-                    existingNarration.UpdatedDate = DateTime.Now;
+                    existingNarration.UpdatedDate = DateTime.UtcNow;
 
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Cập nhật bài thuyết minh thành công!";
@@ -389,7 +389,7 @@ namespace PLTour.Admin.Controllers
                             IsDefault = false,
                             IsActive = true,
                             Version = 1,
-                            CreatedDate = DateTime.Now
+                            CreatedDate = DateTime.UtcNow
                         };
                         _context.Narrations.Add(newNarration);
                         createdCount++;
@@ -399,7 +399,7 @@ namespace PLTour.Admin.Controllers
                         // Cập nhật cả tiêu đề và nội dung
                         existing.Title = translatedTitle;
                         existing.Content = translatedContent;
-                        existing.UpdatedDate = DateTime.Now;
+                        existing.UpdatedDate = DateTime.UtcNow;
                         updatedCount++;
                     }
                 }

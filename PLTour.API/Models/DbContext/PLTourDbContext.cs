@@ -52,7 +52,7 @@ namespace PLTour.API.Models.DbContext
             modelBuilder.Entity<Narration>()
                 .HasIndex(n => new { n.LocationId, n.IsDefault })
                 .IsUnique()
-                .HasFilter("IsDefault = 1");
+                .HasFilter("\"IsDefault\" = true");
 
             // 3. Seed dữ liệu Category
             modelBuilder.Entity<Category>().HasData(
@@ -73,7 +73,7 @@ namespace PLTour.API.Models.DbContext
                     Phone = "0123456789",
                     Role = "Admin",
                     IsActive = true,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = DateTime.UtcNow
                 }
             );
 

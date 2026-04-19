@@ -61,7 +61,7 @@ namespace PLTour.Vendor.Controllers
                         {
                             content.Add(new StreamContent(model.LogoFile.OpenReadStream()), "file", model.LogoFile.FileName);
 
-                            var response = await _httpClient.PostAsync("...", content);
+                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
                             var responseJson = await response.Content.ReadAsStringAsync();
                             using (var doc = JsonDocument.Parse(responseJson))
                             {
@@ -87,7 +87,7 @@ namespace PLTour.Vendor.Controllers
                         Notes = "",
                         Status = "Pending",
                         IsActive = false,
-                        CreatedDate = DateTime.Now
+                        CreatedDate = DateTime.UtcNow
                     };
 
                     _context.Vendors.Add(vendor);

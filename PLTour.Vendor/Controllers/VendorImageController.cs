@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
+using System.Text.Json;  // ✅ THÊM DÒNG NÀY
 
 namespace PLTour.Vendor.Controllers
 {
@@ -11,11 +12,14 @@ namespace PLTour.Vendor.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly HttpClient _httpClient;  // ✅ THÊM DÒNG NÀY
 
         public VendorImageController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
+            _httpClient = new HttpClient();  // ✅ THÊM DÒNG NÀY
+            _httpClient.BaseAddress = new Uri("https://localhost:7291");  // ✅ THÊM DÒNG NÀY
         }
 
         private int GetVendorId()
@@ -34,7 +38,7 @@ namespace PLTour.Vendor.Controllers
             return View(images);
         }
 
-        // Thêm ảnh
+        // Thêm ảnh - ĐÃ SỬA UPLOAD QUA API
         [HttpPost]
         public async Task<IActionResult> AddImage(IFormFile imageFile, string title, string imageType)
         {
@@ -45,25 +49,30 @@ namespace PLTour.Vendor.Controllers
             }
 
             var vendorId = GetVendorId();
-            var uploadsFolder = Path.Combine(_hostEnvironment.WebRootPath, "uploads/vendor-galleries");
-            Directory.CreateDirectory(uploadsFolder);
+            string imageUrl = "";
 
-            var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(imageFile.FileName);
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            // ✅ SỬA: Upload ảnh qua API
+            using (var content = new MultipartFormDataContent())
             {
-                await imageFile.CopyToAsync(stream);
+                content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
+
+                var response = await _httpClient.PostAsync("/api/upload/image?folder=vendor-galleries", content);
+                var responseJson = await response.Content.ReadAsStringAsync();
+
+                using (var doc = JsonDocument.Parse(responseJson))
+                {
+                    imageUrl = doc.RootElement.GetProperty("url").GetString();
+                }
             }
 
             var vendorImage = new VendorImage
             {
                 VendorId = vendorId,
-                ImageUrl = "/uploads/vendor-galleries/" + uniqueFileName,
+                ImageUrl = imageUrl,  // ✅ Dùng URL từ API
                 Title = title,
                 ImageType = imageType,
                 DisplayOrder = await _context.VendorImages.CountAsync(i => i.VendorId == vendorId),
-                CreatedDate = DateTime.Now
+                CreatedDate = DateTime.UtcNow
             };
 
             _context.VendorImages.Add(vendorImage);

@@ -99,11 +99,11 @@ namespace PLTour.Admin.Controllers
             vendor.Status = status;
             vendor.Notes = notes ?? "";
             vendor.IsActive = (status == "Approved");
-            vendor.UpdatedDate = DateTime.Now;
+            vendor.UpdatedDate = DateTime.UtcNow;
 
             if (status == "Approved")
             {
-                vendor.ApprovedDate = DateTime.Now;
+                vendor.ApprovedDate = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync();
@@ -177,7 +177,7 @@ namespace PLTour.Admin.Controllers
                     existingVendor.IsActive = vendor.IsActive;
                     existingVendor.Latitude = vendor.Latitude;
                     existingVendor.Longitude = vendor.Longitude;
-                    existingVendor.UpdatedDate = DateTime.Now;
+                    existingVendor.UpdatedDate = DateTime.UtcNow;
 
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Cập nhật vendor thành công!";
