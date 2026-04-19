@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="PLTour.App.Pages.TourDetailPage"
              Title="Chi tiết Tour"
              Shell.NavBarIsVisible="False">
 
     <Grid x:Name="MainGrid" RowDefinitions="4*, 6*">
+
+        <toolkit:MediaElement x:Name="MainAudioPlayer" IsVisible="False" />
 
         <Grid x:Name="MapSection" Grid.Row="0" ZIndex="1">
             <Grid x:Name="MapContainer" BackgroundColor="#E0E0E0" />
@@ -19,8 +22,8 @@
                     FontAttributes="Bold" Clicked="ToggleMapSize_Clicked" ZIndex="10" />
 
             <Button Text="🎯" HorizontalOptions="End" VerticalOptions="End" Margin="0,0,30,20"
-WidthRequest="55" HeightRequest="55" CornerRadius="27" BackgroundColor="White" TextColor="#2A9D8F" 
-FontSize="22" Clicked="CurrentLocation_Clicked" ZIndex="10">
+                    WidthRequest="55" HeightRequest="55" CornerRadius="27" BackgroundColor="White" TextColor="#2A9D8F" 
+                    FontSize="22" Clicked="CurrentLocation_Clicked" ZIndex="10">
                 <Button.Shadow>
                     <Shadow Brush="Black" Opacity="0.4" Offset="0,3" Radius="5"/>
                 </Button.Shadow>
@@ -54,19 +57,22 @@ FontSize="22" Clicked="CurrentLocation_Clicked" ZIndex="10">
                                     </Grid>
 
                                     <Label Text="{Binding Category}" FontSize="11" TextColor="#2A9D8F" FontAttributes="Italic"/>
+
                                     <Label Text="{Binding Description}" FontSize="13" TextColor="Gray" MaxLines="2" LineBreakMode="TailTruncation"/>
 
                                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,5,0,0">
                                         <Button Grid.Column="0" Text="📍 Map" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
                                                 BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnViewMap_Clicked" />
+
                                         <Button Grid.Column="1" 
-        Text="{Binding PlayButtonText}" 
-        BackgroundColor="{Binding PlayButtonColor}" 
-        Clicked="BtnSpeakPoi_Clicked" 
-        CommandParameter="{Binding .}" 
-        HeightRequest="35" 
-        TextColor="Black" 
-        FontSize="11" />
+                                                Text="{Binding PlayButtonText}" 
+                                                BackgroundColor="{Binding PlayButtonColor}" 
+                                                Clicked="BtnSpeakPoi_Clicked" 
+                                                CommandParameter="{Binding .}" 
+                                                HeightRequest="35" 
+                                                TextColor="Black" 
+                                                FontSize="11" />
+
                                         <Button Grid.Column="2" Text="🧭 Đi" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
                                                 BackgroundColor="#007BFF" TextColor="White" CommandParameter="{Binding .}" Clicked="BtnRoute_Clicked" />
                                     </Grid>

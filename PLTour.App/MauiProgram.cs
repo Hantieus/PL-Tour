@@ -43,6 +43,7 @@ namespace PLTour.App
             builder.Services.AddTransient<LoadingPage>();
             builder.Services.AddTransient<HomePage>();
             builder.Services.AddTransient<MapPage>();
+            builder.Services.AddTransient<TourDetailPage>();
 
             return builder.Build();
         }

@@ -46,12 +46,11 @@
 
         <Border x:Name="InfoPanel" Grid.Row="2" StrokeThickness="0" StrokeShape="RoundRectangle 25,25,0,0" BackgroundColor="#F8F9FA" ZIndex="2">
             <Grid RowDefinitions="Auto, *" Padding="15">
-                <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*" ColumnSpacing="5" Margin="0,0,0,15">
-                    <Button x:Name="TabTatCa" Grid.Column="0" Text="Tất cả" FontAttributes="Bold" CornerRadius="10" FontSize="12" BackgroundColor="#2A9D8F" TextColor="White" Clicked="Tab_Clicked" CommandParameter="Tất cả" />
-                    <Button x:Name="TabThamQuan" Grid.Column="1" Text="Tham quan" FontAttributes="Bold" CornerRadius="10" FontSize="11" BackgroundColor="#D3D3D3" TextColor="DimGray" Clicked="Tab_Clicked" CommandParameter="Tham quan" />
-                    <Button x:Name="TabAnUong" Grid.Column="2" Text="Ăn uống" FontAttributes="Bold" CornerRadius="10" FontSize="11" BackgroundColor="#D3D3D3" TextColor="DimGray" Clicked="Tab_Clicked" CommandParameter="Ăn uống" />
-                    <Button x:Name="TabSuKien" Grid.Column="3" Text="Sự kiện" FontAttributes="Bold" CornerRadius="10" FontSize="11" BackgroundColor="#D3D3D3" TextColor="DimGray" Clicked="Tab_Clicked" CommandParameter="Sự kiện" />
-                </Grid>
+
+                <ScrollView Grid.Row="0" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,0,15">
+                    <HorizontalStackLayout x:Name="CategoryTabsContainer" Spacing="8">
+                    </HorizontalStackLayout>
+                </ScrollView>
 
                 <CollectionView Grid.Row="1" x:Name="PoiListView" SelectionMode="None">
                     <CollectionView.ItemTemplate>

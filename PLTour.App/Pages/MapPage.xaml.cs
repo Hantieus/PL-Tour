@@ -33,7 +33,9 @@ public partial class MapPage : ContentPage
 
     bool _isFirstLocation = true;
     bool isMapExpanded = false;
-    string _currentCategory = "Tất cả";
+
+    // Quản lý ID danh mục hiện tại (0: Tất cả, 1: Tham quan, 2: Ăn uống, 3: Sự kiện)
+    int _currentCategoryId = 0;
 
     private CancellationTokenSource _ttsCts;
     private PoiModel _currentPlayingPoi;
@@ -50,6 +52,8 @@ public partial class MapPage : ContentPage
     {
         InitializeComponent();
         _locationService = locationService;
+
+        // Khởi tạo ban đầu
         PoiListView.ItemsSource = SortedPois;
 
         InitializeMap();
@@ -110,11 +114,9 @@ public partial class MapPage : ContentPage
                 _allPois.Clear();
                 _allPois.AddRange(pois);
 
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    DrawPoisOnMap();
-                    UpdateDistancesAndSort();
-                });
+                GenerateCategoryTabs();
+                UpdateDistancesAndSort();
+                DrawPoisOnMap();
             }
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex.Message}"); }
@@ -123,18 +125,33 @@ public partial class MapPage : ContentPage
     void DrawPoisOnMap()
     {
         if (mapView == null || _allPois == null) return;
-        var poiFeatures = new List<IFeature>();
-        foreach (var poi in _allPois)
+
+        // Bọc vào MainThread để đảm bảo an toàn khi vẽ UI
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
-            var feature = new PointFeature(new MPoint(proj.x, proj.y));
-            feature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(poi.PinColor), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2), SymbolScale = 0.5 });
-            feature.Styles.Add(new LabelStyle { Text = poi.Name, Offset = new Offset(0, -20), ForeColor = Mapsui.Styles.Color.Black, BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White), Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2) });
-            poiFeatures.Add(feature);
-        }
-        _poiLayer.Features = poiFeatures;
-        _poiLayer.DataHasChanged();
-        mapView.RefreshGraphics();
+            // Lọc điểm hiển thị trên bản đồ theo ID mục đang chọn
+            var filteredPois = _currentCategoryId == 0
+                ? _allPois
+                : _allPois.Where(p => p.CategoryId == _currentCategoryId).ToList();
+
+            var poiFeatures = new List<IFeature>();
+
+            foreach (var poi in filteredPois)
+            {
+                var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
+                var feature = new PointFeature(new MPoint(proj.x, proj.y));
+
+                // Màu sắc lấy trực tiếp từ thuộc tính PinColor
+                feature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(poi.PinColor), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2), SymbolScale = 0.5 });
+                feature.Styles.Add(new LabelStyle { Text = poi.Name, Offset = new Offset(0, -20), ForeColor = Mapsui.Styles.Color.Black, BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White), Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2) });
+
+                poiFeatures.Add(feature);
+            }
+
+            _poiLayer.Features = poiFeatures;
+            _poiLayer.DataHasChanged();
+            mapView.RefreshGraphics();
+        });
     }
 
     private void UpdateUserLocationOnMap(Microsoft.Maui.Devices.Sensors.Location location)
@@ -158,31 +175,29 @@ public partial class MapPage : ContentPage
     private void UpdateDistancesAndSort()
     {
         var userLoc = _locationService.CurrentLocation;
-        if (userLoc == null || _allPois == null) return;
-        foreach (var poi in _allPois)
+        if (_allPois == null) return;
+
+        // Tính khoảng cách nếu có GPS
+        if (userLoc != null)
         {
-            double dist = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
-            poi.DistanceMeters = dist;
-            poi.Address = dist < 1000 ? $"{Math.Round(dist)} m" : $"{(dist / 1000.0):F1} km";
+            foreach (var poi in _allPois)
+            {
+                double dist = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
+                poi.DistanceMeters = dist;
+                poi.Address = dist < 1000 ? $"{Math.Round(dist)} m" : $"{(dist / 1000.0):F1} km";
+            }
         }
 
-        var filtered = _currentCategory == "Tất cả"
+        // Lọc danh sách theo Tab hiện tại
+        var filtered = _currentCategoryId == 0
             ? _allPois.OrderBy(p => p.DistanceMeters).ToList()
-            : _allPois.Where(p => p.Category?.Trim().ToLower() == _currentCategory.Trim().ToLower())
+            : _allPois.Where(p => p.CategoryId == _currentCategoryId)
                       .OrderBy(p => p.DistanceMeters).ToList();
 
+        // ĐÃ SỬA LỖI BUG MAUI: Gán null trước rồi mới gán lại data để ép UI xóa danh sách cũ
         MainThread.BeginInvokeOnMainThread(() => {
-            if (SortedPois.Count == 0 || (filtered.Count > 0 && SortedPois[0].Name != filtered[0].Name))
-            {
-                SortedPois.Clear();
-                foreach (var p in filtered) SortedPois.Add(p);
-            }
-            else
-            {
-                var temp = PoiListView.ItemsSource;
-                PoiListView.ItemsSource = null;
-                PoiListView.ItemsSource = temp;
-            }
+            PoiListView.ItemsSource = null;
+            PoiListView.ItemsSource = filtered;
         });
     }
 
@@ -196,21 +211,90 @@ public partial class MapPage : ContentPage
     }
 
     // ==========================================
-    // XỬ LÝ SỰ KIỆN CLICK CỦA NGƯỜI DÙNG
+    // TẠO TAB DANH MỤC CỐ ĐỊNH & ĐỔI MÀU NÚT BẤM
     // ==========================================
-    private void Tab_Clicked(object sender, EventArgs e)
+
+    // Hàm lấy mã màu chủ đạo theo CategoryId
+    private string GetCategoryColorHex(int categoryId) => categoryId switch
     {
-        var btn = sender as Button;
-        _currentCategory = btn.CommandParameter.ToString();
-        TabTatCa.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
-        TabThamQuan.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
-        TabAnUong.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
-        TabSuKien.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
-        btn.TextColor = Microsoft.Maui.Graphics.Colors.White;
-        btn.BackgroundColor = Microsoft.Maui.Graphics.Color.FromArgb("#2A9D8F");
-        UpdateDistancesAndSort();
+        1 => "#E63946", // Đỏ (Tham quan)
+        2 => "#F4A261", // Cam (Ăn uống)
+        3 => "#6A4C93", // Tím (Sự kiện)
+        _ => "#2A9D8F"  // Xanh Mòng Két (Tất cả)
+    };
+
+    private void GenerateCategoryTabs()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            CategoryTabsContainer.Children.Clear();
+
+            // Tạo cố định 4 tab theo ID
+            CategoryTabsContainer.Children.Add(CreateTabButton(0, "Tất cả"));
+            CategoryTabsContainer.Children.Add(CreateTabButton(1, "Tham quan"));
+            CategoryTabsContainer.Children.Add(CreateTabButton(2, "Ăn uống"));
+            CategoryTabsContainer.Children.Add(CreateTabButton(3, "Sự kiện"));
+        });
     }
 
+    private Button CreateTabButton(int categoryId, string categoryName)
+    {
+        bool isSelected = _currentCategoryId == categoryId;
+
+        // Lấy màu theo ID nếu nút đang được chọn
+        string activeColorHex = GetCategoryColorHex(categoryId);
+
+        var btn = new Button
+        {
+            Text = categoryName,
+            CommandParameter = categoryId, // Lưu ID vào nút
+            FontAttributes = FontAttributes.Bold,
+            CornerRadius = 10,
+            FontSize = 12,
+            HeightRequest = 35,
+            Padding = new Thickness(15, 0),
+            // BackgroundColor: Nếu được chọn thì lấy màu chủ đạo, ngược lại xám nhạt
+            BackgroundColor = isSelected ? Microsoft.Maui.Graphics.Color.FromArgb(activeColorHex) : Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3"),
+            TextColor = isSelected ? Microsoft.Maui.Graphics.Colors.White : Microsoft.Maui.Graphics.Colors.DimGray
+        };
+
+        // Gắn sự kiện click
+        btn.Clicked += DynamicTab_Clicked;
+        return btn;
+    }
+
+    private void DynamicTab_Clicked(object sender, EventArgs e)
+    {
+        var btn = sender as Button;
+        if (btn == null) return;
+
+        _currentCategoryId = (int)btn.CommandParameter;
+
+        // Đổi màu UI cho tất cả các nút
+        foreach (var child in CategoryTabsContainer.Children)
+        {
+            if (child is Button b)
+            {
+                int currentBtnId = (int)b.CommandParameter;
+                bool isSelected = currentBtnId == _currentCategoryId;
+
+                // Lấy màu theo ID tương ứng của từng nút
+                string activeColorHex = GetCategoryColorHex(currentBtnId);
+
+                b.BackgroundColor = isSelected ? Microsoft.Maui.Graphics.Color.FromArgb(activeColorHex) : Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
+                b.TextColor = isSelected ? Microsoft.Maui.Graphics.Colors.White : Microsoft.Maui.Graphics.Colors.DimGray;
+            }
+        }
+
+        // Khi click tab, gọi lọc lại List và vẽ lại Bản Đồ
+        UpdateDistancesAndSort();
+        DrawPoisOnMap();
+    }
+
+
+    // ==========================================
+    // XỬ LÝ SỰ KIỆN CLICK CỦA NGƯỜI DÙNG
+    // ==========================================
     private void ToggleMapSize_Clicked(object sender, EventArgs e)
     {
         isMapExpanded = !isMapExpanded;

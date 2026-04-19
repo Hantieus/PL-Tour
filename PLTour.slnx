@@ -2,7 +2,7 @@
   <Project Path="PLTour.Admin/PLTour.Admin.csproj" />
   <Project Path="PLTour.API/PLTour.API.csproj" />
   <Project Path="PLTour.App/PLTour.App.csproj">
-    <Build Solution="Debug|*" Project="false" />
+    <Deploy Solution="Debug|*" />
   </Project>
   <Project Path="PLTour.Shared/PLTour.Shared.csproj" Id="fe195d69-3446-4923-99d8-ec024af189ae" />
   <Project Path="PLTour.Vendor/PLTour.Vendor.csproj" />

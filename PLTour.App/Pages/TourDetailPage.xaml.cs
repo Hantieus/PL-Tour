@@ -20,7 +20,15 @@ public partial class TourDetailPage : ContentPage
     public TourModel Tour
     {
         get => _tour;
-        set { _tour = value; LoadTourData(); }
+        set
+        {
+            _tour = value;
+            // Đảm bảo cập nhật giao diện luôn chạy trên luồng chính để tránh crash
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                LoadTourData();
+            });
+        }
     }
 
     public ObservableCollection<PoiModel> SortedPois { get; set; } = new();
@@ -33,21 +41,19 @@ public partial class TourDetailPage : ContentPage
     // QUẢN LÝ ÂM THANH
     private IAudioPlayer _audioPlayer;
     private CancellationTokenSource _ttsCts;
-    private readonly IAudioManager _audioManager;
     private readonly LocationService _locationService;
 
-    // Cập nhật Constructor để nhận IAudioManager qua DI
-    public TourDetailPage(LocationService locationService, IAudioManager audioManager)
+    // ĐÃ SỬA: Xóa IAudioManager khỏi constructor để tránh lỗi DI crash app
+    public TourDetailPage(LocationService locationService)
     {
         InitializeComponent();
         _locationService = locationService;
-        _audioManager = audioManager;
 
         PoiList.ItemsSource = SortedPois;
         StartTracking();
     }
 
-    // --- LOGIC PHÁT ÂM THANH CHO POI (ĐÃ SỬA THEO YÊU CẦU) ---
+    // --- LOGIC PHÁT ÂM THANH CHO POI ---
     private async void BtnSpeakPoi_Clicked(object sender, EventArgs e)
     {
         var poi = (sender as Button)?.CommandParameter as PoiModel;
@@ -71,7 +77,8 @@ public partial class TourDetailPage : ContentPage
                 using (var httpClient = new HttpClient())
                 {
                     var stream = await httpClient.GetStreamAsync(poi.AudioUrl);
-                    _audioPlayer = _audioManager.CreatePlayer(stream);
+                    // ĐÃ SỬA: Gọi trực tiếp AudioManager.Current
+                    _audioPlayer = AudioManager.Current.CreatePlayer(stream);
 
                     // Khi hết bài tự động reset trạng thái nút
                     _audioPlayer.PlaybackEnded += (s, args) =>

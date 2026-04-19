@@ -4,25 +4,37 @@ namespace PLTour.App.Models;
 
 public class TourModel
 {
-    // Các thông tin cơ bản của Tour
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Duration { get; set; } = string.Empty; // Ví dụ: "1 tiếng 45 phút"
-    public string IntroText { get; set; } = string.Empty; // Nội dung thuyết minh
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
 
-    // Danh sách các điểm tham quan trong Tour (Sử dụng PoiModel từ file riêng)
-    public List<PoiModel> Pois { get; set; } = new List<PoiModel>();
+    // 1. Lưu tổng số phút bằng số nguyên
+    public int Duration { get; init; }
 
-    // --- CÁC THUỘC TÍNH BỔ SUNG ĐỂ HIỂN THỊ TRÊN HOME PAGE ---
+    // 2. TỰ ĐỘNG TÍNH TOÁN HIỂN THỊ GIỜ / PHÚT
+    public string DurationDisplay
+    {
+        get
+        {
+            if (Duration <= 0) return "Đang cập nhật";
 
-    // Tọa độ đại diện của Tour (thường lấy tọa độ của POI đầu tiên)
-    public double Latitude { get; set; }
-    public double Longitude { get; set; }
+            int hours = Duration / 60;
+            int minutes = Duration % 60;
 
-    // Chuỗi hiển thị khoảng cách (Ví dụ: "Cách bạn: 1.2 km")
-    // Thuộc tính này sẽ được tính toán và gán giá trị tại HomePage.xaml.cs
+            if (hours > 0 && minutes > 0)
+                return $"{hours} tiếng {minutes} phút";
+            else if (hours > 0)
+                return $"{hours} tiếng";
+            else
+                return $"{minutes} phút";
+        }
+    }
+
+    public string IntroText { get; init; } = string.Empty;
+    public List<PoiModel> Pois { get; init; } = new List<PoiModel>();
+
+    public double Latitude { get; init; }
+    public double Longitude { get; init; }
+    public string ImageUrl { get; init; } = "tour_thumb.jpg";
+
     public string DistanceDisplay { get; set; } = "Đang tính...";
-
-    // Hình ảnh đại diện cho Tour
-    public string ImageUrl { get; set; } = "tour_thumb.jpg";
 }

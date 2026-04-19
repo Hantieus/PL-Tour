@@ -57,7 +57,7 @@
                                     <VerticalStackLayout Grid.Row="1" Padding="15" Spacing="5">
                                         <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="18"/>
                                         <HorizontalStackLayout Spacing="10">
-                                            <Label Text="{Binding Duration, StringFormat='⏳ {0}'}" TextColor="Gray" FontSize="13"/>
+                                            <Label Text="{Binding DurationDisplay, StringFormat='⏳ {0}'}" TextColor="Gray" FontSize="13"/>
                                             <Label Text="•" TextColor="Gray"/>
                                             <Label Text="{Binding DistanceDisplay}" TextColor="#E76F51" FontAttributes="Bold" FontSize="13"/>
                                         </HorizontalStackLayout>

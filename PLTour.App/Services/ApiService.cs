@@ -37,25 +37,29 @@ public class ApiService
             var tourDtos = await _httpClient.GetFromJsonAsync<List<TourDto>>("api/tours");
             if (tourDtos == null || !tourDtos.Any()) return new List<TourModel>();
 
+            // Đã xóa 1 dòng var tours = new List<TourModel>(); bị dư
             var tours = new List<TourModel>();
+
             foreach (var dto in tourDtos)
             {
+                // 1. Khởi tạo danh sách các địa điểm (POI) TRƯỚC
+                var poisList = dto.Locations.Select(loc => MapToPoiModel(loc)).ToList();
+
+                // 2. Gán TẤT CẢ giá trị vào bên trong khối { } để tuân thủ luật của 'init'
                 var tour = new TourModel
                 {
                     Id = dto.TourId.ToString(),
                     Name = dto.Name,
                     Duration = dto.Duration,
                     IntroText = dto.IntroText,
-                    // Sử dụng hàm xử lý ảnh dùng chung
                     ImageUrl = FormatImageUrl(dto.ImageUrl),
-                    Pois = dto.Locations.Select(loc => MapToPoiModel(loc)).ToList()
+                    Pois = poisList,
+
+                    // Gán tọa độ trực tiếp tại đây bằng toán tử 3 ngôi (nếu có POI thì lấy, không thì gán 0)
+                    Latitude = poisList.Any() ? poisList.First().Lat : 0,
+                    Longitude = poisList.Any() ? poisList.First().Lng : 0
                 };
 
-                if (tour.Pois.Any())
-                {
-                    tour.Latitude = tour.Pois.First().Lat;
-                    tour.Longitude = tour.Pois.First().Lng;
-                }
                 tours.Add(tour);
             }
             return tours;
@@ -141,7 +145,11 @@ public class ApiService
             Radius = loc.Radius > 0 ? loc.Radius : 150,
             Description = loc.Description ?? "",
             Address = loc.Address ?? "",
-            Category = MapCategoryName(loc.CategoryId),
+
+            // THAY ĐỔI Ở ĐÂY: Lưu lại CategoryId và lấy tên từ API
+            CategoryId = loc.CategoryId,
+            Category = !string.IsNullOrEmpty(loc.CategoryName) ? loc.CategoryName : MapCategoryName(loc.CategoryId),
+
             PinColor = GetPinColor(loc.CategoryId)
         };
     }

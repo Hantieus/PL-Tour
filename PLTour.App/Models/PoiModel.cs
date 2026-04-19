@@ -18,7 +18,8 @@ public class PoiModel : INotifyPropertyChanged
     public int Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; } // Mô tả ngắn (hiện trên danh sách)
-    public string ImageUrl { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
     public string Category { get; set; }
     public double Lat { get; set; }
     public double Lng { get; set; }
