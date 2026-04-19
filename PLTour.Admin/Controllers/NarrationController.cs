@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 namespace PLTour.Admin.Controllers
 {
@@ -15,13 +15,13 @@ namespace PLTour.Admin.Controllers
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly ILogger<NarrationController> _logger;
-        private readonly HttpClient _httpClient;
-        public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ILogger<NarrationController> logger)
+        private readonly ICloudinaryService _cloudinaryService;
+        public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ILogger<NarrationController> logger, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
             _logger = logger;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: Narration
@@ -131,19 +131,8 @@ namespace PLTour.Admin.Controllers
                     // Handle audio upload qua API
                     if (audioFile != null && audioFile.Length > 0)
                     {
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(audioFile.OpenReadStream()), "file", audioFile.FileName);
-
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/audio?folder=audio", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                narration.AudioUrl = url;
-                            }
-                        }
+                        var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, "audio");
+                        narration.AudioUrl = audioUrl;
                     }
 
                     // Handle default language
@@ -222,33 +211,29 @@ namespace PLTour.Admin.Controllers
                         return NotFound();
                     }
 
-                    // Handle audio removal
+                    // Xóa audio cũ nếu có
                     if (removeAudio && !string.IsNullOrEmpty(existingNarration.AudioUrl))
                     {
-                        var oldAudioPath = Path.Combine(_hostEnvironment.WebRootPath, existingNarration.AudioUrl.TrimStart('/'));
-                        if (System.IO.File.Exists(oldAudioPath))
-                        {
-                            System.IO.File.Delete(oldAudioPath);
-                        }
+                        var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingNarration.AudioUrl);
+                        if (!string.IsNullOrEmpty(publicId))
+                            await _cloudinaryService.DeleteFileAsync(publicId);
                         existingNarration.AudioUrl = null;
                     }
 
-                    // Handle audio upload qua API
+                    // Upload audio mới
                     if (audioFile != null && audioFile.Length > 0)
                     {
-                        using (var content = new MultipartFormDataContent())
+                        // Xóa audio cũ
+                        if (!string.IsNullOrEmpty(existingNarration.AudioUrl))
                         {
-                            content.Add(new StreamContent(audioFile.OpenReadStream()), "file", audioFile.FileName);
-
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/audio?folder=audio", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                existingNarration.AudioUrl = url;
-                            }
+                            var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingNarration.AudioUrl);
+                            if (!string.IsNullOrEmpty(publicId))
+                                await _cloudinaryService.DeleteFileAsync(publicId);
                         }
+
+                        // Upload mới
+                        var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, "audio");
+                        existingNarration.AudioUrl = audioUrl;
                     }
 
                     // Handle default language

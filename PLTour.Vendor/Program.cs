@@ -1,10 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
+using PLTour.Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 // Đăng ký DBcontext
 builder.Services.AddDbContext<PLTourDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+//Cloudinary
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

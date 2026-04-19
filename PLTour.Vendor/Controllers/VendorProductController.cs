@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -11,14 +11,14 @@ namespace PLTour.Vendor.Controllers
     public class VendorProductController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;
 
-        public VendorProductController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        public VendorProductController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
         }
 
         private int GetVendorId()
@@ -61,21 +61,11 @@ namespace PLTour.Vendor.Controllers
             {
                 try
                 {
-                    // Upload ảnh qua API
+                    // Upload ảnh qua cloudinary
                     if (imageFile != null && imageFile.Length > 0)
                     {
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=products", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                product.ImageUrl = url;
-                            }
-                        }
+                        var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "products");
+                        product.ImageUrl = imageUrl;
                     }
 
                     product.CreatedDate = DateTime.UtcNow;
@@ -119,21 +109,18 @@ namespace PLTour.Vendor.Controllers
 
             if (ModelState.IsValid)
             {
-                // Upload ảnh qua API
+                // Upload ảnh qua cloudinary
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    using (var content = new MultipartFormDataContent())
+                    if (!string.IsNullOrEmpty(existingProduct.ImageUrl))
                     {
-                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=products", content);
-                        var responseJson = await response.Content.ReadAsStringAsync();
-                        using (var doc = JsonDocument.Parse(responseJson))
-                        {
-                            var url = doc.RootElement.GetProperty("url").GetString();
-                            existingProduct.ImageUrl = url;
-                        }
+                        var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingProduct.ImageUrl);
+                        if (!string.IsNullOrEmpty(publicId))
+                            await _cloudinaryService.DeleteFileAsync(publicId);
                     }
+
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "products");
+                    existingProduct.ImageUrl = imageUrl;
                 }
 
                 existingProduct.Name = product.Name;
