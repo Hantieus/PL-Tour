@@ -288,17 +288,17 @@ namespace PLTour.API.Migrations
                 columns: new[] { "LanguageId", "Code", "CreatedDate", "DisplayOrder", "FlagIcon", "IsActive", "Name" },
                 values: new object[,]
                 {
-                    { 1, "vi", new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8280), 1, "flag-icon-vn", true, "Tiếng Việt" },
-                    { 2, "en", new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8284), 2, "flag-icon-us", true, "English" },
-                    { 3, "zh", new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8286), 3, "flag-icon-cn", true, "中文" },
-                    { 4, "ko", new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8287), 4, "flag-icon-kr", true, "한국어" },
-                    { 5, "ja", new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8288), 5, "flag-icon-jp", true, "日本語" }
+                    { 1, "vi", new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9084), 1, "flag-icon-vn", true, "Tiếng Việt" },
+                    { 2, "en", new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9089), 2, "flag-icon-us", true, "English" },
+                    { 3, "zh", new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9090), 3, "flag-icon-cn", true, "中文" },
+                    { 4, "ko", new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9091), 4, "flag-icon-kr", true, "한국어" },
+                    { 5, "ja", new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9092), 5, "flag-icon-jp", true, "日本語" }
                 });
 
             migrationBuilder.InsertData(
                 table: "Users",
                 columns: new[] { "UserId", "CreatedDate", "Email", "FullName", "IsActive", "LastLoginDate", "PasswordHash", "Phone", "Role", "Username" },
-                values: new object[] { 1, new DateTime(2026, 4, 19, 5, 28, 31, 510, DateTimeKind.Utc).AddTicks(3218), "admin@pltour.com", "Administrator", true, null, "$2a$11$IvsCNAERV8Hg1RhAyYZOOeIPPxZBW19vZ.7h.mLPiPKVL280xyPOC", "0123456789", "Admin", "admin" });
+                values: new object[] { 1, new DateTime(2026, 4, 20, 15, 55, 29, 222, DateTimeKind.Utc).AddTicks(7971), "admin@pltour.com", "Administrator", true, null, "$2a$11$R7h/AG2pbtTifq8mKIhgT.RcDEpeuYsqQuvPJZATdnWq/OqXwgmQC", "0123456789", "Admin", "admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Locations_CategoryId",

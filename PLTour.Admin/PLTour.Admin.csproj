@@ -7,10 +7,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="Views\NewFolder1\**" />
-	  <Content Remove="Views\NewFolder1\**" />
-	  <EmbeddedResource Remove="Views\NewFolder1\**" />
-	  <None Remove="Views\NewFolder1\**" />
+		<Compile Remove="Views\NewFolder1\**" />
+		<Content Remove="Views\NewFolder1\**" />
+		<EmbeddedResource Remove="Views\NewFolder1\**" />
+		<None Remove="Views\NewFolder1\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -24,7 +24,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+		<!-- Thay SqlServer bằng PostgreSQL -->
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

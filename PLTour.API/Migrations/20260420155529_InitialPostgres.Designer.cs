@@ -12,7 +12,7 @@ using PLTour.API.Models.DbContext;
 namespace PLTour.API.Migrations
 {
     [DbContext(typeof(PLTourDbContext))]
-    [Migration("20260419052831_InitialPostgres")]
+    [Migration("20260420155529_InitialPostgres")]
     partial class InitialPostgres
     {
         /// <inheritdoc />
@@ -129,7 +129,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 1,
                             Code = "vi",
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8280),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9084),
                             DisplayOrder = 1,
                             FlagIcon = "flag-icon-vn",
                             IsActive = true,
@@ -139,7 +139,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 2,
                             Code = "en",
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8284),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9089),
                             DisplayOrder = 2,
                             FlagIcon = "flag-icon-us",
                             IsActive = true,
@@ -149,7 +149,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 3,
                             Code = "zh",
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8286),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9090),
                             DisplayOrder = 3,
                             FlagIcon = "flag-icon-cn",
                             IsActive = true,
@@ -159,7 +159,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 4,
                             Code = "ko",
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8287),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9091),
                             DisplayOrder = 4,
                             FlagIcon = "flag-icon-kr",
                             IsActive = true,
@@ -169,7 +169,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 5,
                             Code = "ja",
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 404, DateTimeKind.Utc).AddTicks(8288),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 114, DateTimeKind.Utc).AddTicks(9092),
                             DisplayOrder = 5,
                             FlagIcon = "flag-icon-jp",
                             IsActive = true,
@@ -451,11 +451,11 @@ namespace PLTour.API.Migrations
                         new
                         {
                             UserId = 1,
-                            CreatedDate = new DateTime(2026, 4, 19, 5, 28, 31, 510, DateTimeKind.Utc).AddTicks(3218),
+                            CreatedDate = new DateTime(2026, 4, 20, 15, 55, 29, 222, DateTimeKind.Utc).AddTicks(7971),
                             Email = "admin@pltour.com",
                             FullName = "Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$IvsCNAERV8Hg1RhAyYZOOeIPPxZBW19vZ.7h.mLPiPKVL280xyPOC",
+                            PasswordHash = "$2a$11$R7h/AG2pbtTifq8mKIhgT.RcDEpeuYsqQuvPJZATdnWq/OqXwgmQC",
                             Phone = "0123456789",
                             Role = "Admin",
                             Username = "admin"
