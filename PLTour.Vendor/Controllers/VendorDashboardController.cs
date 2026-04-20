@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
 using PLTour.Vendor.ViewModels;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -13,14 +13,15 @@ namespace PLTour.Vendor.Controllers
     public class VendorDashboardController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;
 
-        public VendorDashboardController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        public VendorDashboardController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
+       
         }
 
         // Lấy VendorId từ session
@@ -65,20 +66,20 @@ namespace PLTour.Vendor.Controllers
 
             if (existingVendor == null) return NotFound();
 
-            // Upload logo mới qua API
+            // Upload logo mới qua cloudinary 
             if (logoFile != null && logoFile.Length > 0)
             {
-                using (var content = new MultipartFormDataContent())
+                // Xóa logo cũ
+                if (!string.IsNullOrEmpty(existingVendor.LogoUrl))
                 {
-                    content.Add(new StreamContent(logoFile.OpenReadStream()), "file", logoFile.FileName);
-
-                    var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    using (var doc = JsonDocument.Parse(responseJson))
-                    {
-                        existingVendor.LogoUrl = doc.RootElement.GetProperty("url").GetString();
-                    }
+                    var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingVendor.LogoUrl);
+                    if (!string.IsNullOrEmpty(publicId))
+                        await _cloudinaryService.DeleteFileAsync(publicId);
                 }
+
+                // Upload logo mới
+                var logoUrl = await _cloudinaryService.UploadImageAsync(logoFile, "vendors");
+                existingVendor.LogoUrl = logoUrl;
             }
 
             existingVendor.ShopName = vendor.ShopName;

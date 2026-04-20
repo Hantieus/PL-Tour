@@ -4,7 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models;
+using PLTour.Shared.Services;
 using System.Text;
+using PLTour.Shared.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,9 @@ builder.WebHost.ConfigureKestrel(options =>
     // Nếu bạn vẫn muốn dùng HTTPS trên máy tính thì thêm dòng dưới (tùy chọn)
     options.ListenAnyIP(7291, listenOptions => listenOptions.UseHttps());
 });
+
+//Cloudinary
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // Add services
 builder.Services.AddControllers();

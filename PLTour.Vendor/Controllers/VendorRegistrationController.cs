@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
 using PLTour.Vendor.ViewModels;
-using System.Net.Http;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 
 namespace PLTour.Vendor.Controllers
@@ -13,14 +12,13 @@ namespace PLTour.Vendor.Controllers
     public class VendorRegistrationController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;
-
-        public VendorRegistrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        public VendorRegistrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: /vendor-registration
@@ -57,17 +55,7 @@ namespace PLTour.Vendor.Controllers
                     string? logoUrl = null;
                     if (model.LogoFile != null && model.LogoFile.Length > 0)
                     {
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(model.LogoFile.OpenReadStream()), "file", model.LogoFile.FileName);
-
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                logoUrl = doc.RootElement.GetProperty("url").GetString();
-                            }
-                        }
+                        logoUrl = await _cloudinaryService.UploadImageAsync(model.LogoFile, "vendors");
                     }
 
                     // Tạo vendor mới

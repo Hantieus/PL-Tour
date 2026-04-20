@@ -83,11 +83,12 @@
 
 
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides; // Thêm thư viện này
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders; // Thêm thư viện này
 using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
-using Microsoft.Extensions.FileProviders; // Thêm thư viện này
-using Microsoft.AspNetCore.HttpOverrides; // Thêm thư viện này
+using PLTour.Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +101,9 @@ builder.Services.AddDbContext<PLTourDbContext>(options =>
 
 // Cấu hình TranslationService
 builder.Services.AddScoped<ITranslationService, FreeTranslationService>();
+
+//Cloudinary
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // Cấu hình Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

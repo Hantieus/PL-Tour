@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;  // ✅ THÊM DÒNG NÀY
+using PLTour.Shared.Services; 
 
 namespace PLTour.Admin.Controllers
 {
@@ -11,14 +12,13 @@ namespace PLTour.Admin.Controllers
     public class LocationController : Controller
     {
         private readonly PLTourDbContext _context;
+		private readonly ICloudinaryService _cloudinaryService;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;  // ✅ THÊM DÒNG NÀY
-
-        public LocationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        public LocationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();  // ✅ THÊM DÒNG NÀY
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: Location
@@ -82,36 +82,14 @@ namespace PLTour.Admin.Controllers
             {
                 try
                 {
-                    // ✅ SỬA: Upload ảnh qua API
-                    if (imageFile != null && imageFile.Length > 0)
-                    {
-                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                        var fileExtension = Path.GetExtension(imageFile.FileName).ToLower();
+					// ✅ SỬA: Upload ảnh qua API
+					if (imageFile != null && imageFile.Length > 0)
+					{
+						var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "locations");
+						location.ImageUrl = imageUrl;
+					}
 
-                        if (!allowedExtensions.Contains(fileExtension))
-                        {
-                            ModelState.AddModelError("", "Chỉ chấp nhận file ảnh .jpg, .jpeg, .png, .gif, .webp");
-                            ViewBag.Categories = await _context.Categories.ToListAsync();
-                            return View(location);
-                        }
-
-                        // Gọi API upload
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                            // Trong các controller, chỉ lấy url, không lấy fullUrl
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=locations", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                location.ImageUrl = url;  // Lưu "/uploads/locations/abc.jpg"
-                            }
-                        }
-                    }
-
-                    location.CreatedDate = DateTime.UtcNow;
+					location.CreatedDate = DateTime.UtcNow;
                     location.Radius = location.Radius > 0 ? location.Radius : 50;
                     _context.Add(location);
                     await _context.SaveChangesAsync();
@@ -203,34 +181,23 @@ namespace PLTour.Admin.Controllers
                     existingLocation.UpdatedDate = DateTime.UtcNow;
                     existingLocation.Radius = location.Radius;
 
-                    // ✅ SỬA: Upload ảnh mới qua API
-                    if (imageFile != null && imageFile.Length > 0)
-                    {
-                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
-                        var fileExtension = Path.GetExtension(imageFile.FileName).ToLower();
+					// ✅ SỬA: Upload ảnh mới qua API
+					if (imageFile != null && imageFile.Length > 0)
+					{
+						// Xóa ảnh cũ trên Cloudinary (nếu có)
+						if (!string.IsNullOrEmpty(existingLocation.ImageUrl))
+						{
+							var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingLocation.ImageUrl);
+							if (!string.IsNullOrEmpty(publicId))
+								await _cloudinaryService.DeleteFileAsync(publicId);
+						}
 
-                        if (!allowedExtensions.Contains(fileExtension))
-                        {
-                            ModelState.AddModelError("", "Chỉ chấp nhận file ảnh .jpg, .jpeg, .png, .gif, .webp");
-                            ViewBag.Categories = await _context.Categories.ToListAsync();
-                            return View(location);
-                        }
+						// Upload ảnh mới
+						var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "locations");
+						existingLocation.ImageUrl = imageUrl;
+					}
 
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                            var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=locations", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                existingLocation.ImageUrl = url;
-                            }
-                        }
-                    }
-
-                    _context.Update(existingLocation);
+					_context.Update(existingLocation);
                     await _context.SaveChangesAsync();
 
                     TempData["SuccessMessage"] = "Cập nhật địa điểm thành công!";

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 namespace PLTour.Admin.Controllers
 {
@@ -13,13 +13,12 @@ namespace PLTour.Admin.Controllers
     {
         private readonly PLTourDbContext _context;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;
-
-        public TourController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        private readonly ICloudinaryService _cloudinaryService;
+        public TourController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: Tour
@@ -51,21 +50,11 @@ namespace PLTour.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Upload ảnh qua API
+                // Upload ảnh lên Cloudinary
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    using (var content = new MultipartFormDataContent())
-                    {
-                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=tours", content);
-                        var responseJson = await response.Content.ReadAsStringAsync();
-                        using (var doc = JsonDocument.Parse(responseJson))
-                        {
-                            var url = doc.RootElement.GetProperty("url").GetString();
-                            tour.ImageUrl = url;
-                        }
-                    }
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "tours");
+                    tour.ImageUrl = imageUrl;
                 }
 
                 tour.CreatedDate = DateTime.UtcNow;
@@ -147,22 +136,19 @@ namespace PLTour.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                // Upload ảnh mới
-                // Upload ảnh qua API
                 if (imageFile != null && imageFile.Length > 0)
                 {
-                    using (var content = new MultipartFormDataContent())
+                    // Xóa ảnh cũ
+                    if (!string.IsNullOrEmpty(existingTour.ImageUrl))
                     {
-                        content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
-
-                        var response = await _httpClient.PostAsync("https://localhost:7291/api/upload/image?folder=tours", content);
-                        var responseJson = await response.Content.ReadAsStringAsync();
-                        using (var doc = JsonDocument.Parse(responseJson))
-                        {
-                            var url = doc.RootElement.GetProperty("url").GetString();
-                            existingTour.ImageUrl = url;
-                        }
+                        var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingTour.ImageUrl);
+                        if (!string.IsNullOrEmpty(publicId))
+                            await _cloudinaryService.DeleteFileAsync(publicId);
                     }
+
+                    // Upload ảnh mới
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "tours");
+                    existingTour.ImageUrl = imageUrl;
                 }
 
                 existingTour.Name = tour.Name;

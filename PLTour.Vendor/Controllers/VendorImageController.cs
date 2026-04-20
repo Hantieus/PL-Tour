@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;  // ✅ THÊM DÒNG NÀY
+using PLTour.Shared.Services;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -11,15 +11,14 @@ namespace PLTour.Vendor.Controllers
     public class VendorImageController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly HttpClient _httpClient;  // ✅ THÊM DÒNG NÀY
 
-        public VendorImageController(PLTourDbContext context, IWebHostEnvironment hostEnvironment)
+        public VendorImageController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ICloudinaryService cloudinaryService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
-            _httpClient = new HttpClient();  // ✅ THÊM DÒNG NÀY
-            _httpClient.BaseAddress = new Uri("https://localhost:7291");  // ✅ THÊM DÒNG NÀY
+            _cloudinaryService = cloudinaryService;
         }
 
         private int GetVendorId()
@@ -49,26 +48,15 @@ namespace PLTour.Vendor.Controllers
             }
 
             var vendorId = GetVendorId();
-            string imageUrl = "";
 
-            // ✅ SỬA: Upload ảnh qua API
-            using (var content = new MultipartFormDataContent())
-            {
-                content.Add(new StreamContent(imageFile.OpenReadStream()), "file", imageFile.FileName);
 
-                var response = await _httpClient.PostAsync("/api/upload/image?folder=vendor-galleries", content);
-                var responseJson = await response.Content.ReadAsStringAsync();
-
-                using (var doc = JsonDocument.Parse(responseJson))
-                {
-                    imageUrl = doc.RootElement.GetProperty("url").GetString();
-                }
-            }
+            // Upload ảnh qua cloudinary 
+            var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "vendor-galleries");
 
             var vendorImage = new VendorImage
             {
                 VendorId = vendorId,
-                ImageUrl = imageUrl,  // ✅ Dùng URL từ API
+                ImageUrl = imageUrl,
                 Title = title,
                 ImageType = imageType,
                 DisplayOrder = await _context.VendorImages.CountAsync(i => i.VendorId == vendorId),
@@ -80,6 +68,7 @@ namespace PLTour.Vendor.Controllers
             TempData["SuccessMessage"] = "Thêm ảnh thành công!";
             return RedirectToAction(nameof(Index));
         }
+
 
         // Xóa ảnh
         [HttpPost]
