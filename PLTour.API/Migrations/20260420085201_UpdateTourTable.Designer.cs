@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PLTour.API.Models.DbContext;
@@ -11,9 +12,11 @@ using PLTour.API.Models.DbContext;
 namespace PLTour.API.Migrations
 {
     [DbContext(typeof(PLTourDbContext))]
-    partial class PLTourDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260420085201_UpdateTourTable")]
+    partial class UpdateTourTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -126,7 +129,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 1,
                             Code = "vi",
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 2, 989, DateTimeKind.Utc).AddTicks(1250),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 58, 867, DateTimeKind.Utc).AddTicks(9920),
                             DisplayOrder = 1,
                             FlagIcon = "flag-icon-vn",
                             IsActive = true,
@@ -136,7 +139,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 2,
                             Code = "en",
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 2, 989, DateTimeKind.Utc).AddTicks(1254),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 58, 867, DateTimeKind.Utc).AddTicks(9963),
                             DisplayOrder = 2,
                             FlagIcon = "flag-icon-us",
                             IsActive = true,
@@ -146,7 +149,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 3,
                             Code = "zh",
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 2, 989, DateTimeKind.Utc).AddTicks(1256),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 58, 867, DateTimeKind.Utc).AddTicks(9964),
                             DisplayOrder = 3,
                             FlagIcon = "flag-icon-cn",
                             IsActive = true,
@@ -156,7 +159,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 4,
                             Code = "ko",
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 2, 989, DateTimeKind.Utc).AddTicks(1257),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 58, 867, DateTimeKind.Utc).AddTicks(9966),
                             DisplayOrder = 4,
                             FlagIcon = "flag-icon-kr",
                             IsActive = true,
@@ -166,7 +169,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 5,
                             Code = "ja",
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 2, 989, DateTimeKind.Utc).AddTicks(1259),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 58, 867, DateTimeKind.Utc).AddTicks(9968),
                             DisplayOrder = 5,
                             FlagIcon = "flag-icon-jp",
                             IsActive = true,
@@ -448,11 +451,11 @@ namespace PLTour.API.Migrations
                         new
                         {
                             UserId = 1,
-                            CreatedDate = new DateTime(2026, 4, 20, 10, 53, 3, 257, DateTimeKind.Utc).AddTicks(2820),
+                            CreatedDate = new DateTime(2026, 4, 20, 8, 51, 59, 107, DateTimeKind.Utc).AddTicks(9024),
                             Email = "admin@pltour.com",
                             FullName = "Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$UlXxn0VECcMs3P4LkXTerOfLAQsZt3v.nTlEOE9KoC5QCg0kZAp4y",
+                            PasswordHash = "$2a$11$wQE/OaTgChpBmhhZ6UVy/ehlxH3yCHAreuIBd0wHrPfNQdctXxwfy",
                             Phone = "0123456789",
                             Role = "Admin",
                             Username = "admin"
