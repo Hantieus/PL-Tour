@@ -12,7 +12,7 @@ using PLTour.API.Models.DbContext;
 namespace PLTour.API.Migrations
 {
     [DbContext(typeof(PLTourDbContext))]
-    [Migration("20260422144839_InitialCreate")]
+    [Migration("20260422175809_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
