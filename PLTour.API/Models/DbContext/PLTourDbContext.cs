@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
-using PLTour.Shared.Models.Entities;
+using PLTour.Shared.Models.Entities; // Đảm bảo bạn đã tạo class AnalyticsEvent ở đây
 
 namespace PLTour.API.Models.DbContext
 {
@@ -23,6 +23,9 @@ namespace PLTour.API.Models.DbContext
         // THÊM 2 DÒNG NÀY CHO TOUR
         public DbSet<Tour> Tours { get; set; }
         public DbSet<TourLocation> TourLocations { get; set; }
+
+        // BỔ SUNG CHO TÍNH NĂNG ANALYTICS
+        public DbSet<AnalyticsEvent> AnalyticsEvents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
