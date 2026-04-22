@@ -10,6 +10,7 @@ using PLTour.App.Services;
 using Microsoft.Maui.ApplicationModel;
 using System.Collections.ObjectModel;
 using Plugin.Maui.Audio; // Thêm thư viện âm thanh
+using PLTour.Shared.Models.DTO;
 
 namespace PLTour.App.Pages;
 
@@ -43,7 +44,6 @@ public partial class TourDetailPage : ContentPage
     private CancellationTokenSource _ttsCts;
     private readonly LocationService _locationService;
 
-    // ĐÃ SỬA: Xóa IAudioManager khỏi constructor để tránh lỗi DI crash app
     public TourDetailPage(LocationService locationService)
     {
         InitializeComponent();
@@ -69,6 +69,10 @@ public partial class TourDetailPage : ContentPage
         // BẮT ĐẦU QUY TRÌNH PHÁT
         poi.IsPlaying = true;
 
+        // TRACKING: Ghi nhận sự kiện bắt đầu nghe
+        bool isOnSite = poi.DistanceMeters <= poi.Radius;
+        _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
+
         try
         {
             // 1. ƯU TIÊN PHÁT MP3 TỪ URL
@@ -77,12 +81,14 @@ public partial class TourDetailPage : ContentPage
                 using (var httpClient = new HttpClient())
                 {
                     var stream = await httpClient.GetStreamAsync(poi.AudioUrl);
-                    // ĐÃ SỬA: Gọi trực tiếp AudioManager.Current
                     _audioPlayer = AudioManager.Current.CreatePlayer(stream);
 
-                    // Khi hết bài tự động reset trạng thái nút
+                    // Khi hết bài tự động reset trạng thái nút và gửi Tracking End
                     _audioPlayer.PlaybackEnded += (s, args) =>
+                    {
                         MainThread.BeginInvokeOnMainThread(() => poi.IsPlaying = false);
+                        _ = AnalyticsService.Instance.TrackAudioStopAsync();
+                    };
 
                     _audioPlayer.Play();
                 }
@@ -96,13 +102,22 @@ public partial class TourDetailPage : ContentPage
                 await TextToSpeech.SpeakAsync($"{poi.Name}. {textToRead}", _ttsCts.Token);
 
                 poi.IsPlaying = false;
+
+                // TRACKING: Ghi nhận kết thúc đọc Text-to-Speech
+                _ = AnalyticsService.Instance.TrackAudioStopAsync();
             }
         }
-        catch (OperationCanceledException) { /* Người dùng chủ động dừng */ }
+        catch (OperationCanceledException)
+        {
+            // Người dùng chủ động dừng thông qua Cancel Token
+        }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Lỗi âm thanh: {ex.Message}");
             poi.IsPlaying = false;
+
+            // TRACKING: Dừng nếu có lỗi xảy ra
+            _ = AnalyticsService.Instance.TrackAudioStopAsync();
         }
     }
 
@@ -124,9 +139,12 @@ public partial class TourDetailPage : ContentPage
             _ttsCts.Dispose();
             _ttsCts = null;
         }
+
+        // TRACKING: Báo server là người dùng đã chủ động dừng nghe
+        _ = AnalyticsService.Instance.TrackAudioStopAsync();
     }
 
-    // --- CÁC HÀM KHÁC GIỮ NGUYÊN ---
+    // --- CÁC HÀM KHÁC ---
     private void LoadTourData()
     {
         if (_tour == null) return;
@@ -146,6 +164,9 @@ public partial class TourDetailPage : ContentPage
                 {
                     UpdateUserLocationOnMap(location);
                     UpdateDistances();
+
+                    // TRACKING: Lưu vị trí để vẽ Heatmap và Tuyến di chuyển
+                    _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
                 }
             }
             catch { }
@@ -270,6 +291,9 @@ public partial class TourDetailPage : ContentPage
             var p = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
             mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y));
             mapView.Map.Navigator.ZoomTo(1.5);
+
+            // TRACKING: Theo dõi khi người dùng xem chi tiết 1 địa điểm trên Map
+            _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
         }
     }
 

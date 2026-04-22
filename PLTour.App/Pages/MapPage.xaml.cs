@@ -10,8 +10,7 @@ using Mapsui.UI.Maui;
 using Microsoft.Maui.ApplicationModel;
 using PLTour.App.Models;
 using PLTour.App.Services;
-using PLTour.Share.Models;
-using PLTour.Shared.Models.DTO; // Dùng để gọi DTO Tracking
+using PLTour.Shared.Models.DTO; // Đã đổi sang Shared
 using System.Collections.ObjectModel;
 using System.Net.Http.Json;
 
@@ -40,9 +39,7 @@ public partial class MapPage : ContentPage
     private CancellationTokenSource _ttsCts;
     private PoiModel _currentPlayingPoi;
 
-    // BIẾN ĐỂ TÍNH THỜI GIAN NGHE (TRACKING)
-    private DateTime? _playbackStartTime;
-    private int _currentPoiIdTracked;
+    // ĐÃ XÓA 2 biến _playbackStartTime và _currentPoiIdTracked vì đã chuyển sang AnalyticsService
 
     private readonly ApiService _apiService = new ApiService();
     private readonly LocationService _locationService;
@@ -97,10 +94,13 @@ public partial class MapPage : ContentPage
                 {
                     UpdateUserLocationOnMap(location);
                     UpdateDistancesAndSort();
+
+                    // TRACKING: Lưu tuyến di chuyển / Heatmap
+                    _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
                 }
             }
             catch { }
-            await Task.Delay(5000);
+            await Task.Delay(5000); // 5 giây gửi 1 lần (có thể cân nhắc tăng lên 10-15s nếu sợ nghẽn server)
         }
     }
 
@@ -126,10 +126,8 @@ public partial class MapPage : ContentPage
     {
         if (mapView == null || _allPois == null) return;
 
-        // Bọc vào MainThread để đảm bảo an toàn khi vẽ UI
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            // Lọc điểm hiển thị trên bản đồ theo ID mục đang chọn
             var filteredPois = _currentCategoryId == 0
                 ? _allPois
                 : _allPois.Where(p => p.CategoryId == _currentCategoryId).ToList();
@@ -141,7 +139,6 @@ public partial class MapPage : ContentPage
                 var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
                 var feature = new PointFeature(new MPoint(proj.x, proj.y));
 
-                // Màu sắc lấy trực tiếp từ thuộc tính PinColor
                 feature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(poi.PinColor), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2), SymbolScale = 0.5 });
                 feature.Styles.Add(new LabelStyle { Text = poi.Name, Offset = new Offset(0, -20), ForeColor = Mapsui.Styles.Color.Black, BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White), Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2) });
 
@@ -177,7 +174,6 @@ public partial class MapPage : ContentPage
         var userLoc = _locationService.CurrentLocation;
         if (_allPois == null) return;
 
-        // Tính khoảng cách nếu có GPS
         if (userLoc != null)
         {
             foreach (var poi in _allPois)
@@ -188,13 +184,11 @@ public partial class MapPage : ContentPage
             }
         }
 
-        // Lọc danh sách theo Tab hiện tại
         var filtered = _currentCategoryId == 0
             ? _allPois.OrderBy(p => p.DistanceMeters).ToList()
             : _allPois.Where(p => p.CategoryId == _currentCategoryId)
                       .OrderBy(p => p.DistanceMeters).ToList();
 
-        // ĐÃ SỬA LỖI BUG MAUI: Gán null trước rồi mới gán lại data để ép UI xóa danh sách cũ
         MainThread.BeginInvokeOnMainThread(() => {
             PoiListView.ItemsSource = null;
             PoiListView.ItemsSource = filtered;
@@ -213,14 +207,12 @@ public partial class MapPage : ContentPage
     // ==========================================
     // TẠO TAB DANH MỤC CỐ ĐỊNH & ĐỔI MÀU NÚT BẤM
     // ==========================================
-
-    // Hàm lấy mã màu chủ đạo theo CategoryId
     private string GetCategoryColorHex(int categoryId) => categoryId switch
     {
-        1 => "#E63946", // Đỏ (Tham quan)
-        2 => "#F4A261", // Cam (Ăn uống)
-        3 => "#6A4C93", // Tím (Sự kiện)
-        _ => "#2A9D8F"  // Xanh Mòng Két (Tất cả)
+        1 => "#E63946",
+        2 => "#F4A261",
+        3 => "#6A4C93",
+        _ => "#2A9D8F"
     };
 
     private void GenerateCategoryTabs()
@@ -229,7 +221,6 @@ public partial class MapPage : ContentPage
         {
             CategoryTabsContainer.Children.Clear();
 
-            // Tạo cố định 4 tab theo ID
             CategoryTabsContainer.Children.Add(CreateTabButton(0, "Tất cả"));
             CategoryTabsContainer.Children.Add(CreateTabButton(1, "Tham quan"));
             CategoryTabsContainer.Children.Add(CreateTabButton(2, "Ăn uống"));
@@ -240,25 +231,21 @@ public partial class MapPage : ContentPage
     private Button CreateTabButton(int categoryId, string categoryName)
     {
         bool isSelected = _currentCategoryId == categoryId;
-
-        // Lấy màu theo ID nếu nút đang được chọn
         string activeColorHex = GetCategoryColorHex(categoryId);
 
         var btn = new Button
         {
             Text = categoryName,
-            CommandParameter = categoryId, // Lưu ID vào nút
+            CommandParameter = categoryId,
             FontAttributes = FontAttributes.Bold,
             CornerRadius = 10,
             FontSize = 12,
             HeightRequest = 35,
             Padding = new Thickness(15, 0),
-            // BackgroundColor: Nếu được chọn thì lấy màu chủ đạo, ngược lại xám nhạt
             BackgroundColor = isSelected ? Microsoft.Maui.Graphics.Color.FromArgb(activeColorHex) : Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3"),
             TextColor = isSelected ? Microsoft.Maui.Graphics.Colors.White : Microsoft.Maui.Graphics.Colors.DimGray
         };
 
-        // Gắn sự kiện click
         btn.Clicked += DynamicTab_Clicked;
         return btn;
     }
@@ -270,15 +257,12 @@ public partial class MapPage : ContentPage
 
         _currentCategoryId = (int)btn.CommandParameter;
 
-        // Đổi màu UI cho tất cả các nút
         foreach (var child in CategoryTabsContainer.Children)
         {
             if (child is Button b)
             {
                 int currentBtnId = (int)b.CommandParameter;
                 bool isSelected = currentBtnId == _currentCategoryId;
-
-                // Lấy màu theo ID tương ứng của từng nút
                 string activeColorHex = GetCategoryColorHex(currentBtnId);
 
                 b.BackgroundColor = isSelected ? Microsoft.Maui.Graphics.Color.FromArgb(activeColorHex) : Microsoft.Maui.Graphics.Color.FromArgb("#D3D3D3");
@@ -286,11 +270,9 @@ public partial class MapPage : ContentPage
             }
         }
 
-        // Khi click tab, gọi lọc lại List và vẽ lại Bản Đồ
         UpdateDistancesAndSort();
         DrawPoisOnMap();
     }
-
 
     // ==========================================
     // XỬ LÝ SỰ KIỆN CLICK CỦA NGƯỜI DÙNG
@@ -326,7 +308,7 @@ public partial class MapPage : ContentPage
             mapView.Map.Navigator.ZoomTo(1.5);
 
             // TRACKING: Xem bản đồ
-            _ = AnalyticsService.Instance.TrackEventAsync("view_location", new AnalyticsEventDto { LocationId = poi.Id });
+            _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
         }
     }
 
@@ -348,7 +330,7 @@ public partial class MapPage : ContentPage
             PoiDetailPopup.IsVisible = true;
 
             // TRACKING: Xem chi tiết
-            _ = AnalyticsService.Instance.TrackEventAsync("view_location", new AnalyticsEventDto { LocationId = poi.Id });
+            _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
         }
     }
 
@@ -377,14 +359,13 @@ public partial class MapPage : ContentPage
 
         // Geofencing
         var userLoc = _locationService.CurrentLocation;
-        string eventToTrack = "listen_remote";
+        bool isOnSite = false;
 
         if (userLoc != null)
         {
-            // poi.DistanceMeters đã được tính liên tục ở hàm UpdateDistancesAndSort
             if (poi.DistanceMeters <= poi.Radius)
             {
-                eventToTrack = "listen_onsite";
+                isOnSite = true;
             }
             else
             {
@@ -397,16 +378,9 @@ public partial class MapPage : ContentPage
 
         poi.IsPlaying = true;
         _currentPlayingPoi = poi;
-        _playbackStartTime = DateTime.UtcNow;
-        _currentPoiIdTracked = poi.Id;
 
-        // Gửi Tracking: Báo server là bắt đầu nghe
-        _ = AnalyticsService.Instance.TrackEventAsync(eventToTrack, new AnalyticsEventDto
-        {
-            LocationId = poi.Id,
-            LanguageCode = poi.LanguageCode ?? "vi",
-            HasAudio = true
-        });
+        // Gửi Tracking: Báo server là bắt đầu nghe (ĐÃ SỬA THÀNH GỌI SERVICE)
+        _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
 
         try
         {
@@ -454,7 +428,8 @@ public partial class MapPage : ContentPage
 
         if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
 
-        SendListenDurationTracking();
+        // Gửi Tracking: Báo server là kết thúc nghe
+        _ = AnalyticsService.Instance.TrackAudioStopAsync();
     }
 
     private void AudioPlayer_MediaEnded(object sender, EventArgs e)
@@ -465,24 +440,14 @@ public partial class MapPage : ContentPage
             {
                 _currentPlayingPoi.IsPlaying = false;
                 _currentPlayingPoi = null;
-                SendListenDurationTracking();
+
+                // Gửi Tracking: Báo server là kết thúc nghe (tự động hết audio)
+                _ = AnalyticsService.Instance.TrackAudioStopAsync();
             }
         });
     }
 
-    private void SendListenDurationTracking()
-    {
-        if (_playbackStartTime.HasValue)
-        {
-            int secondsListened = (int)(DateTime.UtcNow - _playbackStartTime.Value).TotalSeconds;
-            _ = AnalyticsService.Instance.TrackEventAsync("listen_duration", new AnalyticsEventDto
-            {
-                LocationId = _currentPoiIdTracked,
-                Duration = secondsListened
-            });
-            _playbackStartTime = null;
-        }
-    }
+    // ĐÃ XÓA hàm SendListenDurationTracking() cũ đi
 
     private string FixLocalhostUrl(string url)
     {
@@ -511,6 +476,7 @@ public partial class MapPage : ContentPage
         poi.IsPlaying = false;
         if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
 
-        SendListenDurationTracking();
+        // Gửi Tracking: Báo server là kết thúc nghe
+        _ = AnalyticsService.Instance.TrackAudioStopAsync();
     }
 }

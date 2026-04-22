@@ -67,10 +67,10 @@ namespace PLTour.Admin.Controllers
             return View();
         }
 
-        // POST: Location/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Location location, IFormFile? imageFile)
+        //POST: Location/Create
+          [HttpPost]
+          [ValidateAntiForgeryToken]
+           public async Task<IActionResult> Create(Location location, IFormFile? imageFile)
         {
             // Loại bỏ lỗi validation cho navigation property
             if (location.Category != null)
@@ -82,14 +82,14 @@ namespace PLTour.Admin.Controllers
             {
                 try
                 {
-					// ✅ SỬA: Upload ảnh qua API
-					if (imageFile != null && imageFile.Length > 0)
-					{
-						var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "locations");
-						location.ImageUrl = imageUrl;
-					}
+                    // ✅ SỬA: Upload ảnh qua API
+                    if (imageFile != null && imageFile.Length > 0)
+                    {
+                        var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "locations");
+                        location.ImageUrl = imageUrl;
+                    }
 
-					location.CreatedDate = DateTime.UtcNow;
+                    location.CreatedDate = DateTime.UtcNow;
                     location.Radius = location.Radius > 0 ? location.Radius : 50;
                     _context.Add(location);
                     await _context.SaveChangesAsync();
