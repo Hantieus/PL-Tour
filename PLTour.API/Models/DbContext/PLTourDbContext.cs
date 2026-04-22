@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using PLTour.Shared.Models.Entities;
 
 namespace PLTour.API.Models.DbContext
@@ -27,13 +28,17 @@ namespace PLTour.API.Models.DbContext
         {
             base.OnModelCreating(modelBuilder);
 
-            // 1. Seed dữ liệu cho Languages
+            // TẠO MỘT MỐC THỜI GIAN CỐ ĐỊNH CHUẨN UTC ĐỂ SEED DỮ LIỆU
+            // Điều này giúp tránh việc EF Core tạo migration liên tục mỗi khi chạy lệnh Add-Migration
+            var fixedUtcDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // 1. Seed dữ liệu cho Languages (Thêm CreatedDate = fixedUtcDate)
             modelBuilder.Entity<Language>().HasData(
-                new Language { LanguageId = 1, Name = "Tiếng Việt", Code = "vi", FlagIcon = "flag-icon-vn", DisplayOrder = 1, IsActive = true },
-                new Language { LanguageId = 2, Name = "English", Code = "en", FlagIcon = "flag-icon-us", DisplayOrder = 2, IsActive = true },
-                new Language { LanguageId = 3, Name = "中文", Code = "zh", FlagIcon = "flag-icon-cn", DisplayOrder = 3, IsActive = true },
-                new Language { LanguageId = 4, Name = "한국어", Code = "ko", FlagIcon = "flag-icon-kr", DisplayOrder = 4, IsActive = true },
-                new Language { LanguageId = 5, Name = "日本語", Code = "ja", FlagIcon = "flag-icon-jp", DisplayOrder = 5, IsActive = true }
+                new Language { LanguageId = 1, Name = "Tiếng Việt", Code = "vi", FlagIcon = "flag-icon-vn", DisplayOrder = 1, IsActive = true, CreatedDate = fixedUtcDate },
+                new Language { LanguageId = 2, Name = "English", Code = "en", FlagIcon = "flag-icon-us", DisplayOrder = 2, IsActive = true, CreatedDate = fixedUtcDate },
+                new Language { LanguageId = 3, Name = "中文", Code = "zh", FlagIcon = "flag-icon-cn", DisplayOrder = 3, IsActive = true, CreatedDate = fixedUtcDate },
+                new Language { LanguageId = 4, Name = "한국어", Code = "ko", FlagIcon = "flag-icon-kr", DisplayOrder = 4, IsActive = true, CreatedDate = fixedUtcDate },
+                new Language { LanguageId = 5, Name = "日本語", Code = "ja", FlagIcon = "flag-icon-jp", DisplayOrder = 5, IsActive = true, CreatedDate = fixedUtcDate }
             );
 
             // 2. Cấu hình Narration
@@ -62,18 +67,20 @@ namespace PLTour.API.Models.DbContext
             );
 
             // 4. Seed dữ liệu admin
+            // LƯU Ý: Đã thay BCrypt.Net.BCrypt.HashPassword("Admin@123") bằng chuỗi hash cố định
+            // để tránh lỗi EF Core liên tục tạo migration mới do salt của BCrypt sinh ra ngẫu nhiên mỗi lần chạy.
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
                     UserId = 1,
                     Username = "admin",
                     Email = "admin@pltour.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                    PasswordHash = "$2a$11$9yp8l6nskdBY8FSI7z.wcOz59amVosuE5psxh.DyxiYE0rRvKH45C", // Hash của chữ: Admin@123
                     FullName = "Administrator",
                     Phone = "0123456789",
                     Role = "Admin",
                     IsActive = true,
-                    CreatedDate = DateTime.UtcNow
+                    CreatedDate = fixedUtcDate
                 }
             );
 

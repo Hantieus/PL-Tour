@@ -6,8 +6,9 @@ using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models;
 using PLTour.Shared.Services;
 using System.Text;
-using PLTour.Shared.Services;
 
+// ---> THÊM DÒNG NÀY VÀO ĐỂ TẮT SỰ KHẮT KHE CỦA POSTGRESQL VỀ THỜI GIAN <---
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,7 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(7291, listenOptions => listenOptions.UseHttps());
 });
 
-//Cloudinary
+// Cloudinary
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // Add services
@@ -113,13 +114,10 @@ app.UseRouting(); // Thêm routing rõ ràng
 
 // CORS PHẢI NẰM TRƯỚC Authentication/Authorization
 app.UseCors("AllowAll");
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseStaticFiles(); // Cho phép truy cập file trong thư mục wwwroot
 
 app.MapControllers();
-
 
 app.Run();

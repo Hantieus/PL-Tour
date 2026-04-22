@@ -112,7 +112,7 @@ public class ApiService
                         ?? loc.Narrations?.FirstOrDefault();
 
         string poiImageUrl = "tour_thumb.jpg";
-        if (!string.IsNullOrEmpty(loc.ImageUrl))
+        if (!string.IsNullOrEmpty(loc.ImageUrl))    
         {
             if (loc.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {

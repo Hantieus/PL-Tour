@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="wwwroot\audio\**" />
+    <Content Remove="wwwroot\audio\**" />
+    <EmbeddedResource Remove="wwwroot\audio\**" />
+    <None Remove="wwwroot\audio\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
     <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
@@ -26,7 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\audio\" />
     <Folder Include="wwwroot\uploads\locations\" />
   </ItemGroup>
 
