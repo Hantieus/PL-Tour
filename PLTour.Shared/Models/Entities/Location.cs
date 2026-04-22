@@ -36,9 +36,14 @@ public class Location
 
     public bool IsActive { get; set; } = true;
 
-    public DateTime CreatedDate { get; set; }
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedDate { get; set; }
+    
+    [StringLength(100)]
+    public string? QrCode { get; set; }
+
+    public DateTime? QrCodeGeneratedAt { get; set; } = DateTime.UtcNow; //TG tạo QR
 
     // Navigation properties
     public virtual Category? Category { get; set; }

@@ -54,9 +54,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Database Context
+// Database Context, có retry logic để đảm bảo kết nối 
 builder.Services.AddDbContext<PLTourDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorCodesToAdd: null);
+        }));
+
 
 // CORS
 builder.Services.AddCors(options =>

@@ -52,6 +52,7 @@
                             <th>Danh mục</th>
                             <th>Bán kính</th>
                             <th>Bài thuyết minh</th>
+                            <th>QR Code</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
@@ -60,86 +61,104 @@
                         @if (Model.Any())
                         {
                             int index = (ViewBag.CurrentPage - 1) * 10 + 1;
-                            foreach (var item in Model)
+                        foreach (var item in Model)
                             {
-                                <tr>
-                                    <td>@(index++)</td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                        <tr>
+                            <td>@index</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.ImageUrl))
                                         {
-                                        <img src="@item.ImageUrl" alt="@item.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />
+                                <img src="@item.ImageUrl" alt="@item.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;" />
                                         }
                                         else
                                         {
-                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
-                                            <i class="fas fa-image"></i>
-                                        </div>
+                                <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 8px;">
+                                    <i class="fas fa-image"></i>
+                                </div>
                                         }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-ruler-combined me-1"></i>@item.Radius m
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <strong>@item.Name</strong>
-                                        <br />
-                                        <small class="text-muted">@item.Address</small>
-                                    </td>
-                                    <td>@item.Category?.Name</td>
+                            </td>
+                            <td>
+                                <strong>@item.Name</strong>
+                                <br />
+                                <small class="text-muted">@item.Address</small>
+                            </td>
+                            <td>@item.Category?.Name</td>
+                            <td>
+                                <span class="badge bg-info">@item.Radius m</span>
+                            </td>
+                                    <!-- Cột Bài thuyết minh -->
                                     <td>
                                         @if (item.Narrations != null && item.Narrations.Any(n => n.IsActive))
                                         {
-                                        <span class="badge bg-success">@item.Narrations.Count(n => n.IsActive) ngôn ngữ</span>
-                                        <br />
-                                        <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@item.LocationId"
-                                           class="btn btn-sm btn-link p-0">Quản lý</a>
+                                            <span class="badge bg-success">@item.Narrations.Count(n => n.IsActive) ngôn ngữ</span>
+                                            <br />
+                                            <a asp-controller="Narration" asp-action="ByLocation" asp-route-locationId="@item.LocationId"
+                                               class="btn btn-sm btn-link p-0">Quản lý</a>
                                         }
                                         else
                                         {
-                                        <span class="badge bg-secondary">Chưa có</span>
-                                        <br />
-                                        <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@item.LocationId"
-                                           class="btn btn-sm btn-link p-0">Thêm mới</a>
+                                            <span class="badge bg-secondary">Chưa có</span>
+                                            <br />
+                                            <a asp-controller="Narration" asp-action="Create" asp-route-locationId="@item.LocationId"
+                                               class="btn btn-sm btn-link p-0">Thêm mới</a>
                                         }
                                     </td>
+
+                                    <!-- Cột QR Code -->
                                     <td>
-                                        @if (item.IsActive)
+                                        @if (!string.IsNullOrEmpty(item.QrCode))
                                         {
-                                        <span class="badge bg-success">Hoạt động</span>
-                                        }
-                                        else
-                                        {
-                                        <span class="badge bg-secondary">Tạm dừng</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a asp-action="Edit" asp-route-id="@item.LocationId" class="btn btn-sm btn-warning" title="Sửa">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a asp-action="Details" asp-route-id="@item.LocationId" class="btn btn-sm btn-info" title="Chi tiết">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.LocationId, '@item.Name')" title="Xóa">
-                                                <i class="fas fa-trash"></i>
+                                            <button type="button" class="btn btn-sm btn-info" onclick="viewQrCode(@item.LocationId, '@item.Name')">
+                                                <i class="fas fa-qrcode"></i> Xem QR
                                             </button>
-                                        </div>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success" onclick="generateQrCode(@item.LocationId, '@item.Name')">
+                                                <i class="fas fa-plus"></i> Tạo QR
+                                            </button>
+                                        }
                                     </td>
-                                </tr>
+                                    <!--Cột trạng thái-->
+                            <td>
+                                @if (item.IsActive)
+                                        {
+                                <span class="badge bg-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                <span class="badge bg-secondary">Tạm dừng</span>
+                                        }
+                            </td>
+                                    <!--Cột Thao tác-->
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a asp-action="Edit" asp-route-id="@item.LocationId" class="btn btn-sm btn-warning" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a asp-action="Details" asp-route-id="@item.LocationId" class="btn btn-sm btn-info" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.LocationId, '@item.Name')" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                                index++;
                             }
                         }
                         else
                         {
-                            <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">Chưa có địa điểm nào</p>
-                                    <a asp-action="Create" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-plus me-1"></i>Thêm mới
-                                    </a>
-                                </td>
-                            </tr>
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Chưa có địa điểm nào</p>
+                                <a asp-action="Create" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Thêm mới
+                                </a>
+                            </td>
+                        </tr>
                         }
                     </tbody>
                 </table>
@@ -183,6 +202,17 @@
             document.getElementById('deleteLocationId').value = id;
             document.getElementById('deleteLocationName').innerText = name;
             new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        function generateQrCode(locationId, locationName) {
+            if (confirm(`Tạo mã QR cho "${locationName}"?`)) {
+                window.open(`/api/qr/generate/${locationId}`, '_blank');
+                setTimeout(() => location.reload(), 1500);
+            }
+        }
+
+        function viewQrCode(locationId, locationName) {
+            window.open(`/api/qr/location/${locationId}`, '_blank');
         }
     </script>
 }

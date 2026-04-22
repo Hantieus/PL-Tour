@@ -12,9 +12,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Cấu hình DbContext
+// Cấu hình DbContext, có retry logic để đảm bảo kết nối ổn định 
+//Retry logic
 builder.Services.AddDbContext<PLTourDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorCodesToAdd: null);
+        }));
+
 
 // Cấu hình TranslationService
 builder.Services.AddScoped<ITranslationService, FreeTranslationService>();
