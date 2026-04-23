@@ -9,6 +9,7 @@ namespace PLTour.Shared.Models.Entities
         [Key]
         public int id { get; set; }
 
+<<<<<<< HEAD
         [Column("session_id")]
         [StringLength(255)]
         public string? session_id { get; set; }
@@ -23,6 +24,29 @@ namespace PLTour.Shared.Models.Entities
 
         [Column("location_id")]
         public int? location_id { get; set; }
+=======
+        [Required]
+        public string? SessionId { get; set; }
+
+        [Required]
+        public string? DeviceId { get; set; }
+
+        [Required]
+        public string? EventType { get; set; }
+
+        public int? LocationId { get; set; }
+        public int? TourId { get; set; }
+
+        public string? LanguageCode { get; set; }
+
+        public int? Duration { get; set; }
+
+        public string? Keyword { get; set; }
+
+        public string? Platform { get; set; }
+
+        public bool? HasAudio { get; set; }
+>>>>>>> a6942460c2252f506ca518bb1a3d19e8baf2c802
 
         [Column("tour_id")]
         public int? tour_id { get; set; }

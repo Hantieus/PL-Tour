@@ -4,6 +4,7 @@ using PLTour.Shared.Models.DTO;
 using Mapsui.Styles;
 using MapsuiColor = Mapsui.Styles.Color;
 using Microsoft.Maui.Storage;
+using Microsoft.Maui.Devices; // Bắt buộc thêm dòng này để dùng DeviceInfo
 
 namespace PLTour.App.Services;
 
@@ -12,14 +13,25 @@ public class ApiService
     private readonly HttpClient _httpClient;
 
     // Base URL của Backend (Server)
-    private readonly string _baseUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
+    private readonly string _baseUrl;
 
     public ApiService()
     {
+#if DEBUG
+        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
+        // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
+        _baseUrl = "http://192.168.2.6:5229/";
+#else
+        // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
+        // Thay bằng domain hoặc IP server thật của bạn
+        _baseUrl = "https://pl-tour-production.up.railway.app/"; 
+#endif
+
         System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {_baseUrl}");
 
         var handler = new HttpClientHandler
         {
+            // Bỏ qua lỗi chứng chỉ SSL khi chạy HTTP ở local
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
 
@@ -37,7 +49,6 @@ public class ApiService
             var tourDtos = await _httpClient.GetFromJsonAsync<List<TourDto>>("api/tours");
             if (tourDtos == null || !tourDtos.Any()) return new List<TourModel>();
 
-            // Đã xóa 1 dòng var tours = new List<TourModel>(); bị dư
             var tours = new List<TourModel>();
 
             foreach (var dto in tourDtos)
@@ -112,7 +123,7 @@ public class ApiService
                         ?? loc.Narrations?.FirstOrDefault();
 
         string poiImageUrl = "tour_thumb.jpg";
-        if (!string.IsNullOrEmpty(loc.ImageUrl))    
+        if (!string.IsNullOrEmpty(loc.ImageUrl))
         {
             if (loc.ImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {

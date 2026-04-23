@@ -12,15 +12,6 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. CẤU HÌNH ĐỂ LẮNG NGHE TỪ ĐIỆN THOẠI THẬT (IP BẤT KỲ) ---
-builder.WebHost.ConfigureKestrel(options =>
-{
-    // Lắng nghe trên cổng 5229 cho tất cả các IP (điện thoại thật gọi vào được)
-    options.ListenAnyIP(5229);
-    // Nếu bạn vẫn muốn dùng HTTPS trên máy tính thì thêm dòng dưới (tùy chọn)
-    options.ListenAnyIP(7291, listenOptions => listenOptions.UseHttps());
-});
-
 // Cloudinary
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
@@ -65,7 +56,6 @@ builder.Services.AddDbContext<PLTourDbContext>(options =>
                 maxRetryDelay: TimeSpan.FromSeconds(10),
                 errorCodesToAdd: null);
         }));
-
 
 // CORS
 builder.Services.AddCors(options =>
