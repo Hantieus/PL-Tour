@@ -20,35 +20,29 @@ namespace PLTour.API.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. API CHO MOBILE APP GỬI DỮ LIỆU LÊN
-        // URL: POST /api/analytics/track
-        // ==========================================
         [HttpPost("track")]
         public async Task<IActionResult> TrackEvent([FromBody] AnalyticsEventDto dto)
         {
-            if (dto == null)
-            {
-                return BadRequest("Dữ liệu không hợp lệ.");
-            }
+            if (dto == null) return BadRequest("Dữ liệu không hợp lệ.");
 
             try
             {
                 var newEvent = new AnalyticsEvent
                 {
-                    session_id = dto.SessionId,
-                    device_id = dto.DeviceId,
-                    event_type = dto.EventType,
-                    location_id = dto.LocationId,
-                    tour_id = dto.TourId,
-                    language_code = dto.LanguageCode,
-                    duration = dto.Duration,
-                    keyword = dto.Keyword,
-                    platform = dto.Platform,
-                    has_audio = dto.HasAudio,
-                    latitude = dto.Latitude,
-                    longitude = dto.Longitude,
-                    timestamp = dto.Timestamp > DateTime.MinValue ? dto.Timestamp : DateTime.UtcNow
+                    // ĐÃ SỬA: Đổi từ session_id thành SessionId (khớp với Entity)
+                    SessionId = dto.SessionId,
+                    DeviceId = dto.DeviceId,
+                    EventType = dto.EventType,
+                    LocationId = dto.LocationId,
+                    TourId = dto.TourId,
+                    LanguageCode = dto.LanguageCode,
+                    Duration = dto.Duration,
+                    Keyword = dto.Keyword,
+                    Platform = dto.Platform,
+                    HasAudio = dto.HasAudio,
+                    Latitude = dto.Latitude,
+                    Longitude = dto.Longitude,
+                    Timestamp = dto.Timestamp > DateTime.MinValue ? dto.Timestamp : DateTime.UtcNow
                 };
 
                 _context.AnalyticsEvents.Add(newEvent);
@@ -62,24 +56,18 @@ namespace PLTour.API.Controllers
             }
         }
 
-        // ==========================================
-        // 2. CÁC API CHO WEB ADMIN LẤY DỮ LIỆU VỀ
-        // ==========================================
-
-        // Lấy Top địa điểm nghe nhiều nhất
-        // URL: GET /api/analytics/top-locations?take=5
         [HttpGet("top-locations")]
         public async Task<IActionResult> GetTopLocations([FromQuery] int take = 10)
         {
             try
             {
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.event_type == "listen_onsite" || e.event_type == "listen_remote")
-                    .Where(e => e.location_id != null)
-                    .GroupBy(e => e.location_id)
+                    .Where(e => e.EventType == "listen_onsite" || e.EventType == "listen_remote")
+                    .Where(e => e.LocationId != null)
+                    .GroupBy(e => e.LocationId)
                     .Select(g => new TopLocationDto
                     {
-                        LocationId = g.Key,
+                        LocationId = g.Key ?? 0,
                         PlayCount = g.Count()
                     })
                     .OrderByDescending(x => x.PlayCount)
@@ -94,20 +82,18 @@ namespace PLTour.API.Controllers
             }
         }
 
-        // Lấy thời gian nghe trung bình của từng POI
-        // URL: GET /api/analytics/average-duration
         [HttpGet("average-duration")]
         public async Task<IActionResult> GetAverageDuration()
         {
             try
             {
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.event_type == "listen_duration" && e.duration.HasValue && e.location_id != null)
-                    .GroupBy(e => e.location_id)
+                    .Where(e => e.EventType == "listen_duration" && e.Duration.HasValue && e.LocationId != null)
+                    .GroupBy(e => e.LocationId)
                     .Select(g => new AvgDurationDto
                     {
-                        LocationId = g.Key,
-                        AverageSeconds = Math.Round(g.Average(e => e.duration.Value), 2)
+                        LocationId = g.Key ?? 0,
+                        AverageSeconds = Math.Round(g.Average(e => e.Duration.Value), 2)
                     })
                     .OrderByDescending(x => x.AverageSeconds)
                     .ToListAsync();
@@ -120,27 +106,24 @@ namespace PLTour.API.Controllers
             }
         }
 
-        // Lấy tọa độ để vẽ Heatmap (vùng nhiệt) và Tuyến đường
-        // URL: GET /api/analytics/heatmap
         [HttpGet("heatmap")]
         public async Task<IActionResult> GetHeatmapData()
         {
             try
             {
-                // Lọc dữ liệu trong 30 ngày gần nhất để biểu đồ không bị quá tải
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
 
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.event_type == "location_ping"
-                             && e.latitude.HasValue
-                             && e.longitude.HasValue
-                             && e.timestamp >= thirtyDaysAgo)
+                    .Where(e => e.EventType == "location_ping"
+                             && e.Latitude.HasValue
+                             && e.Longitude.HasValue
+                             && e.Timestamp >= thirtyDaysAgo)
                     .Select(e => new HeatmapPointDto
                     {
-                        SessionId = e.session_id,
-                        Latitude = e.latitude.Value,
-                        Longitude = e.longitude.Value,
-                        Timestamp = e.timestamp
+                        SessionId = e.SessionId,
+                        Latitude = e.Latitude.Value,
+                        Longitude = e.Longitude.Value,
+                        Timestamp = e.Timestamp
                     })
                     .OrderBy(e => e.Timestamp)
                     .ToListAsync();

@@ -2,7 +2,7 @@
 using Microsoft.Maui.Storage;
 using PLTour.Shared.Models.DTO;
 using System.Text.Json;
-using System.Text; // Thêm thư viện này để dùng Encoding.UTF8
+using System.Text;
 
 namespace PLTour.App.Services;
 
@@ -17,13 +17,11 @@ public class AnalyticsService
     public string SessionId { get; private set; }
     public string DeviceId { get; private set; }
 
-    // Biến lưu trạng thái nghe Audio dùng chung cho toàn App
     private DateTime? _playbackStartTime;
     private int _currentTrackedLocationId;
 
     private AnalyticsService()
     {
-        // 1. Cấu hình vượt rào SSL
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
@@ -34,22 +32,15 @@ public class AnalyticsService
             Timeout = TimeSpan.FromSeconds(15)
         };
 
-        // 2. Cấu hình URL động
         string baseUrl = "";
-
 #if DEBUG
-        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        // Dùng IP LAN của máy tính để app trên điện thoại gọi được API
         baseUrl = "http://192.168.2.6:5229/";
 #else
-        // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         baseUrl = "https://pl-tour-production.up.railway.app/";
 #endif
 
-        // Nối thêm endpoint của Analytics
         _apiUrl = $"{baseUrl}api/analytics/track";
 
-        // 3. Khởi tạo định danh thiết bị
         SessionId = Guid.NewGuid().ToString();
         DeviceId = Preferences.Get("UniqueDeviceId", string.Empty);
 
@@ -60,7 +51,6 @@ public class AnalyticsService
         }
     }
 
-    // Viết hàm gọi API thực tế và hiển thị Popup để Test trên điện thoại thật
     public async Task TrackEventAsync(string eventType, AnalyticsEventDto data = null)
     {
         try
@@ -71,45 +61,52 @@ public class AnalyticsService
             data.SessionId = SessionId;
             data.DeviceId = DeviceId;
             data.Platform = DeviceInfo.Current.Platform.ToString();
-
-            // Ép luôn gửi giờ chuẩn UTC từ điện thoại lên để tránh lỗi PostgreSQL
             data.Timestamp = DateTime.UtcNow;
 
             var json = JsonSerializer.Serialize(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // Gửi dữ liệu POST lên Backend
             var response = await _httpClient.PostAsync(_apiUrl, content);
 
-            // BẬT POPUP HIỂN THỊ KẾT QUẢ TRÊN MÀN HÌNH ĐIỆN THOẠI
+            // XỬ LÝ HIỂN THỊ THÔNG BÁO THEO CHUẨN MAUI MỚI (FIX LỖI OBSOLETE)
             if (!response.IsSuccessStatusCode)
             {
                 string errorDetail = await response.Content.ReadAsStringAsync();
-                MainThread.BeginInvokeOnMainThread(() =>
+                MainThread.BeginInvokeOnMainThread(async () =>
                 {
-                    Application.Current?.MainPage?.DisplayAlert("Lỗi Server", $"Mã lỗi: {response.StatusCode}\nChi tiết: {errorDetail}", "Đóng");
+                    var currentPage = Application.Current?.Windows[0]?.Page;
+                    if (currentPage != null)
+                    {
+                        await currentPage.DisplayAlert("Lỗi Server", $"Mã lỗi: {response.StatusCode}\nChi tiết: {errorDetail}", "Đóng");
+                    }
                 });
             }
             else
             {
-                // Tạm thời bật thông báo thành công để nghiệm thu, khi nào chấm đồ án thì bạn xóa/comment dòng này đi
-                MainThread.BeginInvokeOnMainThread(() =>
+                // Thông báo thành công để nghiệm thu
+                MainThread.BeginInvokeOnMainThread(async () =>
                 {
-                    Application.Current?.MainPage?.DisplayAlert("Thành công", $"Dữ liệu ({eventType}) đã lưu vào Neon Tech!", "Tuyệt vời");
+                    var currentPage = Application.Current?.Windows[0]?.Page;
+                    if (currentPage != null)
+                    {
+                        await currentPage.DisplayAlert("Thành công", $"Dữ liệu ({eventType}) đã lưu vào hệ thống!", "Đóng");
+                    }
                 });
             }
         }
         catch (Exception ex)
         {
-            // NẾU LỖI MẠNG (KHÔNG TÌM THẤY SERVER), CŨNG BẬT POPUP LÊN
-            MainThread.BeginInvokeOnMainThread(() =>
+            MainThread.BeginInvokeOnMainThread(async () =>
             {
-                Application.Current?.MainPage?.DisplayAlert("Lỗi Kết Nối", $"Không thể gửi dữ liệu.\nLỗi: {ex.Message}\nURL: {_apiUrl}", "Đóng");
+                var currentPage = Application.Current?.Windows[0]?.Page;
+                if (currentPage != null)
+                {
+                    await currentPage.DisplayAlert("Lỗi Kết Nối", $"Không thể gửi dữ liệu.\nLỗi: {ex.Message}", "Đóng");
+                }
             });
         }
     }
 
-    // 1. Lưu tuyến di chuyển & Heatmap
     public async Task TrackLocationPingAsync(double lat, double lng)
     {
         await TrackEventAsync("location_ping", new AnalyticsEventDto
@@ -119,13 +116,11 @@ public class AnalyticsService
         });
     }
 
-    // 2. Track xem chi tiết POI
     public async Task TrackPoiViewAsync(int locationId)
     {
         await TrackEventAsync("view_location", new AnalyticsEventDto { LocationId = locationId });
     }
 
-    // 3. Track sự kiện bắt đầu nghe (Top địa điểm nghe nhiều nhất)
     public async Task TrackAudioStartAsync(int locationId, string languageCode, bool isOnSite)
     {
         _playbackStartTime = DateTime.UtcNow;
@@ -140,7 +135,6 @@ public class AnalyticsService
         });
     }
 
-    // 4. Track sự kiện kết thúc nghe (Thời gian trung bình nghe 1 POI)
     public async Task TrackAudioStopAsync()
     {
         if (_playbackStartTime.HasValue && _currentTrackedLocationId > 0)
@@ -153,7 +147,6 @@ public class AnalyticsService
                 Duration = secondsListened
             });
 
-            // Reset trạng thái
             _playbackStartTime = null;
             _currentTrackedLocationId = 0;
         }

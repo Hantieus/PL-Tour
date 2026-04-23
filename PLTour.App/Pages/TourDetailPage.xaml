@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:pages="clr-namespace:PLTour.App.Pages"
              x:Class="PLTour.App.Pages.TourDetailPage"
              Title="Chi tiết Tour"
              Shell.NavBarIsVisible="False">
 
     <Grid x:Name="MainGrid" RowDefinitions="4*, 6*">
-
-        <toolkit:MediaElement x:Name="MainAudioPlayer" IsVisible="False" />
 
         <Grid x:Name="MapSection" Grid.Row="0" ZIndex="1">
             <Grid x:Name="MapContainer" BackgroundColor="#E0E0E0" />
@@ -42,39 +40,25 @@
                 <Button Grid.Row="1" x:Name="btnSpeakIntro" Text="🔊 Nghe giới thiệu Tour" Clicked="SpeakIntro_Clicked"
                         BackgroundColor="#E9ECEF" TextColor="Black" CornerRadius="12" HeightRequest="45" FontAttributes="Bold" />
 
-                <Label Grid.Row="2" Text="Các địa điểm gần bạn nhất:" FontAttributes="Bold" TextColor="Gray" FontSize="14" />
+                <Label Grid.Row="2" Text="Các địa điểm trong Tour:" FontAttributes="Bold" TextColor="Gray" FontSize="14" />
 
                 <CollectionView Grid.Row="3" x:Name="PoiList" SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
                             <Border Margin="0,0,0,12" Padding="15" StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="White">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="PoiItem_Tapped" CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
                                 <VerticalStackLayout Spacing="8">
                                     <Grid ColumnDefinitions="*, Auto">
                                         <Label Grid.Column="0" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" TextColor="#222222"/>
-
-                                        <Label Grid.Column="1" Text="{Binding Address}" 
-                                               TextColor="#E76F51" FontAttributes="Bold" FontSize="13" VerticalOptions="Center"/>
+                                        <Label Grid.Column="1" Text="{Binding Address}" TextColor="#E76F51" FontAttributes="Bold" FontSize="13" VerticalOptions="Center"/>
                                     </Grid>
-
                                     <Label Text="{Binding Category}" FontSize="11" TextColor="#2A9D8F" FontAttributes="Italic"/>
-
-                                    <Label Text="{Binding Description}" FontSize="13" TextColor="Gray" MaxLines="2" LineBreakMode="TailTruncation"/>
-
                                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,5,0,0">
-                                        <Button Grid.Column="0" Text="📍 Map" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
-                                                BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnViewMap_Clicked" />
-
-                                        <Button Grid.Column="1" 
-                                                Text="{Binding PlayButtonText}" 
-                                                BackgroundColor="{Binding PlayButtonColor}" 
-                                                Clicked="BtnSpeakPoi_Clicked" 
-                                                CommandParameter="{Binding .}" 
-                                                HeightRequest="35" 
-                                                TextColor="Black" 
-                                                FontSize="11" />
-
-                                        <Button Grid.Column="2" Text="🧭 Đi" FontSize="11" CornerRadius="8" HeightRequest="35" Padding="0" 
-                                                BackgroundColor="#007BFF" TextColor="White" CommandParameter="{Binding .}" Clicked="BtnRoute_Clicked" />
+                                        <Button Grid.Column="0" Text="📍 Map" FontSize="11" CornerRadius="8" HeightRequest="35" BackgroundColor="#E9ECEF" TextColor="Black" CommandParameter="{Binding .}" Clicked="BtnViewMap_Clicked" />
+                                        <Button Grid.Column="1" Text="{Binding PlayButtonText}" BackgroundColor="{Binding PlayButtonColor}" Clicked="BtnSpeakPoi_Clicked" CommandParameter="{Binding .}" HeightRequest="35" TextColor="Black" FontSize="11" />
+                                        <Button Grid.Column="2" Text="🧭 Đi" FontSize="11" CornerRadius="8" HeightRequest="35" BackgroundColor="#007BFF" TextColor="White" CommandParameter="{Binding .}" Clicked="BtnRoute_Clicked" />
                                     </Grid>
                                 </VerticalStackLayout>
                             </Border>
@@ -83,5 +67,13 @@
                 </CollectionView>
             </Grid>
         </Border>
+
+        <pages:PoiDetailPopupView 
+            x:Name="PoiDetailPopup" 
+            IsVisible="False" 
+            ZIndex="100" 
+            Grid.RowSpan="2"
+            CloseRequested="PoiDetailPopup_CloseRequested"
+            SpeakRequested="PoiDetailPopup_SpeakRequested" />
     </Grid>
 </ContentPage>

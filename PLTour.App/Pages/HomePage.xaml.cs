@@ -6,16 +6,16 @@ namespace PLTour.App.Pages;
 
 public partial class HomePage : ContentPage
 {
-    private readonly ApiService _apiService = new ApiService();
-
-    // 1. Khai báo biến LocationService
+    // SỬA LỖI: Không khởi tạo bằng 'new', để Dependency Injection tự truyền vào
+    private readonly ApiService _apiService;
     private readonly LocationService _locationService;
 
-    // 2. Truyền LocationService qua Constructor
-    public HomePage(LocationService locationService)
+    // Cập nhật Constructor để nhận cả 2 Service từ hệ thống
+    public HomePage(LocationService locationService, ApiService apiService)
     {
         InitializeComponent();
         _locationService = locationService;
+        _apiService = apiService;
     }
 
     protected override async void OnAppearing()
@@ -30,24 +30,20 @@ public partial class HomePage : ContentPage
         {
             LoadingIndicator.IsRunning = true;
 
-            // --- SỬA TẠI ĐÂY: Lấy danh sách Tour từ API thật ---
+            // Lấy danh sách Tour từ API
             var tours = await _apiService.GetToursAsync();
 
-            // 2. Lấy vị trí người dùng từ "Kho lưu trữ" LocationService
+            // Lấy vị trí người dùng đã lưu từ LocationService
             var userLoc = _locationService.GetSavedLocation();
 
-            // 3. Tính toán khoảng cách cho từng tour
             if (tours != null)
             {
                 foreach (var tour in tours)
                 {
-                    // Nếu lấy được vị trí người dùng, tiến hành tính khoảng cách
                     if (userLoc != null)
                     {
-                        // Sử dụng Microsoft.Maui.Devices.Sensors.Location để tính toán
                         var tourLoc = new Microsoft.Maui.Devices.Sensors.Location(tour.Latitude, tour.Longitude);
                         double distance = Microsoft.Maui.Devices.Sensors.Location.CalculateDistance(userLoc, tourLoc, DistanceUnits.Kilometers);
-
                         tour.DistanceDisplay = $"Cách bạn: {distance:F1} km";
                     }
                     else
@@ -56,20 +52,31 @@ public partial class HomePage : ContentPage
                     }
                 }
 
-                // Cập nhật danh sách lên giao diện
                 TourListView.ItemsSource = tours;
             }
         }
         catch (Exception ex)
         {
-            // In ra debug để bạn dễ theo dõi nếu API lỗi
             System.Diagnostics.Debug.WriteLine($"Lỗi LoadTours: {ex.Message}");
-            await DisplayAlert("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
+            // SỬA LỖI: Dùng DisplayAlertAsync thay cho DisplayAlert (obsolete)
+            await DisplayAlertAsync("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
         }
         finally
         {
             LoadingIndicator.IsRunning = false;
         }
+    }
+
+    private async Task DisplayAlertAsync(string title, string message, string cancel)
+    {
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            var currentPage = Application.Current?.Windows[0]?.Page;
+            if (currentPage != null)
+            {
+                await currentPage.DisplayAlert(title, message, cancel);
+            }
+        });
     }
 
     private async void IntroApp_Clicked(object sender, EventArgs e)
@@ -79,7 +86,6 @@ public partial class HomePage : ContentPage
 
     private async void GoToMap_Clicked(object sender, EventArgs e)
     {
-        // Điều hướng sang Tab Map
         await Shell.Current.GoToAsync("//map");
     }
 
@@ -92,7 +98,6 @@ public partial class HomePage : ContentPage
 
     private async void ViewTourDetail_Clicked(object sender, EventArgs e)
     {
-        // Lưu ý: Đảm bảo class trong Models tên là TourModel hoặc Tour tùy theo Project của bạn
         var tour = (sender as Button)?.CommandParameter as TourModel;
         if (tour == null) return;
 
@@ -101,7 +106,6 @@ public partial class HomePage : ContentPage
             { "SelectedTour", tour }
         };
 
-        // Điều hướng sang trang Chi tiết Tour
         await Shell.Current.GoToAsync(nameof(TourDetailPage), navigationParameter);
     }
 }

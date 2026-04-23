@@ -33,9 +33,13 @@ namespace PLTour.App
             // ==========================================
 
             // 1. Đăng ký Service
+            builder.Services.AddSingleton<OfflineDatabase>();
             builder.Services.AddSingleton<LocationService>();
             builder.Services.AddSingleton<ApiService>(); // Đảm bảo đã đăng ký ApiService
 
+            // Đăng ký các Service xử lý logic (Singleton để dùng chung một instance duy nhất)
+            builder.Services.AddSingleton<LocationService>();
+            builder.Services.AddSingleton<RouteTrackingService>();
             // LƯU Ý: Với MediaElement, bạn không cần dòng builder.Services.AddSingleton(AudioManager.Current) 
             // vì MediaElement là một Control trên giao diện XAML, nó tự quản lý trình phát.
 

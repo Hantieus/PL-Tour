@@ -29,6 +29,7 @@ namespace PLTour.API.Models.DbContext
         {
             base.OnModelCreating(modelBuilder);
 
+            // Cố định ngày tạo cho dữ liệu Seed
             var fixedUtcDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
             // 1. Seed dữ liệu cho Languages
@@ -92,7 +93,17 @@ namespace PLTour.API.Models.DbContext
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Tour).WithMany(t => t.TourLocations).HasForeignKey(tl => tl.TourId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Location).WithMany().HasForeignKey(tl => tl.LocationId).OnDelete(DeleteBehavior.Cascade);
 
+            // 7. CẤU HÌNH ANALYTICS EVENTS (Tối ưu hóa)
+            modelBuilder.Entity<AnalyticsEvent>(entity =>
+            {
+                // Đánh Index cho các cột thường xuyên lọc/thống kê để tăng tốc độ truy vấn
+                entity.HasIndex(e => e.EventType);
+                entity.HasIndex(e => e.Timestamp);
+                entity.HasIndex(e => e.SessionId);
 
+                // Đảm bảo ID tự tăng theo chuẩn database
+                entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            });
         }
     }
 }

@@ -9,7 +9,7 @@ using PLTour.App.Models;
 using PLTour.App.Services;
 using Microsoft.Maui.ApplicationModel;
 using System.Collections.ObjectModel;
-using Plugin.Maui.Audio; // Thêm thư viện âm thanh
+using Plugin.Maui.Audio;
 using PLTour.Shared.Models.DTO;
 
 namespace PLTour.App.Pages;
@@ -24,7 +24,6 @@ public partial class TourDetailPage : ContentPage
         set
         {
             _tour = value;
-            // Đảm bảo cập nhật giao diện luôn chạy trên luồng chính để tránh crash
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 LoadTourData();
@@ -38,141 +37,211 @@ public partial class TourDetailPage : ContentPage
     private bool isMapExpanded = false;
     private bool _isFirstLocation = true;
     private MemoryLayer _userLocationLayer;
+    private HashSet<int> _autoPlayedPoiIds = new HashSet<int>();
+    private PoiModel _currentPlayingPoi;
 
     // QUẢN LÝ ÂM THANH
     private IAudioPlayer _audioPlayer;
     private CancellationTokenSource _ttsCts;
-    private readonly LocationService _locationService;
 
-    public TourDetailPage(LocationService locationService)
+    private readonly LocationService _locationService;
+    private readonly RouteTrackingService _routeTrackingService;
+    private readonly ApiService _apiService; // Thêm ApiService để gọi Menu
+
+    public TourDetailPage(LocationService locationService, RouteTrackingService routeTrackingService, ApiService apiService)
     {
         InitializeComponent();
         _locationService = locationService;
+        _routeTrackingService = routeTrackingService;
+        _apiService = apiService;
 
         PoiList.ItemsSource = SortedPois;
         StartTracking();
     }
 
-    // --- LOGIC PHÁT ÂM THANH CHO POI ---
-    private async void BtnSpeakPoi_Clicked(object sender, EventArgs e)
+    // ==========================================
+    // 1. ADAPTIVE GPS & ROUTE TRACKING
+    // ==========================================
+    private async void StartTracking()
+    {
+        var initialLoc = await _locationService.GetAndSaveCurrentLocationAsync();
+        if (initialLoc != null)
+        {
+            UpdateUserLocationOnMap(initialLoc);
+            _ = AnalyticsService.Instance.TrackLocationPingAsync(initialLoc.Latitude, initialLoc.Longitude);
+        }
+
+        while (true)
+        {
+            try
+            {
+                var location = await _locationService.GetAdaptiveLocationAsync();
+                if (location != null)
+                {
+                    UpdateUserLocationOnMap(location);
+                    UpdateDistances();
+
+                    if (_tour?.Pois != null)
+                    {
+                        await _routeTrackingService.ProcessLocationForRoute(location, _tour.Pois);
+                    }
+
+                    if (_locationService.ShouldSendHeartbeat())
+                    {
+                        _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
+                    }
+
+                    CheckGeofenceAndAutoPlay(location);
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Detail Tracking Error: {ex.Message}"); }
+
+            await Task.Delay(_locationService.GetAdaptiveInterval());
+        }
+    }
+
+    private void CheckGeofenceAndAutoPlay(Microsoft.Maui.Devices.Sensors.Location userLoc)
+    {
+        if (_currentPlayingPoi != null && _currentPlayingPoi.IsPlaying) return;
+        if (_tour?.Pois == null) return;
+
+        var closestPoi = _tour.Pois
+            .Where(p => p.DistanceMeters <= p.Radius && !_autoPlayedPoiIds.Contains(p.Id))
+            .OrderBy(p => p.DistanceMeters)
+            .FirstOrDefault();
+
+        if (closestPoi != null)
+        {
+            _autoPlayedPoiIds.Add(closestPoi.Id);
+            PlayAudioForPoi(closestPoi, true);
+        }
+    }
+
+    // ==========================================
+    // 2. LOGIC CHI TIẾT POI & MENU
+    // ==========================================
+
+    // Hàm xử lý khi người dùng chạm vào một Border địa điểm trong danh sách
+    private async void PoiItem_Tapped(object sender, EventArgs e)
+    {
+        var border = sender as Border;
+        var poi = border?.BindingContext as PoiModel;
+
+        if (poi != null)
+        {
+            // Hiển thị Popup
+            PoiDetailPopup.BindingContext = poi;
+            PoiDetailPopup.IsVisible = true;
+            _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
+
+            // Kiểm tra và tải Menu nếu là địa điểm ăn uống
+            if (poi.IsDiningCategory && poi.MenuItems.Count == 0 && poi.VendorId.HasValue)
+            {
+                poi.IsLoadingMenu = true;
+                try
+                {
+                    var products = await _apiService.GetProductsByVendorAsync(poi.VendorId.Value);
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        poi.MenuItems = products;
+                    });
+                }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Menu Load Error: {ex.Message}"); }
+                finally
+                {
+                    poi.IsLoadingMenu = false;
+                }
+            }
+        }
+    }
+
+    // Sự kiện đóng Popup từ Component dùng chung
+    private void PoiDetailPopup_CloseRequested(object sender, EventArgs e)
+    {
+        PoiDetailPopup.IsVisible = false;
+    }
+
+    // Sự kiện nút Nghe từ bên trong Popup
+    private void PoiDetailPopup_SpeakRequested(object sender, PoiModel poi)
+    {
+        if (poi != null)
+        {
+            bool isOnSite = poi.DistanceMeters <= poi.Radius;
+            PlayAudioForPoi(poi, isOnSite);
+        }
+    }
+
+    // ==========================================
+    // 3. LOGIC PHÁT ÂM THANH
+    // ==========================================
+    private void BtnSpeakPoi_Clicked(object sender, EventArgs e)
     {
         var poi = (sender as Button)?.CommandParameter as PoiModel;
         if (poi == null) return;
 
-        // TRƯỜNG HỢP: ĐANG PHÁT THÌ BẤM ĐỂ DỪNG
-        if (poi.IsPlaying)
-        {
-            StopPlayback(poi);
-            return;
-        }
+        if (poi.IsPlaying) { StopPlayback(poi); return; }
+        if (_currentPlayingPoi != null) StopPlayback(_currentPlayingPoi);
 
-        // BẮT ĐẦU QUY TRÌNH PHÁT
-        poi.IsPlaying = true;
-
-        // TRACKING: Ghi nhận sự kiện bắt đầu nghe
         bool isOnSite = poi.DistanceMeters <= poi.Radius;
+        PlayAudioForPoi(poi, isOnSite);
+    }
+
+    private async void PlayAudioForPoi(PoiModel poi, bool isOnSite)
+    {
+        poi.IsPlaying = true;
+        _currentPlayingPoi = poi;
+
+        await _routeTrackingService.RecordVisitAsync(poi, _locationService.CurrentLocation);
         _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
 
         try
         {
-            // 1. ƯU TIÊN PHÁT MP3 TỪ URL
             if (!string.IsNullOrEmpty(poi.AudioUrl))
             {
                 using (var httpClient = new HttpClient())
                 {
                     var stream = await httpClient.GetStreamAsync(poi.AudioUrl);
                     _audioPlayer = AudioManager.Current.CreatePlayer(stream);
-
-                    // Khi hết bài tự động reset trạng thái nút và gửi Tracking End
-                    _audioPlayer.PlaybackEnded += (s, args) =>
-                    {
+                    _audioPlayer.PlaybackEnded += (s, args) => {
                         MainThread.BeginInvokeOnMainThread(() => poi.IsPlaying = false);
+                        _currentPlayingPoi = null;
                         _ = AnalyticsService.Instance.TrackAudioStopAsync();
                     };
-
                     _audioPlayer.Play();
                 }
             }
-            // 2. DỰ PHÒNG: DÙNG GOOGLE TEXT-TO-SPEECH
             else
             {
                 _ttsCts = new CancellationTokenSource();
                 string textToRead = string.IsNullOrEmpty(poi.FullContent) ? poi.Description : poi.FullContent;
-
                 await TextToSpeech.SpeakAsync($"{poi.Name}. {textToRead}", _ttsCts.Token);
-
                 poi.IsPlaying = false;
-
-                // TRACKING: Ghi nhận kết thúc đọc Text-to-Speech
+                _currentPlayingPoi = null;
                 _ = AnalyticsService.Instance.TrackAudioStopAsync();
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Người dùng chủ động dừng thông qua Cancel Token
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Lỗi âm thanh: {ex.Message}");
             poi.IsPlaying = false;
-
-            // TRACKING: Dừng nếu có lỗi xảy ra
+            _currentPlayingPoi = null;
             _ = AnalyticsService.Instance.TrackAudioStopAsync();
         }
     }
 
-    // Hàm phụ trợ dừng âm thanh
     private void StopPlayback(PoiModel poi)
     {
-        poi.IsPlaying = false;
-
-        if (_audioPlayer != null)
-        {
-            if (_audioPlayer.IsPlaying) _audioPlayer.Stop();
-            _audioPlayer.Dispose();
-            _audioPlayer = null;
-        }
-
-        if (_ttsCts != null)
-        {
-            _ttsCts.Cancel();
-            _ttsCts.Dispose();
-            _ttsCts = null;
-        }
-
-        // TRACKING: Báo server là người dùng đã chủ động dừng nghe
+        if (poi != null) poi.IsPlaying = false;
+        if (_audioPlayer != null) { if (_audioPlayer.IsPlaying) _audioPlayer.Stop(); _audioPlayer.Dispose(); _audioPlayer = null; }
+        if (_ttsCts != null) { _ttsCts.Cancel(); _ttsCts.Dispose(); _ttsCts = null; }
+        if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
         _ = AnalyticsService.Instance.TrackAudioStopAsync();
     }
 
-    // --- CÁC HÀM KHÁC ---
-    private void LoadTourData()
-    {
-        if (_tour == null) return;
-        lblTourName.Text = _tour.Name;
-        InitializeMap();
-        UpdateDistances();
-    }
-
-    private async void StartTracking()
-    {
-        while (true)
-        {
-            try
-            {
-                var location = await _locationService.GetAndSaveCurrentLocationAsync();
-                if (location != null)
-                {
-                    UpdateUserLocationOnMap(location);
-                    UpdateDistances();
-
-                    // TRACKING: Lưu vị trí để vẽ Heatmap và Tuyến di chuyển
-                    _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
-                }
-            }
-            catch { }
-            await Task.Delay(5000);
-        }
-    }
+    // ==========================================
+    // 4. CÁC HÀM TIỆN ÍCH & BẢN ĐỒ
+    // ==========================================
+    private void LoadTourData() { if (_tour == null) return; lblTourName.Text = _tour.Name; InitializeMap(); UpdateDistances(); }
 
     private void UpdateUserLocationOnMap(Microsoft.Maui.Devices.Sensors.Location location)
     {
@@ -198,19 +267,9 @@ public partial class TourDetailPage : ContentPage
             poi.Address = distMeters < 1000 ? $"{Math.Round(distMeters)} m" : $"{(distMeters / 1000.0):F1} km";
         }
         var listSorted = _tour.Pois.OrderBy(p => p.DistanceMeters).ToList();
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            if (SortedPois.Count == 0 || SortedPois[0].Name != listSorted[0].Name)
-            {
-                SortedPois.Clear();
-                foreach (var p in listSorted) SortedPois.Add(p);
-            }
-            else
-            {
-                var temp = PoiList.ItemsSource;
-                PoiList.ItemsSource = null;
-                PoiList.ItemsSource = temp;
-            }
+        MainThread.BeginInvokeOnMainThread(() => {
+            if (SortedPois.Count == 0 || SortedPois[0].Name != listSorted[0].Name) { SortedPois.Clear(); foreach (var p in listSorted) SortedPois.Add(p); }
+            else { var temp = PoiList.ItemsSource; PoiList.ItemsSource = null; PoiList.ItemsSource = temp; }
         });
     }
 
@@ -263,56 +322,10 @@ public partial class TourDetailPage : ContentPage
         });
     }
 
-    private void CurrentLocation_Clicked(object sender, EventArgs e)
-    {
-        var loc = _locationService.CurrentLocation;
-        if (loc != null && mapView != null)
-        {
-            var p = SphericalMercator.FromLonLat(loc.Longitude, loc.Latitude);
-            mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y));
-            mapView.Map.Navigator.ZoomTo(1.2);
-        }
-    }
-
-    private void ToggleMapSize_Clicked(object sender, EventArgs e)
-    {
-        isMapExpanded = !isMapExpanded;
-        if (isMapExpanded) { Grid.SetRowSpan(MapSection, 2); InfoPanel.IsVisible = false; BtnToggleMap.Text = "Small 📂"; }
-        else { Grid.SetRowSpan(MapSection, 1); InfoPanel.IsVisible = true; BtnToggleMap.Text = "Full 🔲"; }
-    }
-
+    private void CurrentLocation_Clicked(object sender, EventArgs e) { var loc = _locationService.CurrentLocation; if (loc != null && mapView != null) { var p = SphericalMercator.FromLonLat(loc.Longitude, loc.Latitude); mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y)); mapView.Map.Navigator.ZoomTo(1.2); } }
+    private void ToggleMapSize_Clicked(object sender, EventArgs e) { isMapExpanded = !isMapExpanded; if (isMapExpanded) { Grid.SetRowSpan(MapSection, 2); InfoPanel.IsVisible = false; BtnToggleMap.Text = "Small 📂"; } else { Grid.SetRowSpan(MapSection, 1); InfoPanel.IsVisible = true; BtnToggleMap.Text = "Full 🔲"; } }
     private async void Back_Clicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("..");
-
-    private void BtnViewMap_Clicked(object sender, EventArgs e)
-    {
-        var poi = (sender as Button)?.CommandParameter as PoiModel;
-        if (poi != null && mapView != null)
-        {
-            var p = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
-            mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y));
-            mapView.Map.Navigator.ZoomTo(1.5);
-
-            // TRACKING: Theo dõi khi người dùng xem chi tiết 1 địa điểm trên Map
-            _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
-        }
-    }
-
-    private async void SpeakIntro_Clicked(object sender, EventArgs e)
-    {
-        if (_tour != null)
-        {
-            await TextToSpeech.SpeakAsync(_tour.IntroText);
-        }
-    }
-
-    private async void BtnRoute_Clicked(object sender, EventArgs e)
-    {
-        var poi = (sender as Button)?.CommandParameter as PoiModel;
-        if (poi != null)
-        {
-            await Microsoft.Maui.ApplicationModel.Map.OpenAsync(
-                new Microsoft.Maui.Devices.Sensors.Location(poi.Lat, poi.Lng),
-                new MapLaunchOptions { Name = poi.Name, NavigationMode = NavigationMode.Driving });
-        }
-    }
+    private void BtnViewMap_Clicked(object sender, EventArgs e) { var poi = (sender as Button)?.CommandParameter as PoiModel; if (poi != null && mapView != null) { var p = SphericalMercator.FromLonLat(poi.Lng, poi.Lat); mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y)); mapView.Map.Navigator.ZoomTo(1.5); _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id); } }
+    private async void SpeakIntro_Clicked(object sender, EventArgs e) { if (_tour != null) await TextToSpeech.SpeakAsync(_tour.IntroText); }
+    private async void BtnRoute_Clicked(object sender, EventArgs e) { var poi = (sender as Button)?.CommandParameter as PoiModel; if (poi != null) await Microsoft.Maui.ApplicationModel.Map.OpenAsync(new Microsoft.Maui.Devices.Sensors.Location(poi.Lat, poi.Lng), new MapLaunchOptions { Name = poi.Name, NavigationMode = NavigationMode.Driving }); }
 }

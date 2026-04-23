@@ -7,51 +7,53 @@ namespace PLTour.Shared.Models.Entities
     public class AnalyticsEvent
     {
         [Key]
-        public int id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("id")]
+        public int Id { get; set; }
 
         [Column("session_id")]
         [StringLength(255)]
-        public string? session_id { get; set; }
+        public string? SessionId { get; set; }
 
         [Column("device_id")]
         [StringLength(255)]
-        public string? device_id { get; set; }
+        public string? DeviceId { get; set; }
 
         [Column("event_type")]
         [StringLength(50)]
-        public string? event_type { get; set; }
+        public string? EventType { get; set; }
 
         [Column("location_id")]
-        public int? location_id { get; set; }
+        public int? LocationId { get; set; }
 
         [Column("tour_id")]
-        public int? tour_id { get; set; }
+        public int? TourId { get; set; }
 
         [Column("language_code")]
         [StringLength(10)]
-        public string? language_code { get; set; }
+        public string? LanguageCode { get; set; }
 
         [Column("duration")]
-        public int? duration { get; set; }
+        public int? Duration { get; set; }
 
         [Column("keyword")]
         [StringLength(255)]
-        public string? keyword { get; set; }
+        public string? Keyword { get; set; }
 
         [Column("platform")]
         [StringLength(50)]
-        public string? platform { get; set; }
+        public string? Platform { get; set; }
 
         [Column("has_audio")]
-        public bool? has_audio { get; set; }
+        public bool? HasAudio { get; set; }
 
         [Column("latitude")]
-        public double? latitude { get; set; }
+        public double? Latitude { get; set; }
 
         [Column("longitude")]
-        public double? longitude { get; set; }
+        public double? Longitude { get; set; }
 
         [Column("timestamp")]
-        public DateTime timestamp { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

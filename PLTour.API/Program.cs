@@ -110,4 +110,20 @@ app.UseStaticFiles(); // Cho phép truy cập file trong thư mục wwwroot
 
 app.MapControllers();
 
+// TỰ ĐỘNG CẬP NHẬT DATABASE KHI APP CHẠY
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<PLTourDbContext>();
+        context.Database.Migrate(); // Tự động tạo bảng nếu có Migration mới
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Lỗi khi tự động cập nhật Database.");
+    }
+}
+
 app.Run();
