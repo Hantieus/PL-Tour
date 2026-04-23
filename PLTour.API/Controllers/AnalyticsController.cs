@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PLTour.API.Models.DbContext; // Chứa PLTourDbContext của bạn
-using PLTour.Shared.Models.Entities; // Chứa class AnalyticsEvent
-using PLTour.Shared.Models.DTO; // Chứa AnalyticsEventDto
+using PLTour.API.Models.DbContext;
+using PLTour.Shared.Models.Entities;
+using PLTour.Shared.Models.DTO;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,19 +36,19 @@ namespace PLTour.API.Controllers
             {
                 var newEvent = new AnalyticsEvent
                 {
-                    SessionId = dto.SessionId,
-                    DeviceId = dto.DeviceId,
-                    EventType = dto.EventType,
-                    LocationId = dto.LocationId,
-                    TourId = dto.TourId,
-                    LanguageCode = dto.LanguageCode,
-                    Duration = dto.Duration,
-                    Keyword = dto.Keyword,
-                    Platform = dto.Platform,
-                    HasAudio = dto.HasAudio,
-                    Latitude = dto.Latitude,
-                    Longitude = dto.Longitude,
-                    Timestamp = dto.Timestamp > DateTime.MinValue ? dto.Timestamp : DateTime.UtcNow
+                    session_id = dto.SessionId,
+                    device_id = dto.DeviceId,
+                    event_type = dto.EventType,
+                    location_id = dto.LocationId,
+                    tour_id = dto.TourId,
+                    language_code = dto.LanguageCode,
+                    duration = dto.Duration,
+                    keyword = dto.Keyword,
+                    platform = dto.Platform,
+                    has_audio = dto.HasAudio,
+                    latitude = dto.Latitude,
+                    longitude = dto.Longitude,
+                    timestamp = dto.Timestamp > DateTime.MinValue ? dto.Timestamp : DateTime.UtcNow
                 };
 
                 _context.AnalyticsEvents.Add(newEvent);
@@ -74,9 +74,9 @@ namespace PLTour.API.Controllers
             try
             {
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.EventType == "listen_onsite" || e.EventType == "listen_remote")
-                    .Where(e => e.LocationId != null)
-                    .GroupBy(e => e.LocationId)
+                    .Where(e => e.event_type == "listen_onsite" || e.event_type == "listen_remote")
+                    .Where(e => e.location_id != null)
+                    .GroupBy(e => e.location_id)
                     .Select(g => new TopLocationDto
                     {
                         LocationId = g.Key,
@@ -102,12 +102,12 @@ namespace PLTour.API.Controllers
             try
             {
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.EventType == "listen_duration" && e.Duration.HasValue && e.LocationId != null)
-                    .GroupBy(e => e.LocationId)
+                    .Where(e => e.event_type == "listen_duration" && e.duration.HasValue && e.location_id != null)
+                    .GroupBy(e => e.location_id)
                     .Select(g => new AvgDurationDto
                     {
                         LocationId = g.Key,
-                        AverageSeconds = Math.Round(g.Average(e => e.Duration.Value), 2)
+                        AverageSeconds = Math.Round(g.Average(e => e.duration.Value), 2)
                     })
                     .OrderByDescending(x => x.AverageSeconds)
                     .ToListAsync();
@@ -131,16 +131,16 @@ namespace PLTour.API.Controllers
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
 
                 var query = await _context.AnalyticsEvents
-                    .Where(e => e.EventType == "location_ping"
-                             && e.Latitude.HasValue
-                             && e.Longitude.HasValue
-                             && e.Timestamp >= thirtyDaysAgo)
+                    .Where(e => e.event_type == "location_ping"
+                             && e.latitude.HasValue
+                             && e.longitude.HasValue
+                             && e.timestamp >= thirtyDaysAgo)
                     .Select(e => new HeatmapPointDto
                     {
-                        SessionId = e.SessionId,
-                        Latitude = e.Latitude.Value,
-                        Longitude = e.Longitude.Value,
-                        Timestamp = e.Timestamp
+                        SessionId = e.session_id,
+                        Latitude = e.latitude.Value,
+                        Longitude = e.longitude.Value,
+                        Timestamp = e.timestamp
                     })
                     .OrderBy(e => e.Timestamp)
                     .ToListAsync();
@@ -152,32 +152,5 @@ namespace PLTour.API.Controllers
                 return StatusCode(500, $"Lỗi server: {ex.Message}");
             }
         }
-    }
-}
-
-// ==========================================
-// CÁC CLASS DTO PHỤC VỤ TRẢ KẾT QUẢ CHO ADMIN
-// (Bạn có thể để nguyên ở đây hoặc cắt sang project Shared nếu muốn)
-// ==========================================
-namespace PLTour.Shared.Models.DTO
-{
-    public class TopLocationDto
-    {
-        public int? LocationId { get; set; }
-        public int PlayCount { get; set; }
-    }
-
-    public class AvgDurationDto
-    {
-        public int? LocationId { get; set; }
-        public double AverageSeconds { get; set; }
-    }
-
-    public class HeatmapPointDto
-    {
-        public string SessionId { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public DateTime Timestamp { get; set; }
     }
 }

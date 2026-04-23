@@ -12,8 +12,8 @@ using PLTour.API.Models.DbContext;
 namespace PLTour.API.Migrations
 {
     [DbContext(typeof(PLTourDbContext))]
-    [Migration("20260422095704_AddAnalyticsTable")]
-    partial class AddAnalyticsTable
+    [Migration("20260423025434_AddAnalyticsEvents")]
+    partial class AddAnalyticsEvents
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

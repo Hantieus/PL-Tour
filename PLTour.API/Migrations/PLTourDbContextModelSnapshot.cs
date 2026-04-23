@@ -157,7 +157,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(10)");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
@@ -184,7 +184,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 1,
                             Code = "vi",
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 825, DateTimeKind.Utc).AddTicks(8379),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 1,
                             FlagIcon = "flag-icon-vn",
                             IsActive = true,
@@ -194,7 +194,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 2,
                             Code = "en",
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 825, DateTimeKind.Utc).AddTicks(8383),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 2,
                             FlagIcon = "flag-icon-us",
                             IsActive = true,
@@ -204,7 +204,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 3,
                             Code = "zh",
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 825, DateTimeKind.Utc).AddTicks(8384),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 3,
                             FlagIcon = "flag-icon-cn",
                             IsActive = true,
@@ -214,7 +214,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 4,
                             Code = "ko",
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 825, DateTimeKind.Utc).AddTicks(8385),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 4,
                             FlagIcon = "flag-icon-kr",
                             IsActive = true,
@@ -224,7 +224,7 @@ namespace PLTour.API.Migrations
                         {
                             LanguageId = 5,
                             Code = "ja",
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 825, DateTimeKind.Utc).AddTicks(8387),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 5,
                             FlagIcon = "flag-icon-jp",
                             IsActive = true,
@@ -248,7 +248,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -280,13 +280,13 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("QrCodeGeneratedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Radius")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("LocationId");
 
@@ -311,7 +311,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Duration")
                         .HasColumnType("integer");
@@ -334,7 +334,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Version")
                         .HasColumnType("integer");
@@ -362,7 +362,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -387,7 +387,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("VendorId")
                         .HasColumnType("integer");
@@ -410,7 +410,7 @@ namespace PLTour.API.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TourId"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Duration")
                         .HasColumnType("integer");
@@ -432,7 +432,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("TourId");
 
@@ -468,7 +468,7 @@ namespace PLTour.API.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UserId"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -484,7 +484,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastLoginDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -513,11 +513,11 @@ namespace PLTour.API.Migrations
                         new
                         {
                             UserId = 1,
-                            CreatedDate = new DateTime(2026, 4, 22, 1, 3, 30, 930, DateTimeKind.Utc).AddTicks(3072),
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@pltour.com",
                             FullName = "Administrator",
                             IsActive = true,
-                            PasswordHash = "$2a$11$Ql6auEaZaY/3x3TM8cUReeKQun7b6m3tyz7XtpeIMKFOPeRbVTQq.",
+                            PasswordHash = "$2a$11$9yp8l6nskdBY8FSI7z.wcOz59amVosuE5psxh.DyxiYE0rRvKH45C",
                             Phone = "0123456789",
                             Role = "Admin",
                             Username = "admin"
@@ -538,13 +538,13 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime?>("ApprovedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -598,7 +598,7 @@ namespace PLTour.API.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("VendorId");
 
@@ -616,7 +616,7 @@ namespace PLTour.API.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ImageId"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)

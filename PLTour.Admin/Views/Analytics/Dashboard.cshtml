@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = "Dashboard phân tích";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4">@ViewData["Title"]</h1>
+
+    <!-- 4 thẻ KPI -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Tổng sự kiện</h6>
+                    <h2 class="mb-0">@ViewBag.TotalEvents</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Thiết bị</h6>
+                    <h2 class="mb-0">@ViewBag.UniqueDevices</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Phiên</h6>
+                    <h2 class="mb-0">@ViewBag.TotalSessions</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Hôm nay</h6>
+                    <h2 class="mb-0">@ViewBag.TodayEvents</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Top địa điểm -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Top địa điểm được quan tâm</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Địa điểm</th><th>Lượt tương tác</th></tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.TopLocations != null && ViewBag.TopLocations.Count > 0)
+                            {
+                                @foreach (var item in ViewBag.TopLocations)
+                                {
+                                    <tr><td>Địa điểm #@item.LocationId</td><td>@item.Count</td></tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="2" class="text-center">Chưa có dữ liệu</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thống kê tuần -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Hoạt động 7 ngày qua</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2>@ViewBag.WeekEvents</h2>
+                    <p class="text-muted">sự kiện</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
