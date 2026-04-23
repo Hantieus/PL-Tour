@@ -92,19 +92,7 @@ namespace PLTour.API.Models.DbContext
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Tour).WithMany(t => t.TourLocations).HasForeignKey(tl => tl.TourId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Location).WithMany().HasForeignKey(tl => tl.LocationId).OnDelete(DeleteBehavior.Cascade);
 
-            // --- PHẦN MỚI: ÉP BUỘC CẤU HÌNH CHO ANALYTICS ---
-            modelBuilder.Entity<AnalyticsEvent>(entity =>
-            {
-                // Ép tên bảng là analytics_events (viết thường) để khớp với câu lệnh SQL của PostgreSQL
-                entity.ToTable("analytics_events");
 
-                // Khai báo khóa chính
-                entity.HasKey(e => e.Id);
-
-                // Nếu bạn muốn ép tên cột giống hệt SQL (có dấu ngoặc kép hoặc viết thường)
-                entity.Property(e => e.Id).HasColumnName("Id");
-                entity.Property(e => e.Timestamp).HasColumnName("Timestamp");
-            });
         }
     }
 }
