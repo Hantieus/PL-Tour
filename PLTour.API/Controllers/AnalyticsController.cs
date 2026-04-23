@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PLTour.API.Models.DbContext; // Chứa PLTourDbContext của bạn
-using PLTour.Shared.Models.Entities; // Chứa class AnalyticsEvent
-using PLTour.Shared.Models.DTO; // Chứa AnalyticsEventDto
+using PLTour.API.Models.DbContext;
+using PLTour.Shared.Models.Entities;
+using PLTour.Shared.Models.DTO;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,10 +20,6 @@ namespace PLTour.API.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. API CHO MOBILE APP GỬI DỮ LIỆU LÊN
-        // URL: POST /api/analytics/track
-        // ==========================================
         [HttpPost("track")]
         public async Task<IActionResult> TrackEvent([FromBody] AnalyticsEventDto dto)
         {
@@ -34,6 +30,17 @@ namespace PLTour.API.Controllers
 
             try
             {
+                // PHẦN QUAN TRỌNG: Xử lý thời gian chuẩn UTC cho PostgreSQL
+                DateTime timestampUtc;
+                if (dto.Timestamp > DateTime.MinValue)
+                {
+                    timestampUtc = DateTime.SpecifyKind(dto.Timestamp, DateTimeKind.Utc);
+                }
+                else
+                {
+                    timestampUtc = DateTime.UtcNow;
+                }
+
                 var newEvent = new AnalyticsEvent
                 {
                     SessionId = dto.SessionId,
@@ -48,7 +55,7 @@ namespace PLTour.API.Controllers
                     HasAudio = dto.HasAudio,
                     Latitude = dto.Latitude,
                     Longitude = dto.Longitude,
-                    Timestamp = dto.Timestamp > DateTime.MinValue ? dto.Timestamp : DateTime.UtcNow
+                    Timestamp = timestampUtc
                 };
 
                 _context.AnalyticsEvents.Add(newEvent);
@@ -58,16 +65,11 @@ namespace PLTour.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Lỗi server: {ex.Message}");
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : "N/A";
+                return StatusCode(500, $"Lỗi lưu DB: {ex.Message} | Chi tiết: {innerMessage}");
             }
         }
 
-        // ==========================================
-        // 2. CÁC API CHO WEB ADMIN LẤY DỮ LIỆU VỀ
-        // ==========================================
-
-        // Lấy Top địa điểm nghe nhiều nhất
-        // URL: GET /api/analytics/top-locations?take=5
         [HttpGet("top-locations")]
         public async Task<IActionResult> GetTopLocations([FromQuery] int take = 10)
         {
@@ -94,8 +96,6 @@ namespace PLTour.API.Controllers
             }
         }
 
-        // Lấy thời gian nghe trung bình của từng POI
-        // URL: GET /api/analytics/average-duration
         [HttpGet("average-duration")]
         public async Task<IActionResult> GetAverageDuration()
         {
@@ -120,14 +120,11 @@ namespace PLTour.API.Controllers
             }
         }
 
-        // Lấy tọa độ để vẽ Heatmap (vùng nhiệt) và Tuyến đường
-        // URL: GET /api/analytics/heatmap
         [HttpGet("heatmap")]
         public async Task<IActionResult> GetHeatmapData()
         {
             try
             {
-                // Lọc dữ liệu trong 30 ngày gần nhất để biểu đồ không bị quá tải
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
 
                 var query = await _context.AnalyticsEvents
@@ -155,10 +152,7 @@ namespace PLTour.API.Controllers
     }
 }
 
-// ==========================================
-// CÁC CLASS DTO PHỤC VỤ TRẢ KẾT QUẢ CHO ADMIN
-// (Bạn có thể để nguyên ở đây hoặc cắt sang project Shared nếu muốn)
-// ==========================================
+// Khai báo các DTO trực tiếp trong namespace này để Controller tìm thấy ngay
 namespace PLTour.Shared.Models.DTO
 {
     public class TopLocationDto
@@ -175,7 +169,7 @@ namespace PLTour.Shared.Models.DTO
 
     public class HeatmapPointDto
     {
-        public string SessionId { get; set; }
+        public string? SessionId { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public DateTime Timestamp { get; set; }

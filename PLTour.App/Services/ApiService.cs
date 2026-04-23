@@ -19,20 +19,8 @@ public class ApiService
     {
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        if (DeviceInfo.Platform == DevicePlatform.Android)
-        {
-            // Android Emulator nhận diện localhost của máy tính là 10.0.2.2
-            // LƯU Ý: Đổi 5043 thành Port HTTP backend của bạn
-            _baseUrl = "http://10.0.2.2:5043/";
-        }
-        else
-        {
-            // Windows Machine / iOS Simulator
-            _baseUrl = "http://localhost:5043/";
-        }
-
-        // NẾU CẮM ĐIỆN THOẠI THẬT QUA CÁP/WIFI, HÃY MỞ COMMENT DÒNG DƯỚI VÀ ĐIỀN IP LAN (VD: 192.168.1.15)
-        // _baseUrl = "http://192.168.1.X:5043/";
+        // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
+        _baseUrl = "http://192.168.2.6:5229/";
 #else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         // Thay bằng domain hoặc IP server thật của bạn

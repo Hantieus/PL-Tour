@@ -23,36 +23,36 @@ public class AnalyticsService
 
     private AnalyticsService()
     {
-        // 1. Cấu hình vượt rào SSL giống ApiService
+        // 1. Cấu hình vượt rào SSL
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
+
         _httpClient = new HttpClient(handler)
         {
             Timeout = TimeSpan.FromSeconds(15)
         };
 
-        // 2. Cấu hình URL động giống ApiService
+        // 2. Cấu hình URL động
         string baseUrl = "";
+
 #if DEBUG
-        if (DeviceInfo.Platform == DevicePlatform.Android)
-        {
-            baseUrl = "http://10.0.2.2:5043/";
-        }
-        else
-        {
-            baseUrl = "http://localhost:5043/";
-        }
+        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
+        // Dùng IP LAN của máy tính để app trên điện thoại gọi được API
+        baseUrl = "http://192.168.2.6:5229/";
 #else
+        // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         baseUrl = "https://pl-tour-production.up.railway.app/";
 #endif
+
         // Nối thêm endpoint của Analytics
         _apiUrl = $"{baseUrl}api/analytics/track";
 
         // 3. Khởi tạo định danh thiết bị
         SessionId = Guid.NewGuid().ToString();
         DeviceId = Preferences.Get("UniqueDeviceId", string.Empty);
+
         if (string.IsNullOrEmpty(DeviceId))
         {
             DeviceId = Guid.NewGuid().ToString();
@@ -60,7 +60,7 @@ public class AnalyticsService
         }
     }
 
-    // ĐÃ SỬA: Viết hàm gọi API thực tế và in log
+    // Viết hàm gọi API thực tế và hiển thị Popup để Test trên điện thoại thật
     public async Task TrackEventAsync(string eventType, AnalyticsEventDto data = null)
     {
         try
@@ -71,7 +71,9 @@ public class AnalyticsService
             data.SessionId = SessionId;
             data.DeviceId = DeviceId;
             data.Platform = DeviceInfo.Current.Platform.ToString();
-            // Bỏ qua Timestamp để API tự lấy thời gian thực trên Server
+
+            // Ép luôn gửi giờ chuẩn UTC từ điện thoại lên để tránh lỗi PostgreSQL
+            data.Timestamp = DateTime.UtcNow;
 
             var json = JsonSerializer.Serialize(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -79,20 +81,31 @@ public class AnalyticsService
             // Gửi dữ liệu POST lên Backend
             var response = await _httpClient.PostAsync(_apiUrl, content);
 
-            // Kiểm tra kết quả và in ra cửa sổ Output để debug
+            // BẬT POPUP HIỂN THỊ KẾT QUẢ TRÊN MÀN HÌNH ĐIỆN THOẠI
             if (!response.IsSuccessStatusCode)
             {
                 string errorDetail = await response.Content.ReadAsStringAsync();
-                System.Diagnostics.Debug.WriteLine($"[TRACKING LỖI SERVER] Mã lỗi: {response.StatusCode}. Chi tiết: {errorDetail}");
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Application.Current?.MainPage?.DisplayAlert("Lỗi Server", $"Mã lỗi: {response.StatusCode}\nChi tiết: {errorDetail}", "Đóng");
+                });
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[TRACKING THÀNH CÔNG] Sự kiện: {eventType}");
+                // Tạm thời bật thông báo thành công để nghiệm thu, khi nào chấm đồ án thì bạn xóa/comment dòng này đi
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Application.Current?.MainPage?.DisplayAlert("Thành công", $"Dữ liệu ({eventType}) đã lưu vào Neon Tech!", "Tuyệt vời");
+                });
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[TRACKING LỖI MẠNG] Không thể kết nối tới {_apiUrl}. Lỗi: {ex.Message}");
+            // NẾU LỖI MẠNG (KHÔNG TÌM THẤY SERVER), CŨNG BẬT POPUP LÊN
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Application.Current?.MainPage?.DisplayAlert("Lỗi Kết Nối", $"Không thể gửi dữ liệu.\nLỗi: {ex.Message}\nURL: {_apiUrl}", "Đóng");
+            });
         }
     }
 

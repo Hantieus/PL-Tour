@@ -26,7 +26,8 @@ namespace PLTour.API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("Id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
@@ -45,11 +46,9 @@ namespace PLTour.API.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Keyword")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("LanguageCode")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<double?>("Latitude")
@@ -62,7 +61,6 @@ namespace PLTour.API.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<string>("Platform")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("SessionId")
@@ -70,14 +68,15 @@ namespace PLTour.API.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("Timestamp");
 
                     b.Property<int?>("TourId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.ToTable("analytics_events");
+                    b.ToTable("analytics_events", (string)null);
                 });
 
             modelBuilder.Entity("PLTour.Shared.Models.Entities.Category", b =>
@@ -117,7 +116,7 @@ namespace PLTour.API.Migrations
                         new
                         {
                             CategoryId = 1,
-                            Description = "Các điểm tham quan, di tích lịch sử...",
+                            Description = "Các điểm tham quan...",
                             DisplayOrder = 1,
                             Icon = "fa-landmark",
                             IsActive = true,
@@ -126,7 +125,7 @@ namespace PLTour.API.Migrations
                         new
                         {
                             CategoryId = 2,
-                            Description = "Nhà hàng, quán ăn...",
+                            Description = "Nhà hàng...",
                             DisplayOrder = 2,
                             Icon = "fa-utensils",
                             IsActive = true,
@@ -135,7 +134,7 @@ namespace PLTour.API.Migrations
                         new
                         {
                             CategoryId = 3,
-                            Description = "Các sự kiện, lễ hội...",
+                            Description = "Các sự kiện...",
                             DisplayOrder = 3,
                             Icon = "fa-calendar-alt",
                             IsActive = true,
