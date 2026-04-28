@@ -18,23 +18,43 @@
         public DateTime Timestamp { get; set; }
     }
 
-    public class TopLocationDto
+    public class TimelinePointDto
     {
-        public int? LocationId { get; set; }
-        public int PlayCount { get; set; }
+        public DateTime Date { get; set; }
+        public int Count { get; set; }
     }
 
-    public class AvgDurationDto
+    public class BreakdownDto
     {
-        public int? LocationId { get; set; }
-        public double AverageSeconds { get; set; }
+        public string EventType { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    public class TopLocationDetailDto
+    {
+        public int LocationId { get; set; }
+        public string LocationName { get; set; } = string.Empty;
+        public int ListenCount { get; set; }
+        public int TotalDuration { get; set; }
+        public double AvgDuration { get; set; }
+        public string TopLanguage { get; set; } = "N/A";
+    }
+
+    public class OverviewDto
+    {
+        public int TotalEvents { get; set; }
+        public int UniqueDevices { get; set; }
+        public int UniqueSessions { get; set; }
+        public int TotalListens { get; set; }
+        public double AvgDurationSeconds { get; set; }
+        public int OnsiteCount { get; set; }
+        public int RemoteCount { get; set; }
     }
 
     public class HeatmapPointDto
     {
-        public string? SessionId { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public DateTime Timestamp { get; set; }
+        public int Weight { get; set; } = 1;
     }
 }

@@ -20,7 +20,9 @@ public class ApiService
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
         // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
-        _baseUrl = "http://192.168.2.6:5229/";
+        _baseUrl = "http://192.168.100.123:5229/";
+        //P: 192.168.100.123:5229
+        //L: 192.168.2.6:5229
 #else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         // Thay bằng domain hoặc IP server thật của bạn

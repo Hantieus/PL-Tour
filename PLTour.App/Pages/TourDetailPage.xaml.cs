@@ -44,6 +44,10 @@ public partial class TourDetailPage : ContentPage
     private CancellationTokenSource _ttsCts;
     private readonly LocationService _locationService;
 
+    // Thay vì gửi mỗi 5 giây, chỉ gửi khi vị trí thay đổi > 30m
+    private Location _lastSentLocation;
+    private DateTime _lastSentTime = DateTime.MinValue;
+
     public TourDetailPage(LocationService locationService)
     {
         InitializeComponent();
@@ -165,12 +169,22 @@ public partial class TourDetailPage : ContentPage
                     UpdateUserLocationOnMap(location);
                     UpdateDistances();
 
-                    // TRACKING: Lưu vị trí để vẽ Heatmap và Tuyến di chuyển
-                    _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
+                    // Chỉ gửi location_ping khi vị trí thay đổi > 30m HOẶC đã qua 30 giây
+                    var distanceChanged = _lastSentLocation == null ||
+                        CalculateDistance(location.Latitude, location.Longitude,
+                                          _lastSentLocation.Latitude, _lastSentLocation.Longitude) > 30;
+                    var timeElapsed = (DateTime.UtcNow - _lastSentTime).TotalSeconds > 30;
+
+                    if (distanceChanged || timeElapsed)
+                    {
+                        _ = AnalyticsService.Instance.TrackLocationPingAsync(location.Latitude, location.Longitude);
+                        _lastSentLocation = location;
+                        _lastSentTime = DateTime.UtcNow;
+                    }
                 }
             }
             catch { }
-            await Task.Delay(5000);
+            await Task.Delay(5000); // vẫn check vị trí mỗi 5 giây, nhưng chỉ gửi khi cần
         }
     }
 

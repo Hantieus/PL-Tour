@@ -3,85 +3,351 @@
 }
 
 <div class="container-fluid">
-    <h1 class="h3 mb-4">@ViewData["Title"]</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <div class="text-muted">
+            <i class="fas fa-sync-alt me-1" id="refreshBtn" style="cursor: pointer;"></i>
+            <span id="lastUpdate">Cập nhật lúc: @DateTime.Now.ToString("HH:mm:ss")</span>
+        </div>
+    </div>
 
-    <!-- 4 thẻ KPI -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Tổng sự kiện</h6>
-                    <h2 class="mb-0">@ViewBag.TotalEvents</h2>
+    <!-- ========== BỘ LỌC ========== -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Khoảng thời gian</label>
+                    <select id="dateRange" class="form-select">
+                        <option value="7">7 ngày qua</option>
+                        <option value="14">14 ngày qua</option>
+                        <option value="30" selected>30 ngày qua</option>
+                        <option value="90">90 ngày qua</option>
+                        <option value="custom">Tuỳ chỉnh</option>
+                    </select>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Thiết bị</h6>
-                    <h2 class="mb-0">@ViewBag.UniqueDevices</h2>
+                <div class="col-md-2" id="customDateRange" style="display: none;">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" id="fromDate" class="form-control" />
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Phiên</h6>
-                    <h2 class="mb-0">@ViewBag.TotalSessions</h2>
+                <div class="col-md-2" id="customDateRangeTo" style="display: none;">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" id="toDate" class="form-control" />
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <h6 class="card-title">Hôm nay</h6>
-                    <h2 class="mb-0">@ViewBag.TodayEvents</h2>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Loại sự kiện</label>
+                    <select id="eventType" class="form-select">
+                        <option value="">Tất cả</option>
+                        <option value="view_location">📍 Xem địa điểm</option>
+                        <option value="listen_onsite">🎧 Nghe tại chỗ</option>
+                        <option value="listen_remote">📱 Nghe từ xa</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button id="applyFilter" class="btn btn-primary w-100">Áp dụng</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Top địa điểm -->
-        <div class="col-md-6">
+    <!-- ========== 4 THẺ KPI ========== -->
+    <div class="row mb-4" id="kpiContainer">
+        <div class="col-md-3"><div class="card bg-primary text-white"><div class="card-body"><h6>Đang tải...</h6><h2>-</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-success text-white"><div class="card-body"><h6>Đang tải...</h6><h2>-</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-info text-white"><div class="card-body"><h6>Đang tải...</h6><h2>-</h2></div></div></div>
+        <div class="col-md-3"><div class="card bg-warning text-dark"><div class="card-body"><h6>Đang tải...</h6><h2>-</h2></div></div></div>
+    </div>
+
+    <!-- ========== BIỂU ĐỒ VÀ BREAKDOWN ========== -->
+    <div class="row mb-4">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Top địa điểm được quan tâm</h5>
+                    <h5 class="mb-0">📈 Xu hướng hoạt động</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr><th>Địa điểm</th><th>Lượt tương tác</th></tr>
-                        </thead>
-                        <tbody>
-                            @if (ViewBag.TopLocations != null && ViewBag.TopLocations.Count > 0)
-                            {
-                                @foreach (var item in ViewBag.TopLocations)
-                                {
-                                    <tr><td>Địa điểm #@item.LocationId</td><td>@item.Count</td></tr>
-                                }
-                            }
-                            else
-                            {
-                                <tr><td colspan="2" class="text-center">Chưa có dữ liệu</td></tr>
-                            }
-                        </tbody>
-                    </table>
+                    <canvas id="timelineChart" height="250"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- Thống kê tuần -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Hoạt động 7 ngày qua</h5>
+                    <h5 class="mb-0">🥧 Phân loại sự kiện</h5>
                 </div>
-                <div class="card-body text-center">
-                    <h2>@ViewBag.WeekEvents</h2>
-                    <p class="text-muted">sự kiện</p>
+                <div class="card-body">
+                    <canvas id="breakdownChart" height="250"></canvas>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ========== TOP ĐỊA ĐIỂM ========== -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">🏆 Top địa điểm được nghe nhiều nhất</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="topLocationsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tên địa điểm</th>
+                            <th>Số lượt nghe</th>
+                            <th>Tổng thời gian</th>
+                            <th>TB mỗi lượt</th>
+                            <th>Ngôn ngữ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6" class="text-center">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== HEATMAP ========== -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">🗺️ Bản đồ nhiệt (Heatmap)</h5>
+        </div>
+        <div class="card-body">
+            <div id="heatmapContainer" style="height: 500px; background-color: #e9ecef; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center text-muted">
+                    <i class="fas fa-map-marked-alt fa-3x mb-2"></i>
+                    <p>Đang tải bản đồ...</p>
+                </div>
+            </div>
+            <p class="text-muted mt-2 small">🏷️ Vùng càng đỏ càng nhiều hoạt động. Dữ liệu `location_ping` chỉ hiển thị ở đây.</p>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+
+    <script>
+        let timelineChart, breakdownChart, heatmapLayer, map;
+        let currentParams = { dateRange: 30, fromDate: null, toDate: null, eventType: '' };
+
+        $(document).ready(function() {
+            $('#dateRange').on('change', function() {
+                if ($(this).val() === 'custom') {
+                    $('#customDateRange, #customDateRangeTo').show();
+                } else {
+                    $('#customDateRange, #customDateRangeTo').hide();
+                    currentParams.fromDate = null;
+                    currentParams.toDate = null;
+                    currentParams.dateRange = parseInt($(this).val());
+                    loadAllData();
+                }
+            });
+
+            $('#applyFilter').on('click', function() {
+                if ($('#dateRange').val() === 'custom') {
+                    currentParams.fromDate = $('#fromDate').val();
+                    currentParams.toDate = $('#toDate').val();
+                    currentParams.dateRange = null;
+                } else {
+                    currentParams.fromDate = null;
+                    currentParams.toDate = null;
+                    currentParams.dateRange = parseInt($('#dateRange').val());
+                }
+                currentParams.eventType = $('#eventType').val();
+                loadAllData();
+            });
+
+            $('#refreshBtn').on('click', function() { loadAllData(); });
+
+            initHeatmap();
+            loadAllData();
+        });
+
+        async function loadAllData() {
+            try {
+                await Promise.all([
+                    loadOverview(),
+                    loadTimeline(),
+                    loadBreakdown(),
+                    loadTopLocations(),
+                    loadHeatmap()
+                ]);
+                $('#lastUpdate').text('Cập nhật lúc: ' + new Date().toLocaleTimeString('vi-VN'));
+            } catch(e) { console.error('Lỗi tải dữ liệu:', e); }
+        }
+
+        function buildParams(includeEventType = true) {
+            const params = new URLSearchParams();
+            if (currentParams.dateRange) {
+                params.set('days', currentParams.dateRange);
+            } else if (currentParams.fromDate && currentParams.toDate) {
+                params.set('from', currentParams.fromDate);
+                params.set('to', currentParams.toDate);
+            }
+            if (includeEventType && currentParams.eventType) {
+                params.set('eventType', currentParams.eventType);
+            }
+            const query = params.toString();
+            return query ? `?${query}` : '';
+        }
+
+        async function loadOverview() {
+            const params = buildParams();
+            const response = await fetch(`/api/analytics/overview${params}`);
+            const data = await response.json();
+            
+            const kpis = [
+                { title: 'Tổng sự kiện', value: data.totalEvents, color: 'primary', icon: 'fa-chart-line' },
+                { title: 'Thiết bị', value: data.uniqueDevices, color: 'success', icon: 'fa-mobile-alt' },
+                { title: 'Phiên', value: data.uniqueSessions, color: 'info', icon: 'fa-clock' },
+                { title: 'Lượt nghe', value: data.totalListens, color: 'warning', icon: 'fa-headphones' }
+            ];
+            
+            $('#kpiContainer').html(kpis.map(kpi => `
+                <div class="col-md-3">
+                    <div class="card bg-${kpi.color} text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div><h6>${kpi.title}</h6><h2 class="mb-0">${Number(kpi.value || 0).toLocaleString()}</h2></div>
+                                <i class="fas ${kpi.icon} fa-2x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join(''));
+        }
+
+        async function loadTimeline() {
+            const params = buildParams();
+            const response = await fetch(`/api/analytics/timeline${params}`);
+            const data = await response.json();
+            
+            if (!data.length) {
+                $('#timelineChart').parent().html('<div class="text-center py-5">📭 Không có dữ liệu trong khoảng thời gian này</div>');
+                return;
+            }
+            
+            const labels = data.map(d => new Date(d.date).toLocaleDateString('vi-VN'));
+            const counts = data.map(d => d.count);
+            
+            if (timelineChart) timelineChart.destroy();
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets: [{ label: 'Số sự kiện', data: counts, borderColor: '#4e73df', backgroundColor: 'rgba(78,115,223,0.1)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+            });
+        }
+
+        async function loadBreakdown() {
+            const params = buildParams();
+            const response = await fetch(`/api/analytics/breakdown${params}`);
+            const data = await response.json();
+    
+            if (!data.length) {
+                $('#breakdownChart').parent().html('<div class="text-center py-5">📭 Không có dữ liệu</div>');
+                return;
+            }
+    
+            const total = data.reduce((sum, d) => sum + d.count, 0);
+            const eventTypeMap = {
+                'view_location': '📍 Xem địa điểm',
+                'listen_onsite': '🎧 Nghe tại chỗ',
+                'listen_remote': '📱 Nghe từ xa',
+                'listen_duration': '⏱️ Lượt nghe (duration)'
+            };
+    
+            const labels = data.map(d => {
+                const percent = total > 0 ? ((d.count / total) * 100).toFixed(1) : '0.0';
+                return `${eventTypeMap[d.eventType] || d.eventType} (${percent}%)`;
+            });
+            const counts = data.map(d => d.count);
+            const colors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'];
+    
+            if (breakdownChart) breakdownChart.destroy();
+            const ctx = document.getElementById('breakdownChart').getContext('2d');
+            breakdownChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data: counts, backgroundColor: colors.slice(0, labels.length) }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toLocaleString()} lượt` } }
+                    }
+                }
+            });
+        }
+
+        async function loadTopLocations() {
+            const params = buildParams();
+            const response = await fetch(`/api/analytics/top-locations-detailed${params}`);
+            const data = await response.json();
+            
+            if (!data.length) {
+                $('#topLocationsTable tbody').html('<tr><td colspan="6" class="text-center">📭 Chưa có dữ liệu nghe</td></tr>');
+                return;
+            }
+            
+            const languageMap = {
+                'vi': '🇻🇳 Tiếng Việt', 'en': '🇬🇧 English', 'zh': '🇨🇳 中文',
+                'ko': '🇰🇷 한국어', 'ja': '🇯🇵 日本語'
+            };
+            
+            function formatDuration(seconds) {
+                if (!seconds || seconds === 0) return 'Chưa có dữ liệu';
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins} phút ${secs} giây`;
+            }
+            
+            const rows = data.map((item, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><strong>${item.locationName}</strong></td>
+                    <td><span class="badge bg-primary">${item.listenCount}</span></td>
+                    <td>${formatDuration(item.totalDuration)}</td>
+                    <td>${Math.round(item.avgDuration)} giây</td>
+                    <td>${languageMap[item.topLanguage] || '🌐 ' + item.topLanguage}</td>
+                </tr>
+            `).join('');
+            
+            $('#topLocationsTable tbody').html(rows);
+        }
+
+        async function loadHeatmap() {
+            const params = buildParams(false);
+            const response = await fetch(`/api/analytics/heatmap${params}`);
+            const points = await response.json();
+            
+            if (!points.length) {
+                $('#heatmapContainer').html('<div class="text-center text-muted py-5"><i class="fas fa-map-marked-alt fa-3x mb-2"></i><p>Chưa có dữ liệu vị trí để vẽ heatmap</p></div>');
+                return;
+            }
+            
+            const heatData = points.map(p => [p.latitude, p.longitude, p.weight || 1]);
+            if (heatmapLayer) map.removeLayer(heatmapLayer);
+            heatmapLayer = L.heatLayer(heatData, { radius: 25, blur: 15, maxZoom: 17 });
+            heatmapLayer.addTo(map);
+            
+            const bounds = L.latLngBounds(points.map(p => [p.latitude, p.longitude]));
+            if (points.length) map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        function initHeatmap() {
+            const container = document.getElementById('heatmapContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            map = L.map(container).setView([10.8231, 106.6297], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+            }).addTo(map);
+        }
+    </script>
+}
