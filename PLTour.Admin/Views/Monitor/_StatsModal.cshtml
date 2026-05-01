@@ -1,0 +1,45 @@
+<div class="modal fade" id="monitorStatsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <div>
+                    <h5 class="modal-title mb-0">Thống kê Monitor</h5>
+                    <small class="text-white-50">Báo cáo nhanh theo 24 giờ gần nhất</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="statsTabsWrapper">
+                    <ul class="nav nav-pills nav-fill mb-3" id="statsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-events" data-bs-toggle="tab" data-bs-target="#pane-events" type="button" role="tab">Event theo loại</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-top-devices" data-bs-toggle="tab" data-bs-target="#pane-top-devices" type="button" role="tab">Top device</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-heartbeat" data-bs-toggle="tab" data-bs-target="#pane-heartbeat" type="button" role="tab">Heartbeat theo giờ</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-online" data-bs-toggle="tab" data-bs-target="#pane-online" type="button" role="tab">Online theo thời gian</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="pane-events" role="tabpanel">
+                            <div class="chart-box position-relative"><canvas id="eventTypeChart"></canvas></div>
+                        </div>
+                        <div class="tab-pane fade" id="pane-top-devices" role="tabpanel">
+                            <div class="chart-box"><canvas id="topDevicesChart"></canvas></div>
+                        </div>
+                        <div class="tab-pane fade" id="pane-heartbeat" role="tabpanel">
+                            <div class="chart-box"><canvas id="heartbeatChart"></canvas></div>
+                        </div>
+                        <div class="tab-pane fade" id="pane-online" role="tabpanel">
+                            <div class="chart-box"><canvas id="onlineChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models;
 using PLTour.Shared.Services;
+using PLTour.API.Services;
 using System.Text;
 
 // ---> THÊM DÒNG NÀY VÀO ĐỂ TẮT SỰ KHẮT KHE CỦA POSTGRESQL VỀ THỜI GIAN <---
@@ -86,6 +87,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHostedService<ActiveDeviceCleanupService>();
 
 var app = builder.Build();
 

@@ -28,6 +28,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<LocationService>();
         builder.Services.AddSingleton<ApiService>();
+        builder.Services.AddSingleton<DeviceMonitorService>();
         builder.Services.AddSingleton<IAudioService, AudioService>();
 
         builder.Services.AddTransient<LoadingPage>();

@@ -1,0 +1,38 @@
+@using System.Globalization
+@model PLTour.Shared.Models.DTO.ActiveDeviceDto
+
+@{
+    string FormatRelative(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - DateTime.SpecifyKind(utc, DateTimeKind.Utc);
+        if (diff.TotalSeconds < 60) return $"{Math.Max(1, (int)diff.TotalSeconds)} giây trước";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} phút trước";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} giờ trước";
+        return $"{(int)diff.TotalDays} ngày trước";
+    }
+
+    string FormatLocal(DateTime utc)
+    {
+        var local = DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
+        return local.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+}
+
+<tr data-status="@Model.Status">
+    <td>@Model.DeviceId</td>
+    <td>@Model.DeviceName</td>
+    <td>@Model.DeviceModel</td>
+    <td>@Model.OsVersion</td>
+    <td>@Model.AppVersion</td>
+    <td>@Model.BatteryLevel%</td>
+    <td>
+        <div>@FormatLocal(Model.LastHeartbeat)</div>
+        <small class="text-muted">@FormatRelative(Model.LastHeartbeat)</small>
+    </td>
+    <td>
+        <span class="badge @(Model.Status == "online" ? "bg-success" : Model.Status == "stale" ? "bg-warning text-dark" : "bg-danger")">@Model.Status</span>
+    </td>
+    <td>
+        <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("DeviceDetails", "Monitor", new { id = Model.DeviceId })">Chi tiết</a>
+    </td>
+</tr>

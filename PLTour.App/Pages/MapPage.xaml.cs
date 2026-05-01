@@ -85,6 +85,7 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
 
     private readonly ApiService _apiService = new ApiService();
     private readonly LocationService _locationService;
+    private readonly DeviceMonitorService _deviceMonitorService;
     private static readonly HttpClient _sharedHttpClient = new HttpClient();
     // Thay vì gửi mỗi 5 giây, chỉ gửi khi vị trí thay đổi > 30m
     private Location _lastSentLocation;
@@ -93,11 +94,12 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
     private void OnPropertyChanged(string propertyName)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-    public MapPage(LocationService locationService)
+    public MapPage(LocationService locationService, DeviceMonitorService deviceMonitorService)
     {
         InitializeComponent();
         BindingContext = this;
         _locationService = locationService;
+        _deviceMonitorService = deviceMonitorService;
 
         // Khởi tạo ban đầu
         PoiListView.ItemsSource = SortedPois;
@@ -109,6 +111,7 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _ = _deviceMonitorService.TrackEventAsync("screen_view", new AnalyticsEventDto { Keyword = "map" });
         await LoadDataFromApiAsync();
     }
 

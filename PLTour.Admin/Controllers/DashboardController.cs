@@ -21,6 +21,8 @@ namespace PLTour.Admin.Controllers
             ViewBag.TotalVendors = await _context.Vendors.CountAsync();
             ViewBag.PendingVendors = await _context.Vendors.CountAsync(v => v.Status == "Pending");
             ViewBag.TotalUsers = await _context.Users.CountAsync();
+            ViewBag.TotalDevices = await _context.ActiveDevices.CountAsync();
+            ViewBag.OnlineDevices = await _context.ActiveDevices.CountAsync(d => d.LastHeartbeat >= DateTime.UtcNow.AddMinutes(-2));
 
             // Lấy danh sách vendors pending
             var pendingVendors = await _context.Vendors

@@ -1,0 +1,53 @@
+@model PLTour.Shared.Models.DTO.ActiveDeviceDto
+@using System.Globalization
+@{
+    ViewData["Title"] = "Device Details";
+
+    string FormatLocal(DateTime utc)
+    {
+        var local = DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
+        return local.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Chi tiết thiết bị</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">DeviceId</dt>
+            <dd class="col-sm-9">@Model.DeviceId</dd>
+
+            <dt class="col-sm-3">Tên máy</dt>
+            <dd class="col-sm-9">@Model.DeviceName</dd>
+
+            <dt class="col-sm-3">Model</dt>
+            <dd class="col-sm-9">@Model.DeviceModel</dd>
+
+            <dt class="col-sm-3">OS</dt>
+            <dd class="col-sm-9">@Model.OsVersion</dd>
+
+            <dt class="col-sm-3">App Version</dt>
+            <dd class="col-sm-9">@Model.AppVersion</dd>
+
+            <dt class="col-sm-3">Pin</dt>
+            <dd class="col-sm-9">@Model.BatteryLevel%</dd>
+
+            <dt class="col-sm-3">Đang sạc</dt>
+            <dd class="col-sm-9">@(Model.IsCharging ? "Có" : "Không")</dd>
+
+            <dt class="col-sm-3">Last Heartbeat</dt>
+            <dd class="col-sm-9">@FormatLocal(Model.LastHeartbeat)</dd>
+
+            <dt class="col-sm-3">First Seen</dt>
+            <dd class="col-sm-9">@FormatLocal(Model.FirstSeen)</dd>
+
+            <dt class="col-sm-3">Trạng thái</dt>
+            <dd class="col-sm-9">@Model.Status</dd>
+        </dl>
+    </div>
+    <div class="card-footer">
+        <a class="btn btn-secondary" href="@Url.Action("Index", "Monitor")">Quay lại</a>
+    </div>
+</div>

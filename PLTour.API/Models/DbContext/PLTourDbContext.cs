@@ -21,6 +21,7 @@ namespace PLTour.API.Models.DbContext
         public DbSet<VendorImage> VendorImages { get; set; }
         public DbSet<Tour> Tours { get; set; }
         public DbSet<TourLocation> TourLocations { get; set; }
+        public DbSet<ActiveDevice> ActiveDevices { get; set; }
 
         // BỔ SUNG CHO TÍNH NĂNG ANALYTICS
         public DbSet<AnalyticsEvent> AnalyticsEvents { get; set; }

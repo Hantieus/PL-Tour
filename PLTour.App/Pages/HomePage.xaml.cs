@@ -13,12 +13,14 @@ public partial class HomePage : ContentPage
 
     // 1. Khai báo biến LocationService
     private readonly LocationService _locationService;
+    private readonly DeviceMonitorService _deviceMonitorService;
 
     // 2. Truyền LocationService qua Constructor
-    public HomePage(LocationService locationService)
+    public HomePage(LocationService locationService, DeviceMonitorService deviceMonitorService)
     {
         InitializeComponent();
         _locationService = locationService;
+        _deviceMonitorService = deviceMonitorService;
         BindingContext = this;
     }
 
@@ -26,6 +28,7 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing start");
+        await _deviceMonitorService.TrackEventAsync("screen_view", new PLTour.Shared.Models.DTO.AnalyticsEventDto { Keyword = "home" });
         await LoadToursAsync();
         System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing end");
     }
