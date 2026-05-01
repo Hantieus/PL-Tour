@@ -96,9 +96,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// LƯU Ý: Khi test với điện thoại thật qua HTTP, bạn có thể tạm tắt HttpsRedirection 
-// nếu gặp lỗi chặn chứng chỉ không hợp lệ.
-// app.UseHttpsRedirection(); 
+// Enable HTTPS redirection for secure communication
+app.UseHttpsRedirection(); 
 
 app.UseRouting(); // Thêm routing rõ ràng
 

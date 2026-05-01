@@ -20,7 +20,7 @@ public class ApiService
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
         // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
-        _baseUrl = "http://192.168.100.123:5229/";
+        _baseUrl = "http://192.168.2.6:5229/";
         //P: 192.168.100.123:5229
         //L: 192.168.2.6:5229
 #else
@@ -51,35 +51,11 @@ public class ApiService
             var tourDtos = await _httpClient.GetFromJsonAsync<List<TourDto>>("api/tours");
             if (tourDtos == null || !tourDtos.Any()) return new List<TourModel>();
 
-            var tours = new List<TourModel>();
-
-            foreach (var dto in tourDtos)
-            {
-                // 1. Khởi tạo danh sách các địa điểm (POI) TRƯỚC
-                var poisList = dto.Locations.Select(loc => MapToPoiModel(loc)).ToList();
-
-                // 2. Gán TẤT CẢ giá trị vào bên trong khối { } để tuân thủ luật của 'init'
-                var tour = new TourModel
-                {
-                    Id = dto.TourId.ToString(),
-                    Name = dto.Name,
-                    Duration = dto.Duration,
-                    IntroText = dto.IntroText,
-                    ImageUrl = FormatImageUrl(dto.ImageUrl),
-                    Pois = poisList,
-
-                    // Gán tọa độ trực tiếp tại đây bằng toán tử 3 ngôi (nếu có POI thì lấy, không thì gán 0)
-                    Latitude = poisList.Any() ? poisList.First().Lat : 0,
-                    Longitude = poisList.Any() ? poisList.First().Lng : 0
-                };
-
-                tours.Add(tour);
-            }
-            return tours;
+            return tourDtos.Select(MapToTourModel).ToList();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetTours: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetTours: {ex}");
             return new List<TourModel>();
         }
     }
@@ -89,14 +65,43 @@ public class ApiService
         try
         {
             var locDtos = await _httpClient.GetFromJsonAsync<List<PLTour.Shared.Models.DTO.LocationDto>>("api/Locations");
-            if (locDtos == null || !locDtos.Any()) return new List<PoiModel>();
+            if (locDtos != null && locDtos.Any())
+                return locDtos.Select(loc => MapToPoiModel(loc)).ToList();
 
-            return locDtos.Select(loc => MapToPoiModel(loc)).ToList();
+            System.Diagnostics.Debug.WriteLine("[API_LOG] api/Locations returned empty. Falling back to tours locations.");
+
+            var tours = await GetToursAsync();
+            var fallbackPois = tours
+                .Where(t => t.Pois != null)
+                .SelectMany(t => t.Pois)
+                .Where(p => p != null)
+                .GroupBy(p => p.Id)
+                .Select(g => g.First())
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"[API_LOG] Fallback POIs from tours: {fallbackPois.Count}");
+            return fallbackPois;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetAllLocations: {ex.Message}");
-            return new List<PoiModel>();
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetAllLocations: {ex}");
+
+            try
+            {
+                var tours = await GetToursAsync();
+                return tours
+                    .Where(t => t.Pois != null)
+                    .SelectMany(t => t.Pois)
+                    .Where(p => p != null)
+                    .GroupBy(p => p.Id)
+                    .Select(g => g.First())
+                    .ToList();
+            }
+            catch (Exception fallbackEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetAllLocations fallback failed: {fallbackEx}");
+                return new List<PoiModel>();
+            }
         }
     }
 
@@ -116,6 +121,23 @@ public class ApiService
     }
 
     // --- Hàm bổ trợ để Map dữ liệu ---
+    private TourModel MapToTourModel(TourDto dto)
+    {
+        var poisList = dto.Locations?.Select(MapToPoiModel).ToList() ?? new List<PoiModel>();
+
+        return new TourModel
+        {
+            Id = dto.TourId.ToString(),
+            Name = dto.Name,
+            Duration = dto.Duration,
+            IntroText = dto.IntroText,
+            ImageUrl = FormatImageUrl(dto.ImageUrl),
+            Pois = poisList,
+            Latitude = poisList.Any() ? poisList.First().Lat : 0,
+            Longitude = poisList.Any() ? poisList.First().Lng : 0
+        };
+    }
+
     private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
     {
         string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
@@ -133,13 +155,11 @@ public class ApiService
             }
             else
             {
-                // Tối ưu việc nối chuỗi để tránh lỗi //
                 var cleanPath = loc.ImageUrl.Replace("\\", "/").TrimStart('/');
                 poiImageUrl = $"{_baseUrl.TrimEnd('/')}/{cleanPath}";
             }
         }
 
-        // LOG để kiểm tra link cuối cùng có chạy được không
         System.Diagnostics.Debug.WriteLine($"[DEBUG_IMAGE] Link ảnh cuối cùng: {poiImageUrl}");
 
         return new PoiModel
@@ -158,11 +178,8 @@ public class ApiService
             Radius = loc.Radius > 0 ? loc.Radius : 150,
             Description = loc.Description ?? "",
             Address = loc.Address ?? "",
-
-            // THAY ĐỔI Ở ĐÂY: Lưu lại CategoryId và lấy tên từ API
             CategoryId = loc.CategoryId,
             Category = !string.IsNullOrEmpty(loc.CategoryName) ? loc.CategoryName : MapCategoryName(loc.CategoryId),
-
             PinColor = GetPinColor(loc.CategoryId)
         };
     }
@@ -198,6 +215,21 @@ public class ApiService
         3 => MapsuiColor.Purple,
         _ => MapsuiColor.Blue
     };
+
+    public async Task<bool> TestConnectionAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/tours");
+            System.Diagnostics.Debug.WriteLine($"[API_LOG] TestConnection status: {(int)response.StatusCode} {response.StatusCode}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] TestConnection: {ex}");
+            return false;
+        }
+    }
 }
 
 public class AudioResponseDto

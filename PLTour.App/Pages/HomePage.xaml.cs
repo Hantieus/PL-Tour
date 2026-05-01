@@ -1,6 +1,9 @@
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
 using PLTour.App.Models;
 using PLTour.App.Services;
 using System.Collections.ObjectModel;
+using Microsoft.Maui.Media;
 
 namespace PLTour.App.Pages;
 
@@ -16,12 +19,15 @@ public partial class HomePage : ContentPage
     {
         InitializeComponent();
         _locationService = locationService;
+        BindingContext = this;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing start");
         await LoadToursAsync();
+        System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing end");
     }
 
     private async Task LoadToursAsync()
@@ -30,24 +36,26 @@ public partial class HomePage : ContentPage
         {
             LoadingIndicator.IsRunning = true;
 
-            // --- SỬA TẠI ĐÂY: Lấy danh sách Tour từ API thật ---
-            var tours = await _apiService.GetToursAsync();
+            var connectionOk = await _apiService.TestConnectionAsync();
+            System.Diagnostics.Debug.WriteLine($"[HOME] Connection test = {connectionOk}");
+            if (!connectionOk)
+            {
+                System.Diagnostics.Debug.WriteLine("[HOME] Connection test failed, but continue loading tours anyway.");
+            }
 
-            // 2. Lấy vị trí người dùng từ "Kho lưu trữ" LocationService
+            var tours = await _apiService.GetToursAsync();
+            System.Diagnostics.Debug.WriteLine($"[HOME] Loaded tours: {tours?.Count ?? 0}");
+
             var userLoc = _locationService.GetSavedLocation();
 
-            // 3. Tính toán khoảng cách cho từng tour
             if (tours != null)
             {
                 foreach (var tour in tours)
                 {
-                    // Nếu lấy được vị trí người dùng, tiến hành tính khoảng cách
                     if (userLoc != null)
                     {
-                        // Sử dụng Microsoft.Maui.Devices.Sensors.Location để tính toán
                         var tourLoc = new Microsoft.Maui.Devices.Sensors.Location(tour.Latitude, tour.Longitude);
                         double distance = Microsoft.Maui.Devices.Sensors.Location.CalculateDistance(userLoc, tourLoc, DistanceUnits.Kilometers);
-
                         tour.DistanceDisplay = $"Cách bạn: {distance:F1} km";
                     }
                     else
@@ -56,15 +64,17 @@ public partial class HomePage : ContentPage
                     }
                 }
 
-                // Cập nhật danh sách lên giao diện
-                TourListView.ItemsSource = tours;
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    TourListView.ItemsSource = null;
+                    TourListView.ItemsSource = tours;
+                });
             }
         }
         catch (Exception ex)
         {
-            // In ra debug để bạn dễ theo dõi nếu API lỗi
-            System.Diagnostics.Debug.WriteLine($"Lỗi LoadTours: {ex.Message}");
-            await DisplayAlert("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
+            System.Diagnostics.Debug.WriteLine($"[HOME_ERROR] LoadTours: {ex}");
+            await this.DisplayAlertAsync("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
         }
         finally
         {
@@ -79,7 +89,7 @@ public partial class HomePage : ContentPage
 
     private async void GoToMap_Clicked(object sender, EventArgs e)
     {
-        // Điều hướng sang Tab Map
+        // Chế độ xem tự do: vào map không truyền tour cụ thể
         await Shell.Current.GoToAsync("//map");
     }
 

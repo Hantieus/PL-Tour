@@ -97,7 +97,7 @@ namespace PLTour.Admin.Controllers
                 await _context.Languages.Where(l => l.IsActive).ToListAsync(),
                 "LanguageId", "Name");
 
-            return View(new Narration { LocationId = locationId, IsActive = true, Version = 1 });
+            return View(new Narration { LocationId = locationId, IsActive = true, Version = 1, Title = "" });
         }
 
         // POST: Narration/Create

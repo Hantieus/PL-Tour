@@ -10,27 +10,69 @@ using Mapsui.UI.Maui;
 using Microsoft.Maui.ApplicationModel;
 using PLTour.App.Models;
 using PLTour.App.Services;
-using PLTour.Shared.Models.DTO; // Đã đổi sang Shared
+using PLTour.Shared.Models.DTO;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Net.Http.Json;
 
 namespace PLTour.App.Pages;
 
-// Class dùng để hứng link audio trả về từ Backend
-public class AudioResponse
-{
-    public string Url { get; set; }
-}
-
-public partial class MapPage : ContentPage
+[QueryProperty(nameof(TourId), "TourId")]
+public partial class MapPage : ContentPage, INotifyPropertyChanged
 {
     MapView mapView;
     MemoryLayer _userLocationLayer;
     MemoryLayer _poiLayer;
     List<PoiModel> _allPois = new List<PoiModel>();
+    private string _tourId;
+    private bool _pendingInitialCamera;
+    private string _mapModeText = "Chế độ tự do";
+    private string _tourName = string.Empty;
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    public string MapModeText
+    {
+        get => _mapModeText;
+        set { _mapModeText = value; OnPropertyChanged(nameof(MapModeText)); OnPropertyChanged(nameof(TourHeaderText)); }
+    }
+
+    public string TourName
+    {
+        get => _tourName;
+        set
+        {
+            _tourName = value;
+            OnPropertyChanged(nameof(TourName));
+            OnPropertyChanged(nameof(TourHeaderText));
+            System.Diagnostics.Debug.WriteLine($"[MAP] TourName received: '{value}'");
+        }
+    }
+
+    public string TourHeaderText => string.IsNullOrWhiteSpace(TourName) ? "Địa điểm gần bạn" : TourName;
+
+    public string TourId
+    {
+        get => _tourId;
+        set
+        {
+            _tourId = value;
+            _pendingInitialCamera = true;
+            MapModeText = !string.IsNullOrWhiteSpace(value) ? "Chế độ theo tour" : "Chế độ tự do";
+            System.Diagnostics.Debug.WriteLine($"[MAP] TourId received: '{value}'");
+        }
+    }
+
+    // Class dùng để hứng link audio trả về từ Backend
+    public class AudioResponse
+    {
+        public string Url { get; set; }
+    }
+
     public ObservableCollection<PoiModel> SortedPois { get; set; } = new();
 
     bool _isFirstLocation = true;
+    bool _hasFitPoiBounds = false;
     bool isMapExpanded = false;
 
     // Quản lý ID danh mục hiện tại (0: Tất cả, 1: Tham quan, 2: Ăn uống, 3: Sự kiện)
@@ -48,9 +90,13 @@ public partial class MapPage : ContentPage
     private Location _lastSentLocation;
     private DateTime _lastSentTime = DateTime.MinValue;
 
+    private void OnPropertyChanged(string propertyName)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     public MapPage(LocationService locationService)
     {
         InitializeComponent();
+        BindingContext = this;
         _locationService = locationService;
 
         // Khởi tạo ban đầu
@@ -63,6 +109,13 @@ public partial class MapPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        await LoadDataFromApiAsync();
+    }
+
+    protected override async void OnNavigatedTo(NavigatedToEventArgs args)
+    {
+        base.OnNavigatedTo(args);
+        _pendingInitialCamera = true;
         await LoadDataFromApiAsync();
     }
 
@@ -121,18 +174,50 @@ public partial class MapPage : ContentPage
     {
         try
         {
-            var pois = await _apiService.GetAllLocationsAsync();
-            if (pois != null)
-            {
-                _allPois.Clear();
-                _allPois.AddRange(pois);
+            System.Diagnostics.Debug.WriteLine($"[MAP] Load start. TourId='{TourId}', TourName='{TourName}'");
 
-                GenerateCategoryTabs();
-                UpdateDistancesAndSort();
-                DrawPoisOnMap();
+            if (!string.IsNullOrWhiteSpace(TourId))
+            {
+                var tours = await _apiService.GetToursAsync() ?? new List<TourModel>();
+                System.Diagnostics.Debug.WriteLine($"[MAP] Tours loaded: {tours.Count}");
+
+                var selectedTour = tours.FirstOrDefault(t => string.Equals(t.Id, TourId, StringComparison.OrdinalIgnoreCase));
+                System.Diagnostics.Debug.WriteLine($"[MAP] SelectedTour found: {(selectedTour != null ? selectedTour.Name : "null")}");
+
+                if (selectedTour?.Pois != null && selectedTour.Pois.Count > 0)
+                {
+                    _allPois = selectedTour.Pois.Where(p => p != null).ToList();
+                    TourName = selectedTour.Name;
+                    MapModeText = "Chế độ theo tour";
+                    System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode from API tour. TourId={TourId}, TourName={selectedTour.Name}, POIs={_allPois.Count}");
+                    foreach (var p in _allPois)
+                        System.Diagnostics.Debug.WriteLine($"[MAP] POI {p.Id} {p.Name} lat={p.Lat} lng={p.Lng} active={p.IsPlaying}");
+                }
+                else
+                {
+                    _allPois = new List<PoiModel>();
+                    TourName = "Không tìm thấy tour";
+                    MapModeText = "Chế độ theo tour";
+                    System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode but tour not found or no POIs. TourId={TourId}");
+                }
             }
+            else
+            {
+                _allPois = await _apiService.GetAllLocationsAsync() ?? new List<PoiModel>();
+                MapModeText = "Chế độ tự do";
+                TourName = string.Empty;
+                System.Diagnostics.Debug.WriteLine($"[MAP] Free mode. POIs={_allPois.Count}");
+            }
+
+            GenerateCategoryTabs();
+            UpdateDistancesAndSort();
+            DrawPoisOnMap();
+            ApplyInitialCamera();
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex}");
+        }
     }
 
     void DrawPoisOnMap()
@@ -146,21 +231,47 @@ public partial class MapPage : ContentPage
                 : _allPois.Where(p => p.CategoryId == _currentCategoryId).ToList();
 
             var poiFeatures = new List<IFeature>();
+            var validMapPoints = new List<MPoint>();
 
             foreach (var poi in filteredPois)
             {
-                var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
-                var feature = new PointFeature(new MPoint(proj.x, proj.y));
+                if (!IsValidCoordinate(poi.Lat, poi.Lng))
+                    continue;
 
-                feature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(poi.PinColor), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2), SymbolScale = 0.5 });
-                feature.Styles.Add(new LabelStyle { Text = poi.Name, Offset = new Offset(0, -20), ForeColor = Mapsui.Styles.Color.Black, BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White), Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2) });
+                var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
+                var mapPoint = new MPoint(proj.x, proj.y);
+                var feature = new PointFeature(mapPoint);
+
+                feature.Styles.Add(new SymbolStyle
+                {
+                    SymbolType = SymbolType.Ellipse,
+                    Fill = new Mapsui.Styles.Brush(poi.PinColor),
+                    Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2),
+                    SymbolScale = 1.0
+                });
+
+                feature.Styles.Add(new LabelStyle
+                {
+                    Text = poi.Name,
+                    Offset = new Offset(0, -20),
+                    ForeColor = Mapsui.Styles.Color.Black,
+                    BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White),
+                    Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2)
+                });
 
                 poiFeatures.Add(feature);
+                validMapPoints.Add(mapPoint);
             }
 
             _poiLayer.Features = poiFeatures;
             _poiLayer.DataHasChanged();
             mapView.RefreshGraphics();
+
+            if (!_hasFitPoiBounds && validMapPoints.Count > 0)
+            {
+                FitMapToPoiBounds(validMapPoints);
+                _hasFitPoiBounds = true;
+            }
         });
     }
 
@@ -170,16 +281,86 @@ public partial class MapPage : ContentPage
         var proj = SphericalMercator.FromLonLat(location.Longitude, location.Latitude);
         var mapPoint = new MPoint(proj.x, proj.y);
         var userFeature = new PointFeature(mapPoint);
-        userFeature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(Mapsui.Styles.Color.Blue), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 3), SymbolScale = 0.6 });
+        userFeature.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, Fill = new Mapsui.Styles.Brush(Mapsui.Styles.Color.Blue), Outline = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 3), SymbolScale = 0.8 });
         _userLocationLayer.Features = new List<IFeature> { userFeature };
         _userLocationLayer.DataHasChanged();
-        if (_isFirstLocation)
-        {
-            mapView.Map.Navigator.CenterOn(mapPoint);
-            mapView.Map.Navigator.ZoomTo(2);
-            _isFirstLocation = false;
-        }
         MainThread.BeginInvokeOnMainThread(() => mapView?.RefreshGraphics());
+    }
+
+    private static bool IsValidCoordinate(double lat, double lng)
+        => lat is >= -90 and <= 90 && lng is >= -180 and <= 180 && !(lat == 0 && lng == 0);
+
+    private void FitMapToPoiBounds(List<MPoint> points)
+    {
+        if (mapView?.Map?.Navigator == null || points == null || points.Count == 0)
+            return;
+
+        var minX = points.Min(p => p.X);
+        var maxX = points.Max(p => p.X);
+        var minY = points.Min(p => p.Y);
+        var maxY = points.Max(p => p.Y);
+
+        var center = new MPoint((minX + maxX) / 2, (minY + maxY) / 2);
+
+        if (Math.Abs(maxX - minX) < 1 && Math.Abs(maxY - minY) < 1)
+        {
+            mapView.Map.Navigator.CenterOn(points[0]);
+            mapView.Map.Navigator.ZoomTo(14);
+        }
+        else
+        {
+            mapView.Map.Navigator.CenterOn(center);
+            mapView.Map.Navigator.ZoomTo(12);
+        }
+    }
+
+    private void ApplyInitialCamera()
+    {
+        if (mapView?.Map?.Navigator == null || !_pendingInitialCamera)
+            return;
+
+        _pendingInitialCamera = false;
+
+        if (_allPois != null && _allPois.Count > 0)
+        {
+            var points = _allPois
+                .Where(p => IsValidCoordinate(p.Lat, p.Lng))
+                .Select(p =>
+                {
+                    var proj = SphericalMercator.FromLonLat(p.Lng, p.Lat);
+                    return new MPoint(proj.x, proj.y);
+                })
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"[MAP] ApplyInitialCamera points={points.Count}");
+
+            if (points.Count > 0)
+            {
+                FitMapToPoiBounds(points);
+                return;
+            }
+        }
+
+        var userLoc = _locationService.CurrentLocation;
+        if (userLoc != null)
+        {
+            var proj = SphericalMercator.FromLonLat(userLoc.Longitude, userLoc.Latitude);
+            mapView.Map.Navigator.CenterOn(new MPoint(proj.x, proj.y));
+            mapView.Map.Navigator.ZoomTo(14);
+            return;
+        }
+
+        // Vị trí mặc định của trung tâm thành phố nếu chưa có GPS
+        var cityCenter = SphericalMercator.FromLonLat(106.6297, 10.8231);
+        mapView.Map.Navigator.CenterOn(new MPoint(cityCenter.x, cityCenter.y));
+        mapView.Map.Navigator.ZoomTo(12);
+    }
+
+    private static bool MatchesTour(PoiModel poi, string tourId)
+    {
+        if (poi == null || string.IsNullOrWhiteSpace(tourId)) return false;
+        return string.Equals(poi.Id.ToString(), tourId, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(poi.NarrationId.ToString(), tourId, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateDistancesAndSort()
@@ -202,7 +383,8 @@ public partial class MapPage : ContentPage
             : _allPois.Where(p => p.CategoryId == _currentCategoryId)
                       .OrderBy(p => p.DistanceMeters).ToList();
 
-        MainThread.BeginInvokeOnMainThread(() => {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
             PoiListView.ItemsSource = null;
             PoiListView.ItemsSource = filtered;
         });
@@ -269,6 +451,11 @@ public partial class MapPage : ContentPage
         if (btn == null) return;
 
         _currentCategoryId = (int)btn.CommandParameter;
+        if (string.IsNullOrWhiteSpace(TourId))
+        {
+            MapModeText = "Chế độ tự do";
+            TourName = string.Empty;
+        }
 
         foreach (var child in CategoryTabsContainer.Children)
         {
@@ -491,5 +678,66 @@ public partial class MapPage : ContentPage
 
         // Gửi Tracking: Báo server là kết thúc nghe
         _ = AnalyticsService.Instance.TrackAudioStopAsync();
+    }
+
+    // ==========================================
+    // CÁC HÀM XỬ LÝ SỰ KIỆN THIẾU (THEO YÊU CẦU)
+    // ==========================================
+    private void BottomSheet_PanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        // Xử lý gesture kéo cho bottom sheet
+        // Implementation tự theo yêu cầu UI
+    }
+
+    private void PoiDetailPopup_SpeakButtonClicked(object? sender, PoiModel? poi)
+    {
+        // Xử lý nút nói trong popup chi tiết
+        if (poi != null)
+        {
+            // Create a mock button with CommandParameter set to the POI
+            var mockButton = new Button { CommandParameter = poi };
+            BtnSpeak_Clicked(mockButton, EventArgs.Empty);
+        }
+    }
+
+    private void PoiDetailPopup_ViewMapButtonClicked(object? sender, PoiModel? poi)
+    {
+        // Xử lý nút xem bản đồ trong popup chi tiết
+        if (poi != null)
+        {
+            // Create a mock button with CommandParameter set to the POI
+            var mockButton = new Button { CommandParameter = poi };
+            BtnViewMap_Clicked(mockButton, EventArgs.Empty);
+        }
+    }
+
+    private void ToggleBottomSheet_Clicked(object? sender, EventArgs e)
+    {
+        // Xử lý toggle bottom sheet
+        InfoPanel.IsVisible = !InfoPanel.IsVisible;
+    }
+
+    private void ToggleMapType_Clicked(object? sender, EventArgs e)
+    {
+        // Xử lý chuyển đổi loại bản đồ
+        // Implementation tự theo yêu cầu
+    }
+
+    private void ZoomIn_Clicked(object? sender, EventArgs e)
+    {
+        // Xử lý zoom vào bản đồ
+        if (mapView != null)
+        {
+            mapView.Map.Navigator.ZoomIn();
+        }
+    }
+
+    private void ZoomOut_Clicked(object? sender, EventArgs e)
+    {
+        // Xử lý zoom ra bản đồ
+        if (mapView != null)
+        {
+            mapView.Map.Navigator.ZoomOut();
+        }
     }
 }

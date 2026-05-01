@@ -7,8 +7,8 @@ namespace PLTour.App.Models;
 // Quy định sẵn các danh mục chuẩn để lọc dữ liệu trên bản đồ
 public static class PoiCategories
 {
-    public const string ThamQuan = "Điểm tham quan";
-    public const string AnUong = "Địa điểm ăn uống";
+    public const string ThamQuan = "Tham quan";
+    public const string AnUong = "Ăn uống";
     public const string SuKien = "Sự kiện";
 }
 

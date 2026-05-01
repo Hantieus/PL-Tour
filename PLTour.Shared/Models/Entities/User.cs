@@ -9,24 +9,24 @@ public class User
 
     [Required]
     [StringLength(50)]
-    public string Username { get; set; }
+    public string Username { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100)]
     [EmailAddress]
-    public string Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     [Required]
-    public string PasswordHash { get; set; }
+    public string PasswordHash { get; set; } = string.Empty;
 
     [StringLength(20)]
-    public string Phone { get; set; }
+    public string? Phone { get; set; }
 
     [StringLength(100)]
-    public string FullName { get; set; }
+    public string FullName { get; set; } = string.Empty;
 
     [StringLength(20)]
-    public string Role { get; set; } // "Admin", "Manager", "Staff"
+    public string Role { get; set; } = "User"; // "Admin", "Manager", "Staff"
 
     public bool IsActive { get; set; } = true;
 

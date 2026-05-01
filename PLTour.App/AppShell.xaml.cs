@@ -1,4 +1,6 @@
-﻿using PLTour.App.Pages;
+﻿using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using PLTour.App.Pages;
 
 namespace PLTour.App;
 
@@ -12,5 +14,6 @@ public partial class AppShell : Shell
 
         // Đăng ký các trang không nằm trong TabBar
         Routing.RegisterRoute(nameof(TourDetailPage), typeof(TourDetailPage));
+        Routing.RegisterRoute(nameof(MapPage), typeof(MapPage));
     }
 }

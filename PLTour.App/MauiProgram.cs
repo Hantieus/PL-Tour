@@ -1,51 +1,40 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Hosting;
 using PLTour.App.Pages;
 using PLTour.App.Services;
 using SkiaSharp.Views.Maui.Controls.Hosting;
-using CommunityToolkit.Maui; // 1. Thêm namespace mới này
 
-namespace PLTour.App
+namespace PLTour.App;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .UseSkiaSharp()
-                // SỬA DÒNG NÀY: 
-                // true: Cho phép nhạc tiếp tục phát khi thoát app/tắt màn hình (Android)
-                // false: Tắt nhạc khi thoát app
-                .UseMauiCommunityToolkitMediaElement(true)
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .UseSkiaSharp()
+            .UseMauiCommunityToolkitMediaElement(true)
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            });
 
 #if DEBUG
-            builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
 
-            // ==========================================
-            // ĐĂNG KÝ DEPENDENCY INJECTION (DI)
-            // ==========================================
+        builder.Services.AddSingleton<LocationService>();
+        builder.Services.AddSingleton<ApiService>();
+        builder.Services.AddSingleton<IAudioService, AudioService>();
 
-            // 1. Đăng ký Service
-            builder.Services.AddSingleton<LocationService>();
-            builder.Services.AddSingleton<ApiService>(); // Đảm bảo đã đăng ký ApiService
+        builder.Services.AddTransient<LoadingPage>();
+        builder.Services.AddTransient<HomePage>();
+        builder.Services.AddTransient<MapPage>();
+        builder.Services.AddTransient<TourDetailPage>();
 
-            // LƯU Ý: Với MediaElement, bạn không cần dòng builder.Services.AddSingleton(AudioManager.Current) 
-            // vì MediaElement là một Control trên giao diện XAML, nó tự quản lý trình phát.
-
-            // 2. Đăng ký các Pages
-            builder.Services.AddTransient<LoadingPage>();
-            builder.Services.AddTransient<HomePage>();
-            builder.Services.AddTransient<MapPage>();
-            builder.Services.AddTransient<TourDetailPage>();
-
-            return builder.Build();
-        }
+        return builder.Build();
     }
 }

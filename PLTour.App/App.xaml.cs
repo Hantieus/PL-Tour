@@ -1,23 +1,22 @@
-﻿using PLTour.App.Services;
+﻿using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using PLTour.App.Pages;
+using PLTour.App.Services;
 
-namespace PLTour.App
+namespace PLTour.App;
+
+public partial class App : Application
 {
-    public partial class App : Application
+    private readonly LoadingPage _loadingPage;
+
+    public App(LocationService locationService)
     {
-        // 1. Khai báo tham số LocationService để hệ thống tự động truyền (Inject) vào
-        public App(LocationService locationService)
-        {
-            InitializeComponent();
+        InitializeComponent();
+        _loadingPage = new LoadingPage(locationService);
+    }
 
-            // Gán LoadingPage làm trang khởi đầu và truyền service vào
-            MainPage = new Pages.LoadingPage(locationService);
-        }
-
-        protected override Window CreateWindow(IActivationState? activationState)
-        {
-            // 2. Trả về Window chứa MainPage hiện tại (tức là LoadingPage). 
-            // Sau khi LoadingPage xử lý xong GPS, nó sẽ tự gọi Application.Current.MainPage = new AppShell();
-            return new Window(MainPage);
-        }
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new Window(_loadingPage);
     }
 }

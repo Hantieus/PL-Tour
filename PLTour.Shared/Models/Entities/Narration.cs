@@ -16,12 +16,12 @@ public class Narration
 
     [Required]
     [StringLength(500)]
-    public string Title { get; set; } = string.Empty;
+    public required string Title { get; set; } = string.Empty;
 
-    public string? Content { get; set; }
+    public string Content { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string? AudioUrl { get; set; }
+    public string AudioUrl { get; set; } = string.Empty;
 
     public int Duration { get; set; }
 
