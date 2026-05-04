@@ -78,11 +78,20 @@ namespace PLTour.Admin.Controllers
                 ModelState.Remove("Category");
             }
 
+            if (location.CategoryId <= 0)
+            {
+                ModelState.AddModelError(nameof(location.CategoryId), "Vui lòng chọn danh mục cho địa điểm.");
+            }
+
+            if (location.Radius <= 0)
+            {
+                location.Radius = 50;
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // ✅ SỬA: Upload ảnh qua API
                     if (imageFile != null && imageFile.Length > 0)
                     {
                         var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "locations");
@@ -90,7 +99,6 @@ namespace PLTour.Admin.Controllers
                     }
 
                     location.CreatedDate = DateTime.UtcNow;
-                    location.Radius = location.Radius > 0 ? location.Radius : 50;
                     _context.Add(location);
                     await _context.SaveChangesAsync();
 

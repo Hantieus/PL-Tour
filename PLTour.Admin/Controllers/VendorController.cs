@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-using System.Text.Json;
+using PLTour.Shared.Services;
 
 namespace PLTour.Admin.Controllers
 {
@@ -11,12 +11,12 @@ namespace PLTour.Admin.Controllers
     public class VendorController : Controller
     {
         private readonly PLTourDbContext _context;
-        private readonly HttpClient _httpClient;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public VendorController(PLTourDbContext context)
+        public VendorController(PLTourDbContext context, ICloudinaryService cloudinaryService)
         {
             _context = context;
-            _httpClient = new HttpClient();
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: Vendor
@@ -96,18 +96,22 @@ namespace PLTour.Admin.Controllers
             var vendor = await _context.Vendors.FindAsync(id);
             if (vendor == null) return NotFound();
 
-            vendor.Status = status;
-            vendor.Notes = notes ?? "";
-            vendor.IsActive = (status == "Approved");
-            vendor.UpdatedDate = DateTime.UtcNow;
-
-            if (status == "Approved")
+            var normalizedStatus = status?.Trim();
+            var allowedStatuses = new[] { "Pending", "Approved", "Rejected", "Suspended" };
+            if (string.IsNullOrWhiteSpace(normalizedStatus) || !allowedStatuses.Contains(normalizedStatus))
             {
-                vendor.ApprovedDate = DateTime.UtcNow;
+                ModelState.AddModelError("status", "Trạng thái vendor không hợp lệ.");
+                return View(vendor);
             }
 
+            vendor.Status = normalizedStatus;
+            vendor.Notes = notes?.Trim() ?? string.Empty;
+            vendor.IsActive = normalizedStatus == "Approved";
+            vendor.UpdatedDate = DateTime.UtcNow;
+            vendor.ApprovedDate = normalizedStatus == "Approved" ? DateTime.UtcNow : vendor.ApprovedDate;
+
             await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Đã {status} vendor thành công!";
+            TempData["SuccessMessage"] = $"Đã cập nhật trạng thái vendor thành công!";
             return RedirectToAction(nameof(Index));
         }
 
@@ -146,26 +150,24 @@ namespace PLTour.Admin.Controllers
                     var existingVendor = await _context.Vendors.FindAsync(id);
                     if (existingVendor == null) return NotFound();
 
-                    // Xử lý upload logo mới qua API
-                    if (logoFile != null && logoFile.Length > 0)
+                    if (await _context.Vendors.AnyAsync(v => v.Email == vendor.Email && v.VendorId != id))
                     {
-                        using (var client = new HttpClient())
-                        using (var content = new MultipartFormDataContent())
-                        {
-                            content.Add(new StreamContent(logoFile.OpenReadStream()), "file", logoFile.FileName);
-
-                            var response = await client.PostAsync("https://localhost:7291/api/upload/image?folder=vendors", content);
-                            var responseJson = await response.Content.ReadAsStringAsync();
-
-                            using (var doc = JsonDocument.Parse(responseJson))
-                            {
-                                var url = doc.RootElement.GetProperty("url").GetString();
-                                existingVendor.LogoUrl = url;
-                            }
-                        }
+                        ModelState.AddModelError("Email", "Email này đã tồn tại.");
                     }
 
-                    // Cập nhật các trường
+                    if (!ModelState.IsValid)
+                    {
+                        ViewBag.Categories = await _context.Categories.ToListAsync();
+                        ViewBag.CurrentLogo = existingVendor.LogoUrl;
+                        return View(vendor);
+                    }
+
+                    if (logoFile != null && logoFile.Length > 0)
+                    {
+                        var uploadUrl = await _cloudinaryService.UploadImageAsync(logoFile, "vendors");
+                        existingVendor.LogoUrl = uploadUrl;
+                    }
+
                     existingVendor.ShopName = vendor.ShopName;
                     existingVendor.OwnerName = vendor.OwnerName;
                     existingVendor.Email = vendor.Email;

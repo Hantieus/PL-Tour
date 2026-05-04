@@ -27,7 +27,7 @@ namespace PLTour.Vendor.Controllers
         // Lấy VendorId từ session
         private int GetVendorId()
         {
-            return int.Parse(User.FindFirst("VendorId")?.Value ?? "0");
+            return int.TryParse(User.FindFirst("VendorId")?.Value, out var vendorId) ? vendorId : 0;
         }
 
         // Dashboard chính
