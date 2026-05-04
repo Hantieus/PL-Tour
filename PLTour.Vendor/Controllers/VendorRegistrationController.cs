@@ -44,6 +44,13 @@ namespace PLTour.Vendor.Controllers
                     var existingVendor = await _context.Vendors
                         .FirstOrDefaultAsync(v => v.Email == model.Email);
 
+                    if (await _context.Vendors.AnyAsync(v => v.Phone == model.Phone))
+                    {
+                        ModelState.AddModelError("Phone", "Số điện thoại này đã được đăng ký.");
+                        ViewBag.Categories = await _context.Categories.ToListAsync();
+                        return View(model);
+                    }
+
                     if (existingVendor != null)
                     {
                         ModelState.AddModelError("Email", "Email này đã được đăng ký. Vui lòng sử dụng email khác.");
@@ -71,11 +78,12 @@ namespace PLTour.Vendor.Controllers
                         LogoUrl = logoUrl,
                         Latitude = model.Latitude,
                         Longitude = model.Longitude,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),  // ✅ THÊM DÒNG NÀY
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
                         Notes = "",
                         Status = "Pending",
                         IsActive = false,
-                        CreatedDate = DateTime.UtcNow
+                        CreatedDate = DateTime.UtcNow,
+                        UpdatedDate = DateTime.UtcNow
                     };
 
                     _context.Vendors.Add(vendor);

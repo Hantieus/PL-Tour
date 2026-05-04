@@ -109,11 +109,20 @@ namespace PLTour.Admin.Controllers
             if (narration.Location != null) ModelState.Remove("Location");
             if (narration.Language != null) ModelState.Remove("Language");
 
+            if (narration.LocationId <= 0)
+            {
+                ModelState.AddModelError(nameof(narration.LocationId), "Vui lòng chọn địa điểm.");
+            }
+
+            if (narration.LanguageId <= 0)
+            {
+                ModelState.AddModelError(nameof(narration.LanguageId), "Vui lòng chọn ngôn ngữ.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Check for duplicate language
                     var exists = await _context.Narrations
                         .AnyAsync(n => n.LocationId == narration.LocationId
                                     && n.LanguageId == narration.LanguageId);
@@ -128,14 +137,12 @@ namespace PLTour.Admin.Controllers
                         return View(narration);
                     }
 
-                    // Handle audio upload qua API
                     if (audioFile != null && audioFile.Length > 0)
                     {
                         var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, "audio");
                         narration.AudioUrl = audioUrl;
                     }
 
-                    // Handle default language
                     if (narration.IsDefault)
                     {
                         var defaultNarrations = await _context.Narrations

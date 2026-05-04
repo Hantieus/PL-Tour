@@ -48,9 +48,25 @@ namespace PLTour.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Tour tour, IFormFile? imageFile, int[] selectedLocationIds)
         {
+            selectedLocationIds ??= Array.Empty<int>();
+            selectedLocationIds = selectedLocationIds.Distinct().ToArray();
+
+            if (!selectedLocationIds.Any())
+            {
+                ModelState.AddModelError(nameof(selectedLocationIds), "Vui lòng chọn ít nhất một địa điểm cho tour.");
+            }
+
+            if (selectedLocationIds.Any())
+            {
+                var validLocationCount = await _context.Locations.CountAsync(l => l.IsActive && selectedLocationIds.Contains(l.LocationId));
+                if (validLocationCount != selectedLocationIds.Length)
+                {
+                    ModelState.AddModelError(nameof(selectedLocationIds), "Có địa điểm không hợp lệ hoặc đã bị khóa.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
-                // Upload ảnh lên Cloudinary
                 if (imageFile != null && imageFile.Length > 0)
                 {
                     var imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "tours");
@@ -61,30 +77,20 @@ namespace PLTour.Admin.Controllers
                 _context.Tours.Add(tour);
                 await _context.SaveChangesAsync();
 
-                // Thêm các địa điểm vào tour
-                if (selectedLocationIds != null && selectedLocationIds.Any())
+                for (int i = 0; i < selectedLocationIds.Length; i++)
                 {
-                    for (int i = 0; i < selectedLocationIds.Length; i++)
+                    _context.TourLocations.Add(new TourLocation
                     {
-                        _context.TourLocations.Add(new TourLocation
-                        {
-                            TourId = tour.TourId,
-                            LocationId = selectedLocationIds[i],
-                            OrderIndex = i
-                        });
-                    }
-                    await _context.SaveChangesAsync();
+                        TourId = tour.TourId,
+                        LocationId = selectedLocationIds[i],
+                        OrderIndex = i
+                    });
                 }
+                await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Thêm tour thành công!";
                 return RedirectToAction(nameof(Index));
             }
-
-            // Nếu có lỗi, load lại danh sách địa điểm
-            var locations = await _context.Locations
-                .Where(l => l.IsActive)
-                .OrderBy(l => l.Name)
-                .ToListAsync();
 
             ViewBag.Locations = new MultiSelectList(
                 await _context.Locations.Where(l => l.IsActive).ToListAsync(),

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
-
+using PLTour.Shared.Services;
 
 namespace PLTour.Vendor.Controllers
 {
@@ -11,10 +11,12 @@ namespace PLTour.Vendor.Controllers
     public class VendorController : Controller
     {
         private readonly PLTourDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public VendorController(PLTourDbContext context)
+        public VendorController(PLTourDbContext context, ICloudinaryService cloudinaryService)
         {
             _context = context;
+            _cloudinaryService = cloudinaryService;
         }
 
         // GET: Vendor
@@ -90,17 +92,21 @@ namespace PLTour.Vendor.Controllers
             var vendor = await _context.Vendors.FindAsync(id);
             if (vendor == null) return NotFound();
 
-            vendor.Status = status;
-            vendor.Notes = notes;
-            vendor.IsActive = (status == "Approved");
-
-            if (status == "Approved")
+            var normalizedStatus = status?.Trim();
+            var allowedStatuses = new[] { "Pending", "Approved", "Rejected", "Suspended" };
+            if (string.IsNullOrWhiteSpace(normalizedStatus) || !allowedStatuses.Contains(normalizedStatus))
             {
-                vendor.ApprovedDate = DateTime.UtcNow;
+                ModelState.AddModelError("status", "Trạng thái vendor không hợp lệ.");
+                return View(vendor);
             }
 
+            vendor.Status = normalizedStatus;
+            vendor.Notes = notes?.Trim() ?? string.Empty;
+            vendor.IsActive = normalizedStatus == "Approved";
+            vendor.ApprovedDate = normalizedStatus == "Approved" ? DateTime.UtcNow : vendor.ApprovedDate;
+
             await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Đã {status} vendor thành công!";
+            TempData["SuccessMessage"] = "Cập nhật trạng thái vendor thành công!";
             return RedirectToAction(nameof(Index));
         }
 
@@ -126,12 +132,36 @@ namespace PLTour.Vendor.Controllers
         {
             if (id != vendor.VendorId) return NotFound();
 
+            if (await _context.Vendors.AnyAsync(v => v.Email == vendor.Email && v.VendorId != id))
+            {
+                ModelState.AddModelError("Email", "Email này đã tồn tại.");
+            }
+
+            if (vendor.CategoryId <= 0)
+            {
+                ModelState.AddModelError("CategoryId", "Vui lòng chọn danh mục.");
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    vendor.UpdatedDate = DateTime.UtcNow;
-                    _context.Update(vendor);
+                    var existingVendor = await _context.Vendors.FindAsync(id);
+                    if (existingVendor == null) return NotFound();
+
+                    existingVendor.ShopName = vendor.ShopName;
+                    existingVendor.OwnerName = vendor.OwnerName;
+                    existingVendor.Email = vendor.Email;
+                    existingVendor.Phone = vendor.Phone;
+                    existingVendor.Address = vendor.Address;
+                    existingVendor.CategoryId = vendor.CategoryId;
+                    existingVendor.Description = vendor.Description;
+                    existingVendor.Status = vendor.Status;
+                    existingVendor.IsActive = vendor.IsActive;
+                    existingVendor.Latitude = vendor.Latitude;
+                    existingVendor.Longitude = vendor.Longitude;
+                    existingVendor.UpdatedDate = DateTime.UtcNow;
+
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Cập nhật vendor thành công!";
                 }
@@ -142,6 +172,8 @@ namespace PLTour.Vendor.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
             return View(vendor);
         }
 

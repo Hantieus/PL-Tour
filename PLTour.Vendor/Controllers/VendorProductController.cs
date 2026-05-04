@@ -23,7 +23,7 @@ namespace PLTour.Vendor.Controllers
 
         private int GetVendorId()
         {
-            return int.Parse(User.FindFirst("VendorId")?.Value ?? "0");
+            return int.TryParse(User.FindFirst("VendorId")?.Value, out var vendorId) ? vendorId : 0;
         }
 
         // Danh sách món ăn

@@ -63,19 +63,17 @@ public partial class TourDetailPage : ContentPage
         var poi = (sender as Button)?.CommandParameter as PoiModel;
         if (poi == null) return;
 
-        // TRƯỜNG HỢP: ĐANG PHÁT THÌ BẤM ĐỂ DỪNG
         if (poi.IsPlaying)
         {
             StopPlayback(poi);
             return;
         }
 
-        // BẮT ĐẦU QUY TRÌNH PHÁT
         poi.IsPlaying = true;
 
-        // TRACKING: Ghi nhận sự kiện bắt đầu nghe
         bool isOnSite = poi.DistanceMeters <= poi.Radius;
-        _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
+        var languageCode = string.IsNullOrWhiteSpace(poi.LanguageCode) ? "vi" : poi.LanguageCode;
+        _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, languageCode, isOnSite);
 
         try
         {
