@@ -4,8 +4,6 @@
              x:Class="PLTour.App.Pages.SettingsPage"
              Title="Cài đặt">
     <VerticalStackLayout Padding="20" Spacing="20">
-        <Label Text="Tài khoản" FontAttributes="Bold"/>
-        <Button Text="👤 Quản lý tài khoản" BackgroundColor="LightGray" TextColor="Black"/>
 
         <Label Text="Giao diện" FontAttributes="Bold"/>
         <HorizontalStackLayout Spacing="10">

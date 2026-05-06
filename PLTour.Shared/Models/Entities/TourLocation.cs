@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PLTour.Shared.Models.Entities;
@@ -15,8 +15,8 @@ public class TourLocation
 
     // Navigation properties
     [ForeignKey("TourId")]  
-    public virtual Tour Tour { get; set; }
+    public virtual Tour Tour { get; set; } = default!;
 
     [ForeignKey("LocationId")]
-    public virtual Location Location { get; set; }
+    public virtual Location Location { get; set; } = default!;
 }

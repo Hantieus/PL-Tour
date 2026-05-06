@@ -14,22 +14,28 @@ using PLTour.Shared.Models.DTO;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net.Http.Json;
+using System.Threading;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Media;
 
 namespace PLTour.App.Pages;
 
 [QueryProperty(nameof(TourId), "TourId")]
-public partial class MapPage : ContentPage, INotifyPropertyChanged
+[QueryProperty(nameof(ScannedPoiName), "ScannedPoiName")]
+public partial class MapPage : ContentPage
 {
     MapView mapView;
     MemoryLayer _userLocationLayer;
     MemoryLayer _poiLayer;
     List<PoiModel> _allPois = new List<PoiModel>();
     private string _tourId;
+    private string _scannedPoiName = string.Empty;
+    private bool _isQrSearchActive;
     private bool _pendingInitialCamera;
+    private bool _pendingScannedPoiSearch;
     private string _mapModeText = "Chế độ tự do";
     private string _tourName = string.Empty;
-
-    public event PropertyChangedEventHandler PropertyChanged;
 
     public string MapModeText
     {
@@ -49,7 +55,13 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         }
     }
 
-    public string TourHeaderText => string.IsNullOrWhiteSpace(TourName) ? "Địa điểm gần bạn" : TourName;
+    public string TourHeaderText
+        => !string.IsNullOrWhiteSpace(TourName)
+            ? TourName
+            : (_isQrSearchActive ? "Kết quả từ QR" : "Địa điểm gần bạn");
+
+    public string HeaderHintText
+        => _isQrSearchActive ? "Đang lọc theo POI quét được" : "Chọn tab để lọc";
 
     public string TourId
     {
@@ -59,7 +71,34 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
             _tourId = value;
             _pendingInitialCamera = true;
             MapModeText = !string.IsNullOrWhiteSpace(value) ? "Chế độ theo tour" : "Chế độ tự do";
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                _isQrSearchActive = false;
+                OnPropertyChanged(nameof(TourHeaderText));
+                OnPropertyChanged(nameof(HeaderHintText));
+            }
             System.Diagnostics.Debug.WriteLine($"[MAP] TourId received: '{value}'");
+        }
+    }
+
+    public string ScannedPoiName
+    {
+        get => _scannedPoiName;
+        set
+        {
+            _scannedPoiName = value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(_scannedPoiName))
+                return;
+
+            _pendingScannedPoiSearch = true;
+            _currentCategoryId = 0;
+            _pendingInitialCamera = true;
+            _isQrSearchActive = true;
+            TourName = string.Empty;
+            MapModeText = "Chế độ tự do";
+            OnPropertyChanged(nameof(TourHeaderText));
+            OnPropertyChanged(nameof(HeaderHintText));
+            System.Diagnostics.Debug.WriteLine($"[MAP] ScannedPoiName received: '{_scannedPoiName}'");
         }
     }
 
@@ -77,8 +116,9 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
 
     // Quản lý ID danh mục hiện tại (0: Tất cả, 1: Tham quan, 2: Ăn uống, 3: Sự kiện)
     int _currentCategoryId = 0;
+    private string _searchKeyword = string.Empty;
+    private CancellationTokenSource? _searchDebounceCts;
 
-    private CancellationTokenSource _ttsCts;
     private PoiModel _currentPlayingPoi;
 
     // ĐÃ XÓA 2 biến _playbackStartTime và _currentPoiIdTracked vì đã chuyển sang AnalyticsService
@@ -86,40 +126,78 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
     private readonly ApiService _apiService = new ApiService();
     private readonly LocationService _locationService;
     private readonly DeviceMonitorService _deviceMonitorService;
+    private readonly IAudioService _audioService;
     private static readonly HttpClient _sharedHttpClient = new HttpClient();
+    private readonly ObservableCollection<PoiModel> _visiblePois = new();
+    private CancellationTokenSource? _trackingCts;
+    private Task? _trackingTask;
+    private bool _isLoadingData;
+    private string? _lastPoiDrawKey;
+    private readonly Dictionary<string, MPoint> _poiProjectionCache = new();
+    private Location? _lastUserMapRefreshLocation;
+    private DateTime _lastUserMapRefreshTime = DateTime.MinValue;
     // Thay vì gửi mỗi 5 giây, chỉ gửi khi vị trí thay đổi > 30m
     private Location _lastSentLocation;
     private DateTime _lastSentTime = DateTime.MinValue;
+    private Location? _lastDistanceUpdateLocation;
 
-    private void OnPropertyChanged(string propertyName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-    public MapPage(LocationService locationService, DeviceMonitorService deviceMonitorService)
+    public MapPage(LocationService locationService, DeviceMonitorService deviceMonitorService, IAudioService audioService)
     {
         InitializeComponent();
         BindingContext = this;
         _locationService = locationService;
         _deviceMonitorService = deviceMonitorService;
+        _audioService = audioService;
+        _audioService.PlaybackStopped += AudioService_PlaybackStopped;
 
         // Khởi tạo ban đầu
-        PoiListView.ItemsSource = SortedPois;
+        PoiListView.ItemsSource = _visiblePois;
 
         InitializeMap();
-        StartTracking();
+    }
+
+    private void AudioService_PlaybackStopped(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            // Chỉ xóa trạng thái nếu Service thực sự đã dừng hẳn (không phải đang chuyển bài)
+            if (!_audioService.IsPlaying)
+            {
+                if (_currentPlayingPoi != null)
+                {
+                    _currentPlayingPoi.IsPlaying = false;
+                    _currentPlayingPoi = null;
+                }
+
+                // Reset IsPlaying cho toàn bộ list để chắc chắn
+                foreach (var p in _allPois) p.IsPlaying = false;
+
+                _ = AnalyticsService.Instance.TrackAudioStopAsync();
+            }
+        });
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        StartTracking();
         _ = _deviceMonitorService.TrackEventAsync("screen_view", new AnalyticsEventDto { Keyword = "map" });
         await LoadDataFromApiAsync();
     }
 
-    protected override async void OnNavigatedTo(NavigatedToEventArgs args)
+    protected override void OnNavigatedTo(NavigatedToEventArgs args)
     {
         base.OnNavigatedTo(args);
         _pendingInitialCamera = true;
-        await LoadDataFromApiAsync();
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        StopTracking();
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = null;
     }
 
     // ==========================================
@@ -142,9 +220,26 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         });
     }
 
-    private async void StartTracking()
+    private void StartTracking()
     {
-        while (true)
+        if (_trackingTask is { IsCompleted: false })
+            return;
+
+        _trackingCts = new CancellationTokenSource();
+        _trackingTask = TrackLoopAsync(_trackingCts.Token);
+    }
+
+    private void StopTracking()
+    {
+        if (_trackingCts == null) return;
+        _trackingCts.Cancel();
+        _trackingCts.Dispose();
+        _trackingCts = null;
+    }
+
+    private async Task TrackLoopAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
@@ -152,7 +247,11 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
                 if (location != null)
                 {
                     UpdateUserLocationOnMap(location);
-                    UpdateDistancesAndSort();
+                    if (ShouldUpdateDistanceUI(location))
+                    {
+                        UpdateDistancesAndSort();
+                        _lastDistanceUpdateLocation = location;
+                    }
 
                     // Chỉ gửi location_ping khi vị trí thay đổi > 30m HOẶC đã qua 30 giây
                     var distanceChanged = _lastSentLocation == null ||
@@ -169,12 +268,23 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
                 }
             }
             catch { }
-            await Task.Delay(5000); // vẫn check vị trí mỗi 5 giây, nhưng chỉ gửi khi cần
+
+            try
+            {
+                await Task.Delay(5000, cancellationToken); // vẫn check vị trí mỗi 5 giây, nhưng chỉ gửi khi cần
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 
     async Task LoadDataFromApiAsync()
     {
+        if (_isLoadingData) return;
+        _isLoadingData = true;
+
         try
         {
             System.Diagnostics.Debug.WriteLine($"[MAP] Load start. TourId='{TourId}', TourName='{TourName}'");
@@ -212,14 +322,21 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
                 System.Diagnostics.Debug.WriteLine($"[MAP] Free mode. POIs={_allPois.Count}");
             }
 
+            _poiProjectionCache.Clear();
+            _lastPoiDrawKey = null;
             GenerateCategoryTabs();
             UpdateDistancesAndSort();
             DrawPoisOnMap();
             ApplyInitialCamera();
+            ApplyScannedPoiSearchIfNeeded();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Lỗi tải POIs: {ex}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -229,20 +346,26 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            var filteredPois = _currentCategoryId == 0
-                ? _allPois
-                : _allPois.Where(p => p.CategoryId == _currentCategoryId).ToList();
+            var filteredPois = GetFilteredPois().ToList();
 
             var poiFeatures = new List<IFeature>();
             var validMapPoints = new List<MPoint>();
+            var drawKey = BuildPoiDrawKey(filteredPois);
+
+            if (string.Equals(_lastPoiDrawKey, drawKey, StringComparison.Ordinal))
+            {
+                return;
+            }
+            _lastPoiDrawKey = drawKey;
+
+            var showLabels = filteredPois.Count <= 40;
 
             foreach (var poi in filteredPois)
             {
                 if (!IsValidCoordinate(poi.Lat, poi.Lng))
                     continue;
 
-                var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
-                var mapPoint = new MPoint(proj.x, proj.y);
+                var mapPoint = GetProjectedPoint(poi);
                 var feature = new PointFeature(mapPoint);
 
                 feature.Styles.Add(new SymbolStyle
@@ -253,14 +376,17 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
                     SymbolScale = 1.0
                 });
 
-                feature.Styles.Add(new LabelStyle
+                if (showLabels)
                 {
-                    Text = poi.Name,
-                    Offset = new Offset(0, -20),
-                    ForeColor = Mapsui.Styles.Color.Black,
-                    BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White),
-                    Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2)
-                });
+                    feature.Styles.Add(new LabelStyle
+                    {
+                        Text = poi.Name,
+                        Offset = new Offset(0, -20),
+                        ForeColor = Mapsui.Styles.Color.Black,
+                        BackColor = new Mapsui.Styles.Brush(Mapsui.Styles.Color.White),
+                        Halo = new Mapsui.Styles.Pen(Mapsui.Styles.Color.White, 2)
+                    });
+                }
 
                 poiFeatures.Add(feature);
                 validMapPoints.Add(mapPoint);
@@ -278,9 +404,30 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         });
     }
 
+    private string BuildPoiDrawKey(List<PoiModel> pois)
+    {
+        var selectedId = pois.FirstOrDefault(p => p.IsSelected)?.Id.ToString() ?? "none";
+        var ids = string.Join(',', pois.Where(p => p != null).Select(p => p.Id));
+        return $"{_currentCategoryId}|{_searchKeyword}|{selectedId}|{ids}";
+    }
+
+    private MPoint GetProjectedPoint(PoiModel poi)
+    {
+        var cacheKey = $"{poi.Id}:{poi.Lat:F6}:{poi.Lng:F6}";
+        if (_poiProjectionCache.TryGetValue(cacheKey, out var cachedPoint))
+            return cachedPoint;
+
+        var proj = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
+        var point = new MPoint(proj.x, proj.y);
+        _poiProjectionCache[cacheKey] = point;
+        return point;
+    }
+
     private void UpdateUserLocationOnMap(Microsoft.Maui.Devices.Sensors.Location location)
     {
         if (mapView == null) return;
+        if (!ShouldRefreshUserMarker(location)) return;
+
         var proj = SphericalMercator.FromLonLat(location.Longitude, location.Latitude);
         var mapPoint = new MPoint(proj.x, proj.y);
         var userFeature = new PointFeature(mapPoint);
@@ -288,6 +435,9 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         _userLocationLayer.Features = new List<IFeature> { userFeature };
         _userLocationLayer.DataHasChanged();
         MainThread.BeginInvokeOnMainThread(() => mapView?.RefreshGraphics());
+
+        _lastUserMapRefreshLocation = location;
+        _lastUserMapRefreshTime = DateTime.UtcNow;
     }
 
     private static bool IsValidCoordinate(double lat, double lng)
@@ -328,11 +478,7 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         {
             var points = _allPois
                 .Where(p => IsValidCoordinate(p.Lat, p.Lng))
-                .Select(p =>
-                {
-                    var proj = SphericalMercator.FromLonLat(p.Lng, p.Lat);
-                    return new MPoint(proj.x, proj.y);
-                })
+                .Select(GetProjectedPoint)
                 .ToList();
 
             System.Diagnostics.Debug.WriteLine($"[MAP] ApplyInitialCamera points={points.Count}");
@@ -377,20 +523,63 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
             {
                 double dist = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
                 poi.DistanceMeters = dist;
-                poi.Address = dist < 1000 ? $"{Math.Round(dist)} m" : $"{(dist / 1000.0):F1} km";
             }
         }
 
-        var filtered = _currentCategoryId == 0
-            ? _allPois.OrderBy(p => p.DistanceMeters).ToList()
-            : _allPois.Where(p => p.CategoryId == _currentCategoryId)
-                      .OrderBy(p => p.DistanceMeters).ToList();
+        var filtered = GetFilteredPois()
+            .OrderByDescending(p => p.IsSelected)
+            .ThenBy(p => p.DistanceMeters)
+            .ToList();
 
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            PoiListView.ItemsSource = null;
-            PoiListView.ItemsSource = filtered;
+            _visiblePois.Clear();
+            foreach (var poi in filtered)
+            {
+                _visiblePois.Add(poi);
+            }
         });
+    }
+
+    private bool ShouldUpdateDistanceUI(Location currentLocation)
+    {
+        if (_lastDistanceUpdateLocation == null) return true;
+        var movedMeters = CalculateDistance(
+            currentLocation.Latitude,
+            currentLocation.Longitude,
+            _lastDistanceUpdateLocation.Latitude,
+            _lastDistanceUpdateLocation.Longitude);
+        return movedMeters > 8;
+    }
+
+    private bool ShouldRefreshUserMarker(Location currentLocation)
+    {
+        if (_lastUserMapRefreshLocation == null) return true;
+
+        var movedMeters = CalculateDistance(
+            currentLocation.Latitude,
+            currentLocation.Longitude,
+            _lastUserMapRefreshLocation.Latitude,
+            _lastUserMapRefreshLocation.Longitude);
+
+        var elapsedMs = (DateTime.UtcNow - _lastUserMapRefreshTime).TotalMilliseconds;
+        return movedMeters > 3 || elapsedMs > 1500;
+    }
+
+    private IEnumerable<PoiModel> GetFilteredPois()
+    {
+        IEnumerable<PoiModel> query = _currentCategoryId == 0
+            ? _allPois
+            : _allPois.Where(p => p.CategoryId == _currentCategoryId);
+
+        if (string.IsNullOrWhiteSpace(_searchKeyword))
+            return query;
+
+        var keyword = _searchKeyword.Trim();
+        return query.Where(p =>
+            (!string.IsNullOrWhiteSpace(p.Name) && p.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(p.Description) && p.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(p.Address) && p.Address.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
     }
 
     double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
@@ -498,20 +687,54 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         }
     }
 
-    private async void Back_Clicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("//home");
-    private void VoiceSearch_Clicked(object sender, EventArgs e) => txtSearch.Text = "Đang nghe...";
+    private async void Back_Clicked(object sender, EventArgs e) => await Shell.Current.GoToAsync("..");
+
+    private void Search_Clicked(object sender, EventArgs e)
+    {
+        _searchKeyword = txtSearch.Text?.Trim() ?? string.Empty;
+        UpdateQrHeaderStateBySearchKeyword();
+        UpdateDistancesAndSort();
+        DrawPoisOnMap();
+
+        var firstPoi = _visiblePois.FirstOrDefault();
+        FocusOnPoi(firstPoi);
+    }
+
+    private async void TxtSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            _searchKeyword = e.NewTextValue?.Trim() ?? string.Empty;
+            UpdateQrHeaderStateBySearchKeyword();
+            UpdateDistancesAndSort();
+            DrawPoisOnMap();
+        }
+        catch (OperationCanceledException)
+        {
+            // Người dùng tiếp tục gõ, bỏ lần debounce cũ
+        }
+    }
 
     private void BtnViewMap_Clicked(object sender, EventArgs e)
     {
         var poi = (sender as Button)?.CommandParameter as PoiModel;
         if (poi != null && mapView != null)
         {
+            MarkSelectedPoi(poi);
             var p = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
             mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y));
-            mapView.Map.Navigator.ZoomTo(1.5);
+            mapView.Map.Navigator.ZoomTo(15);
 
             // TRACKING: Xem bản đồ
             _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
+
+            PoiDetailPopupView.HidePopup();
         }
     }
 
@@ -529,18 +752,76 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         var poi = e.Parameter as PoiModel ?? (sender as Border)?.BindingContext as PoiModel;
         if (poi != null)
         {
-            PoiDetailPopup.BindingContext = poi;
-            PoiDetailPopup.IsVisible = true;
-
-            // TRACKING: Xem chi tiết
+            MarkSelectedPoi(poi);
+            PoiDetailPopupView.ShowPopup(poi);
             _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
         }
     }
 
     private void ClosePopup_Clicked(object sender, EventArgs e)
     {
-        PoiDetailPopup.IsVisible = false;
-        PoiDetailPopup.BindingContext = null;
+        PoiDetailPopupView.HidePopup();
+        ClearSelectedPoi();
+    }
+
+    private void MarkSelectedPoi(PoiModel poi)
+    {
+        foreach (var item in _allPois)
+            item.IsSelected = false;
+
+        poi.IsSelected = true;
+        UpdateDistancesAndSort();
+        DrawPoisOnMap();
+    }
+
+    private void ClearSelectedPoi()
+    {
+        foreach (var item in _allPois)
+            item.IsSelected = false;
+
+        UpdateDistancesAndSort();
+        DrawPoisOnMap();
+    }
+
+    private void ApplyScannedPoiSearchIfNeeded()
+    {
+        if (!_pendingScannedPoiSearch || string.IsNullOrWhiteSpace(_scannedPoiName))
+            return;
+
+        _pendingScannedPoiSearch = false;
+        _searchKeyword = _scannedPoiName.Trim();
+        txtSearch.Text = _searchKeyword;
+
+        UpdateDistancesAndSort();
+        DrawPoisOnMap();
+
+        var exactPoi = _visiblePois.FirstOrDefault(p =>
+            string.Equals(p.Name, _searchKeyword, StringComparison.OrdinalIgnoreCase));
+        var targetPoi = exactPoi ?? _visiblePois.FirstOrDefault();
+        if (targetPoi == null) return;
+
+        MarkSelectedPoi(targetPoi);
+        FocusOnPoi(targetPoi);
+    }
+
+    private void UpdateQrHeaderStateBySearchKeyword()
+    {
+        if (_isQrSearchActive && string.IsNullOrWhiteSpace(_searchKeyword))
+        {
+            _isQrSearchActive = false;
+            OnPropertyChanged(nameof(TourHeaderText));
+            OnPropertyChanged(nameof(HeaderHintText));
+        }
+    }
+
+    private void FocusOnPoi(PoiModel? poi)
+    {
+        if (poi == null || mapView == null || !IsValidCoordinate(poi.Lat, poi.Lng))
+            return;
+
+        var projected = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
+        mapView.Map.Navigator.CenterOn(new MPoint(projected.x, projected.y));
+        mapView.Map.Navigator.ZoomTo(15);
     }
 
     // ==========================================
@@ -558,31 +839,32 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
             return;
         }
 
-        if (_currentPlayingPoi != null) StopPlayback(_currentPlayingPoi);
-
         // Geofencing
         var userLoc = _locationService.CurrentLocation;
         bool isOnSite = false;
 
         if (userLoc != null)
         {
-            if (poi.DistanceMeters <= poi.Radius)
-            {
-                isOnSite = true;
-            }
-            else
+            if (poi.DistanceMeters > poi.Radius)
             {
                 bool confirm = await DisplayAlert("Bạn đang ở xa",
                     $"Bạn cách {poi.Name} khoảng {Math.Round(poi.DistanceMeters)}m. Bạn có muốn nghe thuyết minh ảo từ xa không?",
                     "Nghe", "Hủy bỏ");
                 if (!confirm) return;
             }
+            else
+            {
+                isOnSite = true;
+            }
         }
+
+        // Dừng cái cũ trước khi gán cái mới
+        await _audioService.StopAsync();
 
         poi.IsPlaying = true;
         _currentPlayingPoi = poi;
 
-        // Gửi Tracking: Báo server là bắt đầu nghe (ĐÃ SỬA THÀNH GỌI SERVICE)
+        // Gửi Tracking: Báo server là bắt đầu nghe
         _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
 
         try
@@ -590,25 +872,12 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
             if (!string.IsNullOrEmpty(poi.AudioUrl))
             {
                 string finalUrl = FixLocalhostUrl(poi.AudioUrl);
-                AudioPlayer.Source = MediaSource.FromUri(finalUrl);
-                AudioPlayer.Play();
+                await _audioService.PlayAudioAsync(finalUrl);
             }
-            else if (!string.IsNullOrWhiteSpace(poi.FullContent))
+            else
             {
-                string baseUrl = "https://q0x087zj-7291.asse.devtunnels.ms";
-                string generateApiUrl = $"{baseUrl}/api/audio/generate?text={Uri.EscapeDataString(poi.FullContent)}&langCode={poi.LanguageCode}&narrationId={poi.NarrationId}";
-
-                var response = await _sharedHttpClient.GetFromJsonAsync<AudioResponse>(generateApiUrl);
-
-                if (response != null && !string.IsNullOrEmpty(response.Url))
-                {
-                    string finalAudioUrl = FixLocalhostUrl(response.Url);
-                    AudioPlayer.Source = MediaSource.FromUri(finalAudioUrl);
-                    AudioPlayer.Play();
-                }
-                else await ReadTextOffline(poi);
+                await ReadTextOffline(poi);
             }
-            else await ReadTextOffline(poi);
         }
         catch (Exception ex)
         {
@@ -617,17 +886,10 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         }
     }
 
-    private void StopPlayback(PoiModel poi)
+    private async void StopPlayback(PoiModel poi)
     {
         poi.IsPlaying = false;
-        AudioPlayer.Stop();
-
-        if (_ttsCts != null)
-        {
-            _ttsCts.Cancel();
-            _ttsCts.Dispose();
-            _ttsCts = null;
-        }
+        await _audioService.StopAsync();
 
         if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
 
@@ -635,20 +897,6 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         _ = AnalyticsService.Instance.TrackAudioStopAsync();
     }
 
-    private void AudioPlayer_MediaEnded(object sender, EventArgs e)
-    {
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            if (_currentPlayingPoi != null)
-            {
-                _currentPlayingPoi.IsPlaying = false;
-                _currentPlayingPoi = null;
-
-                // Gửi Tracking: Báo server là kết thúc nghe (tự động hết audio)
-                _ = AnalyticsService.Instance.TrackAudioStopAsync();
-            }
-        });
-    }
 
     // ĐÃ XÓA hàm SendListenDurationTracking() cũ đi
 
@@ -665,22 +913,11 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
 
     private async Task ReadTextOffline(PoiModel poi)
     {
-        _ttsCts = new CancellationTokenSource();
         string content = string.IsNullOrWhiteSpace(poi.FullContent) ? poi.Description : poi.FullContent;
         if (string.IsNullOrWhiteSpace(content)) content = "Không có thông tin thuyết minh.";
 
-        var locales = await TextToSpeech.Default.GetLocalesAsync();
-        var targetLocale = locales.FirstOrDefault(l => l.Language.StartsWith(poi.LanguageCode ?? "vi", StringComparison.OrdinalIgnoreCase));
-
-        var speechOptions = new SpeechOptions { Locale = targetLocale };
-
-        await TextToSpeech.SpeakAsync($"{poi.Name}. {content}", speechOptions, _ttsCts.Token);
-
-        poi.IsPlaying = false;
-        if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
-
-        // Gửi Tracking: Báo server là kết thúc nghe
-        _ = AnalyticsService.Instance.TrackAudioStopAsync();
+        string langCode = Preferences.Default.Get("UserLanguage", poi.LanguageCode ?? "vi");
+        await _audioService.PlayTextToSpeechAsync($"{poi.Name}. {content}", langCode);
     }
 
     // ==========================================
@@ -692,25 +929,34 @@ public partial class MapPage : ContentPage, INotifyPropertyChanged
         // Implementation tự theo yêu cầu UI
     }
 
-    private void PoiDetailPopup_SpeakButtonClicked(object? sender, PoiModel? poi)
+    private void PoiDetailPopupView_SpeakRequested(object sender, PoiModel? poi)
     {
-        // Xử lý nút nói trong popup chi tiết
-        if (poi != null)
-        {
-            // Create a mock button with CommandParameter set to the POI
-            var mockButton = new Button { CommandParameter = poi };
-            BtnSpeak_Clicked(mockButton, EventArgs.Empty);
-        }
+        if (poi == null) return;
+        var mockButton = new Button { CommandParameter = poi };
+        BtnSpeak_Clicked(mockButton, EventArgs.Empty);
     }
 
-    private void PoiDetailPopup_ViewMapButtonClicked(object? sender, PoiModel? poi)
+    private void PoiDetailPopupView_ViewMapRequested(object sender, PoiModel? poi)
     {
-        // Xử lý nút xem bản đồ trong popup chi tiết
-        if (poi != null)
+        if (poi == null) return;
+
+        MarkSelectedPoi(poi);
+
+        if (mapView == null)
+            return;
+
+        var p = SphericalMercator.FromLonLat(poi.Lng, poi.Lat);
+        mapView.Map.Navigator.CenterOn(new MPoint(p.x, p.y));
+        mapView.Map.Navigator.ZoomTo(15);
+
+        PoiDetailPopupView.HidePopup();
+        InfoPanel.IsVisible = true;
+        if (isMapExpanded)
         {
-            // Create a mock button with CommandParameter set to the POI
-            var mockButton = new Button { CommandParameter = poi };
-            BtnViewMap_Clicked(mockButton, EventArgs.Empty);
+            Grid.SetRowSpan(MapSection, 1);
+            InfoPanel.IsVisible = true;
+            BtnToggleMap.Text = "Mở rộng";
+            isMapExpanded = false;
         }
     }
 

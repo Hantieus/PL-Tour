@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Mapsui.Styles;
 using MapsuiColor = Mapsui.Styles.Color;
 
@@ -16,11 +16,11 @@ public class PoiModel : INotifyPropertyChanged
 {
     // 1. --- THÔNG TIN TỪ API (CHỈ LẤY NHỮNG GÌ THỰC SỰ CẦN) ---
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; } // Mô tả ngắn (hiện trên danh sách)
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty; // Mô tả ngắn (hiện trên danh sách)
     public string ImageUrl { get; set; } = string.Empty;
     public int CategoryId { get; set; }
-    public string Category { get; set; }
+    public string Category { get; set; } = string.Empty;
     public double Lat { get; set; }
     public double Lng { get; set; }
     public double Radius { get; set; }
@@ -28,17 +28,17 @@ public class PoiModel : INotifyPropertyChanged
 
     // --- DỮ LIỆU THUYẾT MINH (Lọc từ NarrationDto theo Ngôn ngữ) ---
     public int NarrationId { get; set; }
-    public string AudioUrl { get; set; }    // Link MP3 từ Admin (Ưu tiên 1)
-    public string FullContent { get; set; }  // Nội dung chi tiết để đọc TTS (Ưu tiên 2)
-    public string LanguageName { get; set; } // Tên ngôn ngữ đang dùng (Ví dụ: Tiếng Việt)
+    public string AudioUrl { get; set; } = string.Empty;    // Link MP3 từ Admin (Ưu tiên 1)
+    public string FullContent { get; set; } = string.Empty;  // Nội dung chi tiết để đọc TTS (Ưu tiên 2)
+    public string LanguageName { get; set; } = string.Empty; // Tên ngôn ngữ đang dùng (Ví dụ: Tiếng Việt)
 
     // THÊM MỚI: Lấy thêm ID và Code của ngôn ngữ
     public int LanguageId { get; set; }
-    public string LanguageCode { get; set; }
+    public string LanguageCode { get; set; } = string.Empty;
 
     // 2. --- LOGIC XỬ LÝ KHOẢNG CÁCH (Tự động cập nhật giao diện) ---
     private double _distanceMeters;
-    private string _address;
+    private string _address = string.Empty;
 
     public string Address
     {
@@ -88,6 +88,20 @@ public class PoiModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged(nameof(IsSelected));
+            }
+        }
+    }
+
     // Tự động đổi chữ trên nút bấm
     public string PlayButtonText => IsPlaying ? "⏸️ Dừng" : "🔊 Nghe";
 
@@ -96,7 +110,7 @@ public class PoiModel : INotifyPropertyChanged
         IsPlaying ? Microsoft.Maui.Graphics.Color.FromArgb("#FFB4A2") : Microsoft.Maui.Graphics.Color.FromArgb("#E9ECEF");
 
     // --- SỰ KIỆN CẬP NHẬT GIAO DIỆN ---
-    public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

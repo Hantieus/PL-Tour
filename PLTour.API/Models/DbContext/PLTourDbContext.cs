@@ -20,6 +20,8 @@ namespace PLTour.API.Models.DbContext
         public DbSet<Language> Languages { get; set; }
         public DbSet<VendorImage> VendorImages { get; set; }
         public DbSet<Tour> Tours { get; set; }
+        public DbSet<TourAudio> TourAudios { get; set; }
+        public DbSet<TourNarration> TourNarrations { get; set; }
         public DbSet<TourLocation> TourLocations { get; set; }
         public DbSet<ActiveDevice> ActiveDevices { get; set; }
 
@@ -93,6 +95,21 @@ namespace PLTour.API.Models.DbContext
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Tour).WithMany(t => t.TourLocations).HasForeignKey(tl => tl.TourId).OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<TourLocation>().HasOne(tl => tl.Location).WithMany().HasForeignKey(tl => tl.LocationId).OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<TourNarration>()
+                .HasOne(ta => ta.Tour)
+                .WithMany(t => t.TourNarrations)
+                .HasForeignKey(ta => ta.TourId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TourNarration>()
+                .HasOne(ta => ta.Language)
+                .WithMany()
+                .HasForeignKey(ta => ta.LanguageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TourNarration>()
+                .HasIndex(ta => new { ta.TourId, ta.LanguageId, ta.Version })
+                .IsUnique();
 
         }
     }

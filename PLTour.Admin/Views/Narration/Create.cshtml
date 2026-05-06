@@ -1,118 +1,97 @@
 ﻿@model PLTour.Shared.Models.Entities.Narration
-
 @{
+    var location = ViewBag.Location as PLTour.Shared.Models.Entities.Location;
+    var languages = ViewBag.Languages as IEnumerable<PLTour.Shared.Models.Entities.Language> ?? Enumerable.Empty<PLTour.Shared.Models.Entities.Language>();
     ViewData["Title"] = "Thêm bài thuyết minh mới";
 }
 
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
-            <form asp-action="Create" method="post" enctype="multipart/form-data">
-                @Html.AntiForgeryToken()
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1">@ViewData["Title"]</h1>
+            <p class="text-muted mb-0">Tạo và quản lý bài thuyết minh cho địa điểm.</p>
+        </div>
+        <a asp-action="ByLocation" asp-route-locationId="@location?.LocationId" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
 
-                <input type="hidden" asp-for="LocationId" />
-                <input type="hidden" asp-for="Version" value="1" />
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Địa điểm</label>
-                    <input type="text" class="form-control" value="@ViewBag.Location?.Name" readonly />
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-map-marker-alt me-2"></i>Thông tin địa điểm
                 </div>
-
-                <div class="mb-3">
-                    <label asp-for="LanguageId" class="form-label fw-bold">Ngôn ngữ</label>
-                    <select asp-for="LanguageId" class="form-select" asp-items="@(ViewBag.Languages as SelectList)" id="LanguageId">
-                        <option value="">-- Chọn ngôn ngữ --</option>
-                    </select>
+                <div class="card-body">
+                    <div class="mb-2"><strong>Tên:</strong> @location?.Name</div>
+                    <div class="mb-2"><strong>Địa chỉ:</strong> @location?.Address</div>
+                    <div class="mb-2"><strong>Mô tả:</strong></div>
+                    <div class="border rounded-3 p-3 bg-light" style="min-height:140px; white-space:pre-wrap;">
+                        @(string.IsNullOrWhiteSpace(location?.Description) ? "Địa điểm chưa có mô tả." : location?.Description)
+                    </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="mb-3">
-                    <label asp-for="Title" class="form-label fw-bold">Tiêu đề</label>
-                    <input asp-for="Title" class="form-control" />
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-plus-circle me-2"></i>Thêm / tạo lại narration địa điểm
                 </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="LocationId" />
+                        <input type="hidden" asp-for="Version" value="1" />
 
-                <div class="mb-3">
-                    <label asp-for="Content" class="form-label fw-bold">Nội dung</label>
-                    <textarea asp-for="Content" class="form-control" rows="5" id="ContentText"></textarea>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Chọn ngôn ngữ</label>
+                            <div class="row g-2">
+                                @foreach (var lang in languages)
+                                {
+                                    <div class="col-md-4 col-lg-3">
+                                        <div class="form-check border rounded p-2 h-100">
+                                            <input class="form-check-input" type="checkbox" name="languageIds" value="@lang.LanguageId" id="lang_@lang.LanguageId" />
+                                            <label class="form-check-label ms-1" for="lang_@lang.LanguageId">
+                                                @lang.Name (@lang.Code)
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <small class="text-muted">Có thể chọn nhiều ngôn ngữ. Hệ thống sẽ tạo narration và audio cho từng ngôn ngữ đã chọn.</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tiêu đề gốc (Tiếng Việt)</label>
+                            <input type="text" name="title" class="form-control" value="@location?.Name" required />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Nội dung gốc (Description)</label>
+                            <textarea name="content" class="form-control" rows="6" required>@location?.Description</textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Thời lượng (giây)</label>
+                            <input type="number" name="duration" class="form-control" min="0" value="0" />
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="isDefault" value="true" checked />
+                                <label class="form-check-label">Đặt mặc định cho bản tiếng Việt</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-wand-magic-sparkles me-1"></i>Lưu và tạo audio
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">File audio</label>
-                    <input type="file" name="audioFile" class="form-control" accept="audio/*" />
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Duration" class="form-label">Thời lượng (giây)</label>
-                    <input asp-for="Duration" class="form-control" type="number" min="0" />
-                </div>
-
-                <div class="form-check mb-2">
-                    <input asp-for="IsDefault" class="form-check-input" />
-                    <label asp-for="IsDefault" class="form-check-label">Đặt làm mặc định</label>
-                </div>
-
-                <div class="form-check mb-3">
-                    <input asp-for="IsActive" class="form-check-input" checked />
-                    <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
-                </div>
-
-                <!-- NÚT DỊCH TỰ ĐỘNG -->
-                <div class="mt-3">
-                    <button type="button" id="autoTranslateBtn" class="btn btn-info">Dịch tự động</button>
-                    <div id="translateResult" class="mt-2"></div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Lưu</button>
-                <a asp-action="ByLocation" asp-route-locationId="@Model.LocationId" class="btn btn-secondary">Hủy</a>
-            </form>
+            </div>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#autoTranslateBtn').click(function() {
-                var locationId = $('#LocationId').val();
-                var languageId = $('#LanguageId').val();
-                var content = $('#ContentText').val();
-
-                if (!languageId) {
-                    alert('Vui lòng chọn ngôn ngữ gốc trước');
-                    return;
-                }
-
-                if (!content) {
-                    alert('Vui lòng nhập nội dung cần dịch');
-                    return;
-                }
-
-                var btn = $(this);
-                btn.prop('disabled', true).text('Đang dịch...');
-
-                $.ajax({
-                    url: '@Url.Action("AutoTranslate", "Narration")',
-                    type: 'POST',
-                    data: {
-                        locationId: locationId,
-                        sourceLanguageId: languageId,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            $('#translateResult').html('<div class="alert alert-success">' + response.message + '</div>');
-                        } else {
-                            $('#translateResult').html('<div class="alert alert-danger">' + response.message + '</div>');
-                        }
-                    },
-                    error: function(xhr) {
-                        $('#translateResult').html('<div class="alert alert-danger">Lỗi: ' + xhr.responseText + '</div>');
-                    },
-                    complete: function() {
-                        btn.prop('disabled', false).text('Dịch tự động');
-                    }
-                });
-            });
-        });
-    </script>
-}

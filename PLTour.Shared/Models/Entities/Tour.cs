@@ -28,5 +28,6 @@ namespace PLTour.Shared.Models.Entities
 
         // Navigation
         public virtual ICollection<TourLocation> TourLocations { get; set; } = new List<TourLocation>();
+        public virtual ICollection<TourNarration> TourNarrations { get; set; } = new List<TourNarration>();
     }
 }

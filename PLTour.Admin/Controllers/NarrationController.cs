@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Text;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
+using PLTour.API.Services;
+using PLTour.Admin.Services;
 using PLTour.Shared.Models.Entities;
 using PLTour.Shared.Services;
 
@@ -16,12 +19,26 @@ namespace PLTour.Admin.Controllers
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly ILogger<NarrationController> _logger;
         private readonly ICloudinaryService _cloudinaryService;
-        public NarrationController(PLTourDbContext context, IWebHostEnvironment hostEnvironment, ILogger<NarrationController> logger, ICloudinaryService cloudinaryService)
+        private readonly IConfiguration _configuration;
+        private readonly ITranslationService _translationService;
+        private readonly ITtsService _ttsService;
+
+        public NarrationController(
+            PLTourDbContext context,
+            IWebHostEnvironment hostEnvironment,
+            ILogger<NarrationController> logger,
+            ICloudinaryService cloudinaryService,
+            IConfiguration configuration,
+            ITranslationService translationService,
+            ITtsService ttsService)
         {
             _context = context;
             _hostEnvironment = hostEnvironment;
             _logger = logger;
             _cloudinaryService = cloudinaryService;
+            _configuration = configuration;
+            _translationService = translationService;
+            _ttsService = ttsService;
         }
 
         // GET: Narration
@@ -80,93 +97,117 @@ namespace PLTour.Admin.Controllers
                 .ToListAsync();
 
             ViewBag.Location = location;
+            ViewBag.HasNarrations = narrations.Any();
+            ViewBag.Languages = await _context.Languages.Where(l => l.IsActive).OrderBy(l => l.DisplayOrder).ToListAsync();
             return View(narrations);
         }
 
-        // GET: Narration/Create/5
-        public async Task<IActionResult> Create(int locationId)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpsertLocationNarration(int locationId, List<int> languageIds, string title, string content, int duration, bool isDefault)
         {
-            var location = await _context.Locations.FindAsync(locationId);
-            if (location == null)
+            var location = await _context.Locations.FirstOrDefaultAsync(l => l.LocationId == locationId);
+            if (location == null) return NotFound();
+
+            if (languageIds == null || !languageIds.Any())
             {
-                return NotFound();
+                TempData["ErrorMessage"] = "Vui lòng chọn ít nhất 1 ngôn ngữ.";
+                return RedirectToAction(nameof(ByLocation), new { locationId });
             }
 
-            ViewBag.Location = location;
-            ViewBag.Languages = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
-                await _context.Languages.Where(l => l.IsActive).ToListAsync(),
-                "LanguageId", "Name");
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
+            {
+                TempData["ErrorMessage"] = "Title và Content không được rỗng.";
+                return RedirectToAction(nameof(ByLocation), new { locationId });
+            }
 
-            return View(new Narration { LocationId = locationId, IsActive = true, Version = 1, Title = "" });
+            try
+            {
+                var translatedTitles = await _translationService.TranslateToAllLanguages(title, "vi");
+                var translatedContents = await _translationService.TranslateToAllLanguages(content, "vi");
+                var savedCount = 0;
+
+                foreach (var languageId in languageIds.Distinct())
+                {
+                    var language = await _context.Languages.FirstOrDefaultAsync(l => l.LanguageId == languageId && l.IsActive);
+                    if (language == null) continue;
+
+                    var useTitle = language.Code == "vi" ? title : translatedTitles.GetValueOrDefault(language.Code, title);
+                    var useContent = language.Code == "vi" ? content : translatedContents.GetValueOrDefault(language.Code, content);
+
+                    var audioBytes = await _ttsService.GenerateAudioAsync(useContent, language.Code);
+                    await using var audioStream = new MemoryStream(audioBytes);
+                    var shortHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{locationId}|{language.Code}|{useTitle}|{useContent}")))[..12];
+                    var audioUrl = await _cloudinaryService.UploadAudioAsync(audioStream, $"location_{locationId}_{language.Code}_{shortHash}.mp3", $"pltour/audio/locations/{locationId}");
+
+                    var existing = await _context.Narrations
+                        .FirstOrDefaultAsync(x => x.LocationId == locationId && x.LanguageId == languageId);
+
+                    if (existing == null)
+                    {
+                        existing = new Narration
+                        {
+                            LocationId = locationId,
+                            LanguageId = languageId,
+                            Title = useTitle,
+                            Content = useContent,
+                            AudioUrl = audioUrl,
+                            Duration = duration,
+                            IsDefault = isDefault && language.Code == "vi",
+                            IsActive = true,
+                            Version = 1,
+                            CreatedDate = DateTime.UtcNow
+                        };
+                        _context.Narrations.Add(existing);
+                    }
+                    else
+                    {
+                        existing.Title = useTitle;
+                        existing.Content = useContent;
+                        existing.AudioUrl = audioUrl;
+                        existing.Duration = duration;
+                        existing.IsDefault = isDefault && language.Code == "vi";
+                        existing.IsActive = true;
+                        existing.Version += 1;
+                        existing.UpdatedDate = DateTime.UtcNow;
+                    }
+
+                    if (existing.IsDefault)
+                    {
+                        var defaults = await _context.Narrations
+                            .Where(x => x.LocationId == locationId && x.IsDefault && x.LanguageId != languageId)
+                            .ToListAsync();
+                        foreach (var item in defaults)
+                            item.IsDefault = false;
+                    }
+
+                    savedCount++;
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã tạo/cập nhật narration cho {savedCount} ngôn ngữ.";
+                return RedirectToAction(nameof(ByLocation), new { locationId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi lưu narration location. LocationId={LocationId}", locationId);
+                TempData["ErrorMessage"] = $"Lỗi lưu narration: {ex.Message}";
+                return RedirectToAction(nameof(ByLocation), new { locationId });
+            }
+        }
+
+        // GET: Narration/Create/5
+        public Task<IActionResult> Create(int locationId)
+        {
+            return Task.FromResult<IActionResult>(RedirectToAction(nameof(ByLocation), new { locationId }));
         }
 
         // POST: Narration/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Narration narration, IFormFile? audioFile)
+        public async Task<IActionResult> Create(int locationId, List<int> languageIds, string title, string content, int duration, bool isDefault)
         {
-            // Remove validation errors for navigation properties
-            if (narration.Location != null) ModelState.Remove("Location");
-            if (narration.Language != null) ModelState.Remove("Language");
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    // Check for duplicate language
-                    var exists = await _context.Narrations
-                        .AnyAsync(n => n.LocationId == narration.LocationId
-                                    && n.LanguageId == narration.LanguageId);
-
-                    if (exists)
-                    {
-                        ModelState.AddModelError("LanguageId", "Bài thuyết minh cho ngôn ngữ này đã tồn tại");
-                        ViewBag.Location = await _context.Locations.FindAsync(narration.LocationId);
-                        ViewBag.Languages = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
-                            await _context.Languages.Where(l => l.IsActive).ToListAsync(),
-                            "LanguageId", "Name");
-                        return View(narration);
-                    }
-
-                    // Handle audio upload qua API
-                    if (audioFile != null && audioFile.Length > 0)
-                    {
-                        var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, "audio");
-                        narration.AudioUrl = audioUrl;
-                    }
-
-                    // Handle default language
-                    if (narration.IsDefault)
-                    {
-                        var defaultNarrations = await _context.Narrations
-                            .Where(n => n.LocationId == narration.LocationId && n.IsDefault)
-                            .ToListAsync();
-                        foreach (var n in defaultNarrations)
-                        {
-                            n.IsDefault = false;
-                        }
-                    }
-
-                    narration.CreatedDate = DateTime.UtcNow;
-                    narration.Version = 1;
-
-                    _context.Add(narration);
-                    await _context.SaveChangesAsync();
-
-                    TempData["SuccessMessage"] = "Thêm bài thuyết minh thành công!";
-                    return RedirectToAction("ByLocation", new { locationId = narration.LocationId });
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
-                }
-            }
-
-            ViewBag.Location = await _context.Locations.FindAsync(narration.LocationId);
-            ViewBag.Languages = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(
-                await _context.Languages.Where(l => l.IsActive).ToListAsync(),
-                "LanguageId", "Name");
-            return View(narration);
+            return await UpsertLocationNarration(locationId, languageIds, title, content, duration, isDefault);
         }
 
         // GET: Narration/Edit/5
@@ -183,7 +224,7 @@ namespace PLTour.Admin.Controllers
             if (narration == null) return NotFound();
 
             ViewBag.Location = narration.Location;
-            ViewBag.LanguageName = narration.Language?.Name ?? "Không xác định";  // ✅ QUAN TRỌNG
+            ViewBag.LanguageName = narration.Language?.Name ?? "Không xác định";
 
             return View(narration);
         }
@@ -211,32 +252,27 @@ namespace PLTour.Admin.Controllers
                         return NotFound();
                     }
 
-                    // Xóa audio cũ nếu có
                     if (removeAudio && !string.IsNullOrEmpty(existingNarration.AudioUrl))
                     {
                         var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingNarration.AudioUrl);
                         if (!string.IsNullOrEmpty(publicId))
                             await _cloudinaryService.DeleteFileAsync(publicId);
-                        existingNarration.AudioUrl = null;
+                        existingNarration.AudioUrl = string.Empty;
                     }
 
-                    // Upload audio mới
                     if (audioFile != null && audioFile.Length > 0)
                     {
-                        // Xóa audio cũ
                         if (!string.IsNullOrEmpty(existingNarration.AudioUrl))
                         {
-                            var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingNarration.AudioUrl);
-                            if (!string.IsNullOrEmpty(publicId))
-                                await _cloudinaryService.DeleteFileAsync(publicId);
+                            var oldPublicId = _cloudinaryService.ExtractPublicIdFromUrl(existingNarration.AudioUrl);
+                            if (!string.IsNullOrEmpty(oldPublicId))
+                                await _cloudinaryService.DeleteFileAsync(oldPublicId);
                         }
 
-                        // Upload mới
-                        var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, "audio");
+                        var audioUrl = await _cloudinaryService.UploadAudioAsync(audioFile, $"narrations/{narration.LocationId}/{narration.LanguageId}");
                         existingNarration.AudioUrl = audioUrl;
                     }
 
-                    // Handle default language
                     if (narration.IsDefault && !existingNarration.IsDefault)
                     {
                         var defaultNarrations = await _context.Narrations
@@ -250,7 +286,6 @@ namespace PLTour.Admin.Controllers
                         }
                     }
 
-                    // Update fields
                     existingNarration.Title = narration.Title;
                     existingNarration.Content = narration.Content;
                     existingNarration.Duration = narration.Duration;
@@ -399,6 +434,38 @@ namespace PLTour.Admin.Controllers
                 _logger.LogError(ex, "Lỗi khi dịch tự động");
                 return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
             }
+        }
+
+        private async Task<string> GenerateNarrationAudioAsync(string title, string content, int languageId, int locationId)
+        {
+            var language = await _context.Languages.FirstOrDefaultAsync(l => l.LanguageId == languageId);
+            if (language == null)
+                throw new InvalidOperationException("Không tìm thấy ngôn ngữ");
+
+            var audioBytes = await GetTtsAudioBytesAsync(content, language.Code);
+            var publicName = $"narration_{locationId}_{language.Code}_{GetShortHash($"{title}|{content}|{language.Code}")}";
+            await using var stream = new MemoryStream(audioBytes);
+            return await _cloudinaryService.UploadAudioAsync(stream, publicName + ".mp3", "audio");
+        }
+
+        private async Task<byte[]> GetTtsAudioBytesAsync(string content, string langCode)
+        {
+            var baseUrl = _configuration["Tts:BaseUrl"];
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new InvalidOperationException("Tts:BaseUrl chưa được cấu hình");
+
+            using var client = new HttpClient();
+            var response = await client.PostAsJsonAsync($"{baseUrl.TrimEnd('/')}/tts", new { text = content, langCode });
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException("Không tạo được audio từ TTS service");
+
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
+        private static string GetShortHash(string input)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(hash)[..12];
         }
 
         private bool NarrationExists(int id)

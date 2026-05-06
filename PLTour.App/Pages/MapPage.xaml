@@ -2,20 +2,13 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-             xmlns:controls="clr-namespace:PLTour.App.Controls"
+             xmlns:pages="clr-namespace:PLTour.App.Pages"
              x:Class="PLTour.App.Pages.MapPage"
              Title="Map"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F3F6F9">
 
     <Grid x:Name="MainGrid" RowDefinitions="Auto,*,380">
-
-        <!-- Audio player dùng cho thuyết minh -->
-        <toolkit:MediaElement x:Name="AudioPlayer"
-                              ShouldAutoPlay="False"
-                              IsVisible="False"
-                              MediaEnded="AudioPlayer_MediaEnded" />
-
         <!-- Thanh trên cùng -->
         <Border Grid.Row="0"
                 BackgroundColor="White"
@@ -48,6 +41,7 @@
                            ClearButtonVisibility="WhileEditing"
                            TextColor="#111827"
                            PlaceholderColor="#94A3B8"
+                           TextChanged="TxtSearch_TextChanged"
                            VerticalOptions="Center" />
                 </Border>
 
@@ -60,7 +54,7 @@
                         WidthRequest="44"
                         HeightRequest="44"
                         CornerRadius="22"
-                        Clicked="VoiceSearch_Clicked" />
+                        Clicked="Search_Clicked" />
             </Grid>
         </Border>
 
@@ -121,7 +115,7 @@
                                FontSize="18"
                                TextColor="#111827"
                                VerticalOptions="Center" />
-                        <Label Text="Chọn tab để lọc"
+                        <Label Text="{Binding HeaderHintText}"
                                FontSize="12"
                                TextColor="#6B7280" />
                     </VerticalStackLayout>
@@ -152,26 +146,55 @@
                                         </Border.GestureRecognizers>
 
                                         <VerticalStackLayout Spacing="10">
-                                            <Border StrokeShape="RoundRectangle 14" StrokeThickness="0" HeightRequest="120">
-                                                <Image Source="{Binding ImageUrl}"
-                                                       HeightRequest="120"
-                                                       Aspect="AspectFill" />
-                                            </Border>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Border IsVisible="{Binding IsSelected}"
+                                                        BackgroundColor="#2A9D8F"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 10"
+                                                        Padding="8,4">
+                                                    <Label Text="Đang chọn"
+                                                           FontSize="10"
+                                                           TextColor="White"
+                                                           FontAttributes="Bold" />
+                                                </Border>
 
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                                <Label Grid.Column="0"
+                                                <Label Grid.Column="1"
                                                        Text="{Binding Name}"
                                                        FontAttributes="Bold"
                                                        FontSize="16"
                                                        TextColor="#111827"
                                                        MaxLines="1"
                                                        LineBreakMode="TailTruncation" />
-                                                <Label Grid.Column="1"
-                                                       Text="{Binding Address}"
-                                                       FontAttributes="Bold"
-                                                       FontSize="13"
-                                                       TextColor="#E76F51"
-                                                       VerticalOptions="Center" />
+                                            </Grid>
+
+                                            <Grid HeightRequest="120">
+                                                <Border StrokeShape="RoundRectangle 14"
+                                                        StrokeThickness="0">
+                                                    <Image Source="{Binding ImageUrl}"
+                                                           HeightRequest="120"
+                                                           Aspect="AspectFill" />
+                                                </Border>
+
+                                                <Border IsVisible="{Binding IsSelected}"
+                                                        BackgroundColor="#2A9D8F"
+                                                        Opacity="0.16"
+                                                        StrokeThickness="2"
+                                                        Stroke="#2A9D8F"
+                                                        StrokeShape="RoundRectangle 14" />
+
+                                                <Border IsVisible="{Binding IsSelected}"
+                                                        BackgroundColor="#2A9D8F"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 999"
+                                                        HorizontalOptions="End"
+                                                        VerticalOptions="Start"
+                                                        Margin="10">
+                                                    <Label Text="Đang chọn"
+                                                           FontSize="10"
+                                                           TextColor="White"
+                                                           FontAttributes="Bold"
+                                                           Padding="8,4" />
+                                                </Border>
                                             </Grid>
 
                                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,4,0,0">
@@ -214,9 +237,12 @@
         </Border>
 
         <!-- Popup chi tiết -->
-        <controls:PoiDetailPopup x:Name="PoiDetailPopup"
-                                 IsVisible="False"
-                                 SpeakButtonClicked="PoiDetailPopup_SpeakButtonClicked"
-                                 ViewMapButtonClicked="PoiDetailPopup_ViewMapButtonClicked" />
+        <pages:PoiDetailPopupView x:Name="PoiDetailPopupView"
+                                  Grid.RowSpan="3"
+                                  IsVisible="False"
+                                  ZIndex="100"
+                                  CloseRequested="ClosePopup_Clicked"
+                                  SpeakRequested="PoiDetailPopupView_SpeakRequested"
+                                  ViewMapRequested="PoiDetailPopupView_ViewMapRequested" />
     </Grid>
 </ContentPage>

@@ -4,6 +4,8 @@ using Microsoft.Maui.Hosting;
 using PLTour.App.Pages;
 using PLTour.App.Services;
 using SkiaSharp.Views.Maui.Controls.Hosting;
+using ZXing.Net.Maui.Controls;
+using ZXing.Net.Maui;
 
 namespace PLTour.App;
 
@@ -16,6 +18,7 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseSkiaSharp()
             .UseMauiCommunityToolkitMediaElement(true)
+            .UseBarcodeReader()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -34,6 +37,7 @@ public static class MauiProgram
         builder.Services.AddTransient<LoadingPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<MapPage>();
+        builder.Services.AddTransient<QrScannerPage>();
         builder.Services.AddTransient<TourDetailPage>();
 
         return builder.Build();

@@ -10,4 +10,5 @@ public class TourDto
 
     // Chứa danh sách các địa điểm đã được sắp xếp theo OrderIndex
     public List<LocationDto> Locations { get; set; } = new();
+    public List<TourNarrationDto> TourNarrations { get; set; } = new();
 }

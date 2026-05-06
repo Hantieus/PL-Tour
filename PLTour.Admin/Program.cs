@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders; // Thêm thư viện này
 using PLTour.Admin.Services;
 using PLTour.API.Models.DbContext;
+using PLTour.API.Services;
 using PLTour.Shared.Services;
 using Npgsql;
 
@@ -30,6 +31,9 @@ builder.Services.AddScoped<ITranslationService, FreeTranslationService>();
 
 //Cloudinary
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+// TTS service
+builder.Services.AddHttpClient<ITtsService, EdgeTtsService>();
 
 // Cấu hình Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
