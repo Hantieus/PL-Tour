@@ -94,7 +94,8 @@ public class MonitorController : ControllerBase
     [HttpGet("active-devices")]
     public async Task<IActionResult> GetActiveDevices()
     {
-        var cutoff = DateTime.UtcNow.AddMinutes(-2);
+        var cutoffOnline = DateTime.UtcNow.AddMinutes(-1);
+        var cutoffStale = DateTime.UtcNow.AddMinutes(-2);
 
         var devices = await _context.ActiveDevices
             .OrderByDescending(x => x.LastHeartbeat)
@@ -112,7 +113,7 @@ public class MonitorController : ControllerBase
                 IsCharging = x.IsCharging,
                 LastHeartbeat = DateTime.SpecifyKind(x.LastHeartbeat, DateTimeKind.Utc),
                 FirstSeen = DateTime.SpecifyKind(x.FirstSeen, DateTimeKind.Utc),
-                Status = x.LastHeartbeat >= cutoff ? x.Status : "offline"
+                Status = x.LastHeartbeat >= cutoffOnline ? "online" : x.LastHeartbeat >= cutoffStale ? "stale" : "offline"
             })
             .ToListAsync();
 
@@ -147,7 +148,7 @@ public class MonitorController : ControllerBase
     [HttpPost("mark-offline")]
     public async Task<IActionResult> MarkOfflineDevices()
     {
-        var cutoff = DateTime.UtcNow.AddMinutes(-10);
+        var cutoff = DateTime.UtcNow.AddMinutes(-2);
         var staleDevices = await _context.ActiveDevices
             .Where(x => x.LastHeartbeat < cutoff && x.Status != "offline")
             .ToListAsync();
@@ -164,10 +165,10 @@ public class MonitorController : ControllerBase
     private static string GetStatus(DateTime lastHeartbeat)
     {
         var minutes = (DateTime.UtcNow - lastHeartbeat).TotalMinutes;
-        if (minutes <= 2)
+        if (minutes <= 1)
             return "online";
 
-        if (minutes <= 10)
+        if (minutes <= 2)
             return "stale";
 
         return "offline";

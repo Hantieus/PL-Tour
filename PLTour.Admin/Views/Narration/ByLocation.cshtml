@@ -1,136 +1,285 @@
 ﻿@model IEnumerable<PLTour.Shared.Models.Entities.Narration>
 @{
     var location = ViewBag.Location as PLTour.Shared.Models.Entities.Location;
-    ViewData["Title"] = $"Bài thuyết minh - {location?.Name}";
+    var hasNarrations = ViewBag.HasNarrations as bool? ?? false;
+    var languages = ViewBag.Languages as IEnumerable<PLTour.Shared.Models.Entities.Language> ?? Enumerable.Empty<PLTour.Shared.Models.Entities.Language>();
+    ViewData["Title"] = $"Quản lý audio - {location?.Name}";
 }
+
+<style>
+    #editModal .modal-dialog {
+        max-height: calc(100vh - 2rem);
+    }
+
+    #editModal .modal-content {
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+    }
+
+    #editModal .modal-body {
+        overflow-y: auto;
+        max-height: calc(100vh - 11rem);
+    }
+</style>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h1 class="h3">@ViewData["Title"]</h1>
-            <p class="text-muted">
-                <i class="fas fa-map-marker-alt me-1"></i>@location?.Address
-            </p>
+            <h1 class="h3 mb-1">@ViewData["Title"]</h1>
+            <p class="text-muted mb-0">Tạo và quản lý thuyết minh cho địa điểm theo từng ngôn ngữ.</p>
         </div>
-        <div>
-            <a asp-action="Create" asp-route-locationId="@location?.LocationId" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-1"></i>Thêm bài thuyết minh
-            </a>
-            <a asp-controller="Location" asp-action="Index" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i>Quay lại
-            </a>
+        <a asp-controller="Location" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách địa điểm
+        </a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-map-marker-alt me-2"></i>Thông tin địa điểm
+                </div>
+                <div class="card-body">
+                    <div class="mb-2"><strong>Tên:</strong> @location?.Name</div>
+                    <div class="mb-2"><strong>Địa chỉ:</strong> @location?.Address</div>
+                    <div class="mb-2"><strong>Ngồi độ:</strong> @location?.Latitude, @location?.Longitude</div>
+                    <div class="mb-2"><strong>Mô tả:</strong></div>
+                    <div class="border rounded-3 p-3 bg-light" style="min-height:140px; white-space:pre-wrap;">
+                        @(string.IsNullOrWhiteSpace(location?.Description) ? "Địa điểm chưa có mô tả." : location?.Description)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-plus-circle me-2"></i>@(hasNarrations ? "Cập nhật narration địa điểm" : "Thêm / tạo lại narration địa điểm")
+                </div>
+                <div class="card-body">
+                    @if (string.IsNullOrWhiteSpace(location?.Description))
+                    {
+                        <div class="alert alert-warning mb-3">Địa điểm chưa có Description nên chưa thể tạo audio.</div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-3">Nếu bạn vừa sửa Description, hãy tạo lại audio để đồng bộ nội dung.</div>
+                    }
+
+                    <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="locationId" value="@location?.LocationId" />
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+                                <span>Chọn ngôn ngữ</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllLanguagesBtn">Chọn tất cả</button>
+                            </label>
+                            <div class="row g-2">
+                                @foreach (var lang in languages)
+                                {
+                                    <div class="col-md-4 col-lg-3">
+                                        <div class="form-check border rounded p-2 h-100">
+                                            <input class="form-check-input lang-checkbox" type="checkbox" name="languageIds" value="@lang.LanguageId" id="lang_@lang.LanguageId" />
+                                            <label class="form-check-label ms-1" for="lang_@lang.LanguageId">@lang.Name (@lang.Code)</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <small class="text-muted">Có thể chọn nhiều ngôn ngữ. Hệ thống sẽ tạo narration và audio cho từng ngôn ngữ đã chọn.</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tiêu đề gốc (Tiếng Việt)</label>
+                            <input type="text" name="title" class="form-control" value="@location?.Name" required />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Nội dung gốc (Description)</label>
+                            <textarea name="content" class="form-control" rows="5" required>@location?.Description</textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Thời lượng (giây)</label>
+                            <input type="number" name="duration" class="form-control" min="0" value="0" />
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="isDefault" value="true" checked />
+                                <label class="form-check-label">Đặt mặc định cho bản tiếng Việt</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-wand-magic-sparkles me-1"></i>@(hasNarrations ? "Cập nhật" : "Lưu và tạo audio")
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        @if (Model.Any())
-        {
-            @foreach (var item in Model)
-            {
-                <div class="col-md-6 mb-3">
-                    <div class="card @(item.IsDefault ? "border-primary" : "")">
-                        <div class="card-header @(item.IsDefault ? "bg-primary text-white" : "bg-light")">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="flag-icon @item.Language?.FlagIcon me-2"></span>
-                                    <strong>@item.Language?.Name</strong>
-                                    @if (item.IsDefault)
-                                    {
-                                        <span class="badge bg-warning text-dark ms-2">Mặc định</span>
-                                    }
-                                </div>
-                                <div>
-                                    @if (!string.IsNullOrEmpty(item.AudioUrl))
-                                    {
-                                        <span class="badge bg-success me-2">
-                                            <i class="fas fa-headphones me-1"></i>Audio
-                                        </span>
-                                    }
-                                    <span class="badge bg-info">@item.Duration giây</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title">@item.Title</h5>
-                            <p class="card-text text-muted" style="max-height: 100px; overflow-y: auto;">
-                                @item.Content
-                            </p>
-
-                            @if (!string.IsNullOrEmpty(item.AudioUrl))
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-headphones me-2"></i>Danh sách narration hiện có</span>
+            <span class="badge bg-dark">@((Model?.Count() ?? 0)) bản ghi</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Ngôn ngữ</th>
+                            <th>Tiêu đề</th>
+                            <th>Audio</th>
+                            <th>Trạng thái</th>
+                            <th>Mặc định</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var item in Model.OrderByDescending(x => x.CreatedDate))
                             {
-                                <audio controls class="w-100 mb-2">
-                                    <source src="@item.AudioUrl" type="audio/mpeg">
-                                </audio>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@(item.Language?.Name ?? $"Language #{item.LanguageId}")</div>
+                                        <small class="text-muted">@item.Language?.Code</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@item.Title</div>
+                                        <small class="text-muted">v@item.Version</small>
+                                    </td>
+                                    <td style="max-width:360px; word-break:break-all;">
+                                        <div class="d-flex flex-column gap-2">
+                                            <a href="@item.AudioUrl" target="_blank">@item.AudioUrl</a>
+                                            @if (!string.IsNullOrWhiteSpace(item.AudioUrl))
+                                            {
+                                                <audio controls preload="none" style="width:100%;">
+                                                    <source src="@item.AudioUrl" type="audio/mpeg" />
+                                                </audio>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>@(item.IsActive ? "Active" : "Inactive")</td>
+                                    <td>@(item.IsDefault ? "Default" : "-")</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal(this)"
+                                                    data-narration-id="@item.NarrationId"
+                                                    data-language-id="@item.LanguageId"
+                                                    data-title="@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Title))"
+                                                    data-content="@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Content))"
+                                                    data-duration="@item.Duration"
+                                                    data-is-default="@item.IsDefault.ToString().ToLower()"
+                                                    data-is-active="@item.IsActive.ToString().ToLower()"
+                                                    data-audio-url="@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.AudioUrl ?? string.Empty))"
+                                                    data-language-name="@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(item.Language?.Name ?? string.Empty))">
+                                                <i class="fas fa-pen-to-square me-1"></i>Sửa
+                                            </button>
+                                            <form asp-action="Delete" method="post" onsubmit="return confirm('Bạn có chắc muốn xóa narration này không?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.NarrationId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash me-1"></i>Xóa
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
                             }
-
-                            <div class="mt-2">
-                                <span class="text-muted small">
-                                    <i class="far fa-calendar-alt me-1"></i>
-                                    @item.CreatedDate.ToString("dd/MM/yyyy HH:mm")
-                                </span>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="btn-group w-100" role="group">
-                                <a asp-action="Edit" asp-route-id="@item.NarrationId" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit me-1"></i>Sửa
-                                </a>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@item.NarrationId, '@item.Language?.Name')">
-                                    <i class="fas fa-trash me-1"></i>Xóa
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
-        else
-        {
-            <div class="col-12">
-                <div class="alert alert-info text-center py-4">
-                    <i class="fas fa-info-circle fa-3x mb-3"></i>
-                    <h5>Chưa có bài thuyết minh nào</h5>
-                    <p>Thêm bài thuyết minh đầu tiên cho địa điểm này</p>
-                    <a asp-action="Create" asp-route-locationId="@location?.LocationId" class="btn btn-primary">
-                        <i class="fas fa-plus-circle me-1"></i>Thêm ngay
-                    </a>
-                </div>
+                        }
+                        else
+                        {
+                            <tr><td colspan="6" class="text-center text-muted py-4">Chưa có narration nào cho địa điểm này.</td></tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-        }
+        </div>
     </div>
 </div>
 
-<!-- Modal xác nhận xóa -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Bạn có chắc muốn xóa bài thuyết minh <strong id="deleteLanguageName"></strong>?</p>
-                <p class="text-danger small">Hành động này không thể hoàn tác!</p>
-            </div>
-            <div class="modal-footer">
-                <form asp-action="Delete" method="post" id="deleteForm">
-                    <input type="hidden" name="id" id="deleteNarrationId" />
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-danger">Xóa</button>
-                </form>
-            </div>
+            <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-warning-subtle">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Sửa narration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="NarrationId" id="editNarrationId" />
+                    <input type="hidden" name="LocationId" id="editLocationId" value="@location?.LocationId" />
+                    <input type="hidden" name="LanguageId" id="editLanguageId" />
+                    <input type="hidden" name="Version" id="editVersion" />
+                    <input type="hidden" name="CreatedDate" id="editCreatedDate" />
+                    <input type="hidden" name="AudioUrl" id="editAudioUrl" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ngôn ngữ</label>
+                        <input type="text" class="form-control" id="editLanguageName" readonly />
+                    </div>
+                    <div class="mb-3"><label class="form-label fw-bold">Title</label><input type="text" class="form-control" name="Title" id="editTitle" /></div>
+                    <div class="mb-3"><label class="form-label fw-bold">Content</label><textarea class="form-control" rows="6" name="Content" id="editContent"></textarea></div>
+                    <div class="mb-3"><label class="form-label fw-bold">Thời lượng (giây)</label><input type="number" class="form-control" name="Duration" id="editDuration" min="0" /></div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="IsDefault" id="editIsDefault" value="true" /><label class="form-check-label" for="editIsDefault">Đặt làm mặc định</label></div></div>
+                        <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="IsActive" id="editIsActive" value="true" /><label class="form-check-label" for="editIsActive">Kích hoạt</label></div></div>
+                    </div>
+
+                    <div class="mb-3"><label class="form-label fw-bold">Audio hiện tại</label><div id="editAudioPreview" class="mb-2"></div></div>
+                    <div class="mb-3"><label class="form-label fw-bold">Upload audio mới</label><input type="file" class="form-control" name="audioFile" accept="audio/*" /><div class="form-text">Nếu upload file mới thì hệ thống sẽ thay audio hiện tại bằng file của bạn.</div></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="removeAudio" value="true" id="editRemoveAudio" /><label class="form-check-label text-danger" for="editRemoveAudio">Xóa audio hiện tại</label></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-warning">Lưu thay đổi</button></div>
+            </form>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        function confirmDelete(id, languageName) {
-            document.getElementById('deleteNarrationId').value = id;
-            document.getElementById('deleteLanguageName').innerText = languageName;
-            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        function decodeSafe(value) {
+            if (!value) return '';
+            try {
+                return value
+                    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+                    .replace(/\\/g, '');
+            } catch {
+                return value;
+            }
         }
+
+        function openEditModal(btn) {
+            const d = btn.dataset;
+            document.getElementById('editNarrationId').value = d.narrationId;
+            document.getElementById('editLanguageId').value = d.languageId || '';
+            document.getElementById('editTitle').value = decodeSafe(d.title || '');
+            document.getElementById('editContent').value = decodeSafe(d.content || '');
+            document.getElementById('editDuration').value = d.duration || 0;
+            document.getElementById('editIsDefault').checked = (d.isDefault === 'true');
+            document.getElementById('editIsActive').checked = (d.isActive === 'true');
+            document.getElementById('editLanguageName').value = decodeSafe(d.languageName || '');
+            document.getElementById('editAudioUrl').value = d.audioUrl || '';
+            document.getElementById('editAudioPreview').innerHTML = d.audioUrl ? `<audio controls class="w-100"><source src="${d.audioUrl}" type="audio/mpeg"></audio>` : '<div class="alert alert-light border mb-0">Chưa có audio</div>';
+            const modalEl = document.getElementById('editModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        document.getElementById('selectAllLanguagesBtn')?.addEventListener('click', function () {
+            const checkboxes = document.querySelectorAll('.lang-checkbox');
+            const allChecked = Array.from(checkboxes).every(x => x.checked);
+            checkboxes.forEach(x => x.checked = !allChecked);
+            this.textContent = allChecked ? 'Chọn tất cả' : 'Bỏ chọn tất cả';
+        });
     </script>
 }

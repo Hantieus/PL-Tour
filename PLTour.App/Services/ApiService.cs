@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using PLTour.App.Models;
 using PLTour.Shared.Models.DTO;
 using Mapsui.Styles;
@@ -15,19 +15,37 @@ public class ApiService
     // Base URL của Backend (Server)
     private readonly string _baseUrl;
 
+    private const string DevTunnelUrl = "https://q0x087zj-5229.asse.devtunnels.ms/";
+    private const string LanUrl = "http://192.168.100.123:5229/";
+    //P: 192.168.100.123:5229
+    //L: 192.168.2.6:5229
+    //L lop: 192.168.31.247:5229
+    private const string RenderUrl = "https://pl-tour.onrender.com/";
+
     public ApiService()
     {
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
-        _baseUrl = "http://192.168.2.6:5229/";
-        //P: 192.168.100.123:5229
-        //L: 192.168.2.6:5229
+        // Mặc định dùng Dev Tunnel
+        _baseUrl = DevTunnelUrl;
 #else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
-        // Thay bằng domain hoặc IP server thật của bạn
-        _baseUrl = "https://pl-tour-production.up.railway.app/"; 
+        // Mặc định dùng Render
+        _baseUrl = RenderUrl;
 #endif
+
+        // Cho phép đổi sang LAN hoặc Render bằng biến môi trường
+        // PLTOUR_API_MODE = devtunnel | lan | render
+        var apiMode = Environment.GetEnvironmentVariable("PLTOUR_API_MODE")?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(apiMode))
+        {
+            _baseUrl = apiMode switch
+            {
+                "lan" => LanUrl,
+                "render" => RenderUrl,
+                _ => DevTunnelUrl
+            };
+        }
 
         System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {_baseUrl}");
 
@@ -105,7 +123,7 @@ public class ApiService
         }
     }
 
-    public async Task<string> GetAudioLinkAsync(string text, string langCode, int narrationId)
+    public async Task<string?> GetAudioLinkAsync(string text, string langCode, int narrationId)
     {
         try
         {
@@ -123,28 +141,59 @@ public class ApiService
     // --- Hàm bổ trợ để Map dữ liệu ---
     private TourModel MapToTourModel(TourDto dto)
     {
+        string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
+        System.Diagnostics.Debug.WriteLine($"[API_LOG] Mapping Tour {dto.TourId}: SelectedLang={selectedLangCode}");
+
+        var narration = dto.TourNarrations?.FirstOrDefault(n => 
+                            !string.IsNullOrEmpty(n.LanguageCode) && 
+                            n.LanguageCode.StartsWith(selectedLangCode, StringComparison.OrdinalIgnoreCase))
+                        ?? dto.TourNarrations?.FirstOrDefault(n => n.IsDefault && selectedLangCode == "vi")
+                        ?? dto.TourNarrations?.FirstOrDefault(n => n.LanguageId == 1 && selectedLangCode == "vi");
+
+        // Nếu chọn tiếng Anh mà không thấy English Narration, cố gắng tìm bất kỳ cái nào không phải tiếng Việt hoặc cái đầu tiên
+        if (selectedLangCode != "vi" && narration == null)
+        {
+            narration = dto.TourNarrations?.FirstOrDefault(n => n.LanguageCode != "vi" && n.LanguageId != 1)
+                        ?? dto.TourNarrations?.FirstOrDefault();
+        }
+
         var poisList = dto.Locations?.Select(MapToPoiModel).ToList() ?? new List<PoiModel>();
 
-        return new TourModel
+        var model = new TourModel
         {
             Id = dto.TourId.ToString(),
-            Name = dto.Name,
+            Name = narration?.Title ?? dto.Name,
             Duration = dto.Duration,
-            IntroText = dto.IntroText,
+            IntroText = narration?.Content ?? dto.IntroText,
+            IntroAudioUrl = FormatAudioUrl(narration?.AudioUrl),
             ImageUrl = FormatImageUrl(dto.ImageUrl),
             Pois = poisList,
             Latitude = poisList.Any() ? poisList.First().Lat : 0,
             Longitude = poisList.Any() ? poisList.First().Lng : 0
         };
+
+        System.Diagnostics.Debug.WriteLine($"[API_LOG] Tour {dto.TourId} IntroText Length: {model.IntroText?.Length ?? 0}, HasAudio: {!string.IsNullOrEmpty(model.IntroAudioUrl)}");
+        return model;
     }
 
     private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
     {
-        string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
+        string selectedLangCode = LocalizationService.Instance.CurrentLanguageCode;
 
-        var narration = loc.Narrations?.FirstOrDefault(n => n.LanguageCode == selectedLangCode)
-                        ?? loc.Narrations?.FirstOrDefault(n => n.LanguageId == 1)
+        var narration = loc.Narrations?.FirstOrDefault(n =>
+                            !string.IsNullOrEmpty(n.LanguageCode) &&
+                            n.LanguageCode.StartsWith(selectedLangCode, StringComparison.OrdinalIgnoreCase));
+
+        if (selectedLangCode != "vi" && narration == null)
+        {
+            narration = loc.Narrations?.FirstOrDefault(n => n.LanguageCode != "vi" && n.LanguageId != 1)
                         ?? loc.Narrations?.FirstOrDefault();
+        }
+        else if (narration == null)
+        {
+            narration = loc.Narrations?.FirstOrDefault(n => n.LanguageId == 1)
+                        ?? loc.Narrations?.FirstOrDefault();
+        }
 
         string poiImageUrl = "tour_thumb.jpg";
         if (!string.IsNullOrEmpty(loc.ImageUrl))
@@ -167,8 +216,8 @@ public class ApiService
             Id = loc.LocationId,
             ImageUrl = poiImageUrl,
             NarrationId = narration?.NarrationId ?? 0,
-            AudioUrl = narration?.AudioUrl,
-            FullContent = narration?.Content,
+            AudioUrl = FormatAudioUrl(narration?.AudioUrl),
+            FullContent = narration?.Content ?? string.Empty,
             LanguageName = narration?.LanguageName ?? "Tiếng Việt",
             LanguageId = narration?.LanguageId ?? 1,
             LanguageCode = narration?.LanguageCode ?? "vi",
@@ -176,10 +225,10 @@ public class ApiService
             Lat = loc.Latitude,
             Lng = loc.Longitude,
             Radius = loc.Radius > 0 ? loc.Radius : 150,
-            Description = loc.Description ?? "",
-            Address = loc.Address ?? "",
+            Description = loc.Description ?? string.Empty,
+            Address = loc.Address ?? string.Empty,
             CategoryId = loc.CategoryId,
-            Category = !string.IsNullOrEmpty(loc.CategoryName) ? loc.CategoryName : MapCategoryName(loc.CategoryId),
+            Category = MapCategoryName(loc.CategoryId),
             PinColor = GetPinColor(loc.CategoryId)
         };
     }
@@ -200,12 +249,23 @@ public class ApiService
         return $"{_baseUrl.TrimEnd('/')}/{rawUrl.TrimStart('/')}";
     }
 
+    private string? FormatAudioUrl(string? rawUrl)
+    {
+        if (string.IsNullOrEmpty(rawUrl))
+            return null;
+
+        if (rawUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return rawUrl;
+
+        return $"{_baseUrl.TrimEnd('/')}/{rawUrl.TrimStart('/')}";
+    }
+
     private string MapCategoryName(int categoryId) => categoryId switch
     {
-        1 => "Tham quan",
-        2 => "Ăn uống",
-        3 => "Sự kiện",
-        _ => "Tham quan"
+        1 => LocalizationService.Instance["CategoryTourism"],
+        2 => LocalizationService.Instance["CategoryFood"],
+        3 => LocalizationService.Instance["CategoryEvent"],
+        _ => LocalizationService.Instance["CategoryTourism"]
     };
 
     private MapsuiColor GetPinColor(int categoryId) => categoryId switch
@@ -234,5 +294,5 @@ public class ApiService
 
 public class AudioResponseDto
 {
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 }

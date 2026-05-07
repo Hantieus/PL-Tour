@@ -1,9 +1,13 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Media;
+using Microsoft.Maui.Storage;
 using MauiColor = Microsoft.Maui.Graphics.Color;
-using PLTour.App.Controls;
 using PLTour.App.Models;
 using PLTour.App.Services;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
+using System.Threading;
 
 namespace PLTour.App.Pages;
 
@@ -14,7 +18,9 @@ public partial class TourDetailPage : ContentPage
     private readonly LocationService _locationService;
     private readonly IAudioService _audioService;
     private TourModel? _tour;
-    private bool _isTracking;
+    private CancellationTokenSource? _trackingCts;
+    private Task? _trackingTask;
+    private Microsoft.Maui.Devices.Sensors.Location? _lastDistanceUpdateLocation;
 
     public TourModel? Tour
     {
@@ -22,6 +28,7 @@ public partial class TourDetailPage : ContentPage
         set
         {
             _tour = value;
+            OnPropertyChanged(nameof(Tour));
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 System.Diagnostics.Debug.WriteLine($"[TOUR] Tour assigned: {(_tour != null ? _tour.Name : "null")}, POIs={_tour?.Pois?.Count ?? 0}");
@@ -35,17 +42,42 @@ public partial class TourDetailPage : ContentPage
     public TourDetailPage(LocationService locationService, IAudioService audioService)
     {
         InitializeComponent();
+        BindingContext = this;
         _locationService = locationService;
         _audioService = audioService;
+        _audioService.PlaybackStopped += AudioService_PlaybackStopped;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         PoiList.ItemsSource = PoiListSource;
         SetActiveFilter(PoiCategories.ThamQuan);
+    }
+
+    private void AudioService_PlaybackStopped(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_tour != null) _tour.IsPlaying = false;
+
+            foreach (var poi in PoiListSource)
+            {
+                poi.IsPlaying = false;
+            }
+
+            _ = AnalyticsService.Instance.TrackAudioStopAsync();
+        });
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        // Không đăng ký lại event ở đây vì đã đăng ký trong constructor
+        LoadTourData();
         StartTracking();
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        _isTracking = false;
+        StopTracking();
     }
 
     private void LoadTourData()
@@ -66,25 +98,57 @@ public partial class TourDetailPage : ContentPage
         UpdateDistances();
     }
 
-    private async void StartTracking()
+    private void OnLanguageChanged(object? sender, EventArgs e)
     {
-        if (_isTracking) return;
-        _isTracking = true;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SetActiveFilter(GetActiveCategory());
+            if (_tour != null)
+                lblTourName.Text = _tour.Name;
+        });
+    }
 
-        while (_isTracking)
+    private void StartTracking()
+    {
+        if (_trackingTask is { IsCompleted: false }) return;
+        _trackingCts = new CancellationTokenSource();
+        _trackingTask = TrackLoopAsync(_trackingCts.Token);
+    }
+
+    private void StopTracking()
+    {
+        if (_trackingCts == null) return;
+        _trackingCts.Cancel();
+        _trackingCts.Dispose();
+        _trackingCts = null;
+    }
+
+    private async Task TrackLoopAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 var location = await _locationService.GetAndSaveCurrentLocationAsync();
-                if (location != null)
+                if (location != null && ShouldUpdateDistanceUI(location))
+                {
                     UpdateDistances();
+                    _lastDistanceUpdateLocation = location;
+                }
             }
             catch
             {
                 // Bỏ qua lỗi định vị tạm thời để tránh crash UI
             }
 
-            await Task.Delay(5000);
+            try
+            {
+                await Task.Delay(5000, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 
@@ -97,19 +161,29 @@ public partial class TourDetailPage : ContentPage
         {
             var distMeters = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
             poi.DistanceMeters = distMeters;
-            poi.Address = distMeters < 1000 ? $"{Math.Round(distMeters)} m" : $"{(distMeters / 1000.0):F1} km";
         }
 
         ApplyCurrentFilter();
+    }
+
+    private bool ShouldUpdateDistanceUI(Microsoft.Maui.Devices.Sensors.Location currentLocation)
+    {
+        if (_lastDistanceUpdateLocation == null) return true;
+        var movedMeters = CalculateDistance(
+            currentLocation.Latitude,
+            currentLocation.Longitude,
+            _lastDistanceUpdateLocation.Latitude,
+            _lastDistanceUpdateLocation.Longitude);
+        return movedMeters > 8;
     }
 
     private void ApplyCurrentFilter()
     {
         if (_tour?.Pois == null) return;
 
-        var activeCategory = GetActiveCategory();
+        var activeCategory = CanonicalizeCategory(GetActiveCategory());
         var filtered = _tour.Pois
-            .Where(p => string.Equals(NormalizeCategory(p.Category), activeCategory, StringComparison.OrdinalIgnoreCase))
+            .Where(p => CanonicalizeCategory(p.Category, p.CategoryId) == activeCategory)
             .OrderBy(p => p.DistanceMeters)
             .ToList();
 
@@ -144,7 +218,7 @@ public partial class TourDetailPage : ContentPage
     private void PoiItem_Tapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Border border || border.BindingContext is not PoiModel poi) return;
-        this.PoiDetailPopup.ShowPopup(poi);
+        this.PoiDetailPopupView.ShowPopup(poi);
     }
 
     private async void SpeakIntro_Clicked(object? sender, EventArgs e)
@@ -154,7 +228,37 @@ public partial class TourDetailPage : ContentPage
         var intro = _tour.IntroText?.Trim();
         if (string.IsNullOrWhiteSpace(intro)) return;
 
-        await TextToSpeech.SpeakAsync(intro);
+        if (_tour.IsPlaying)
+        {
+            await _audioService.StopAsync();
+            return;
+        }
+
+        // Dừng tất cả đang phát trước khi bắt đầu cái mới
+        await _audioService.StopAsync();
+
+        // Cập nhật trạng thái sau khi đã dừng
+        _tour.IsPlaying = true;
+        foreach (var p in PoiListSource) p.IsPlaying = false;
+
+        try
+        {
+            string url = FixAudioUrl(_tour.IntroAudioUrl);
+            if (!string.IsNullOrEmpty(url))
+            {
+                await _audioService.PlayAudioAsync(url);
+            }
+            else
+            {
+                string langCode = Preferences.Default.Get("UserLanguage", "vi");
+                await _audioService.PlayTextToSpeechAsync(intro, langCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TOUR] Audio intro error: {ex.Message}");
+            _tour.IsPlaying = false;
+        }
     }
 
     private async void ViewMap_Clicked(object? sender, EventArgs e)
@@ -198,21 +302,45 @@ public partial class TourDetailPage : ContentPage
         ApplyCurrentFilter();
     }
 
-    private static string NormalizeCategory(string? category)
-        => string.IsNullOrWhiteSpace(category) ? PoiCategories.ThamQuan : category.Trim();
-
-    private async void AudioPlayer_MediaEnded(object sender, EventArgs e)
+    private static string CanonicalizeCategory(string? category, int? categoryId = null)
     {
-        await _audioService.StopAsync();
+        if (categoryId is >= 1 and <= 3)
+            return categoryId.Value.ToString(CultureInfo.InvariantCulture);
 
-        if (_tour != null)
-        {
-            foreach (var poi in PoiListSource)
-                poi.IsPlaying = false;
-        }
+        if (string.IsNullOrWhiteSpace(category))
+            return "1";
+
+        var normalized = RemoveDiacritics(category)
+            .ToLowerInvariant()
+            .Replace(" ", string.Empty)
+            .Trim();
+
+        if (normalized.Contains("anuong") || normalized.Contains("food"))
+            return "2";
+
+        if (normalized.Contains("sukien") || normalized.Contains("event"))
+            return "3";
+
+        return "1";
     }
 
-    private async void PoiDetailPopup_SpeakRequested(object sender, PoiModel? poi)
+    private static string RemoveDiacritics(string value)
+    {
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+
+        foreach (var c in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                builder.Append(c);
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+
+
+    private async void PoiDetailPopupView_SpeakRequested(object sender, PoiModel? poi)
     {
         if (poi == null) return;
         await SpeakPoiAsync(poi);
@@ -222,48 +350,64 @@ public partial class TourDetailPage : ContentPage
     {
         try
         {
-            foreach (var item in PoiListSource)
+            if (poi.IsPlaying)
             {
-                if (item != poi && item.IsPlaying)
-                    item.IsPlaying = false;
+                await _audioService.StopAsync();
+                return;
             }
 
-            poi.IsPlaying = true;
+            // Dừng tất cả trước
             await _audioService.StopAsync();
 
-            var audioUrl = poi.AudioUrl?.Trim();
+            // Cập nhật trạng thái
+            if (_tour != null) _tour.IsPlaying = false;
+            foreach (var item in PoiListSource) item.IsPlaying = (item == poi);
+
+            var audioUrl = FixAudioUrl(poi.AudioUrl);
             if (!string.IsNullOrWhiteSpace(audioUrl))
             {
                 await _audioService.PlayAudioAsync(audioUrl);
                 return;
             }
 
-            var speakText = poi.FullContent;
-            if (string.IsNullOrWhiteSpace(speakText))
-                speakText = poi.Description;
-
+            // Fallback: TTS
+            var speakText = string.IsNullOrWhiteSpace(poi.FullContent) ? poi.Description : poi.FullContent;
             speakText = speakText?.Trim();
-            if (string.IsNullOrWhiteSpace(speakText)) return;
+            if (string.IsNullOrWhiteSpace(speakText))
+            {
+                poi.IsPlaying = false;
+                return;
+            }
 
-            await TextToSpeech.SpeakAsync($"{poi.Name}. {speakText}");
+            string langCode = Preferences.Default.Get("UserLanguage", poi.LanguageCode ?? "vi");
+            await _audioService.PlayTextToSpeechAsync($"{poi.Name}. {speakText}", langCode);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[TOUR] Speak POI failed: {ex}");
-        }
-        finally
-        {
             poi.IsPlaying = false;
         }
     }
 
-    private async void PoiDetailPopup_CloseRequested(object sender, EventArgs e)
+    private string? FixAudioUrl(string? url)
     {
-        await _audioService.StopAsync();
-        this.PoiDetailPopup.HidePopup();
+        if (string.IsNullOrEmpty(url)) return url;
+        // Xử lý localhost nếu có (thường xảy ra khi backend trả về link absolute với localhost)
+        if (url.Contains("localhost"))
+        {
+            url = url.Replace("localhost:7291", "q0x087zj-7291.asse.devtunnels.ms");
+            url = url.Replace("http://", "https://");
+        }
+        return url;
     }
 
-    private void PoiDetailPopup_ViewMapRequested(object sender, PoiModel? poi)
+    private async void PoiDetailPopupView_CloseRequested(object sender, EventArgs e)
+    {
+        await _audioService.StopAsync();
+        this.PoiDetailPopupView.HidePopup();
+    }
+
+    private void PoiDetailPopupView_ViewMapRequested(object sender, PoiModel? poi)
     {
         if (poi == null || _tour == null) return;
         _ = Shell.Current.GoToAsync($"//map?TourId={Uri.EscapeDataString(_tour.Id)}&TourName={Uri.EscapeDataString(_tour.Name)}");

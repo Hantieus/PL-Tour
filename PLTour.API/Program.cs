@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Cloudinary
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddHttpClient<ITtsService, EdgeTtsService>();
 
 // Add services
 builder.Services.AddControllers();

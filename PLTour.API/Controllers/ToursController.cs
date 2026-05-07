@@ -25,6 +25,8 @@ namespace PLTour.API.Controllers
                     .ThenInclude(tl => tl.Location)
                         .ThenInclude(l => l.Narrations)
                             .ThenInclude(n => n.Language)
+                .Include(t => t.TourNarrations)
+                    .ThenInclude(tn => tn.Language)
                 .Where(t => t.IsActive)
                 .ToListAsync();
 
@@ -49,9 +51,8 @@ namespace PLTour.API.Controllers
                         ImageUrl = tl.Location.ImageUrl,
                         CategoryId = tl.Location.CategoryId,
                         Radius = tl.Location.Radius,
-                        OrderIndex = tl.OrderIndex, // Giữ đúng thứ tự Tour
+                        OrderIndex = tl.OrderIndex,
 
-                        // Ánh xạ chi tiết Narrations (Đã bổ sung NarrationId và các thông tin ngôn ngữ)
                         Narrations = tl.Location.Narrations?.Select(n => new NarrationDto
                         {
                             NarrationId = n.NarrationId,
@@ -64,6 +65,22 @@ namespace PLTour.API.Controllers
                             Duration = n.Duration,
                             IsDefault = n.IsDefault
                         }).ToList()
+                    }).ToList(),
+                TourNarrations = t.TourNarrations?
+                    .OrderByDescending(n => n.Version)
+                    .Select(n => new TourNarrationDto
+                    {
+                        TourNarrationId = n.TourNarrationId,
+                        LanguageId = n.LanguageId,
+                        LanguageCode = n.Language?.Code ?? "vi",
+                        LanguageName = n.Language?.Name ?? "Tiếng Việt",
+                        Title = n.Title,
+                        Content = n.Content,
+                        AudioUrl = n.AudioUrl,
+                        Duration = n.Duration,
+                        IsDefault = n.IsDefault,
+                        Version = n.Version,
+                        IsActive = n.IsActive
                     }).ToList()
             }).ToList();
 

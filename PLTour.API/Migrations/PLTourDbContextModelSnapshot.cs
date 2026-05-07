@@ -517,6 +517,51 @@ namespace PLTour.API.Migrations
                     b.ToTable("Tours");
                 });
 
+            modelBuilder.Entity("PLTour.Shared.Models.Entities.TourAudio", b =>
+                {
+                    b.Property<int>("TourAudioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TourAudioId"));
+
+                    b.Property<string>("AudioUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LanguageId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TextHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("TourId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("TourAudioId");
+
+                    b.HasIndex("LanguageId");
+
+                    b.HasIndex("TourId");
+
+                    b.ToTable("TourAudios");
+                });
+
             modelBuilder.Entity("PLTour.Shared.Models.Entities.TourLocation", b =>
                 {
                     b.Property<int>("TourId")
@@ -535,6 +580,62 @@ namespace PLTour.API.Migrations
                     b.HasIndex("LocationId");
 
                     b.ToTable("TourLocations");
+                });
+
+            modelBuilder.Entity("PLTour.Shared.Models.Entities.TourNarration", b =>
+                {
+                    b.Property<int>("TourNarrationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TourNarrationId"));
+
+                    b.Property<string>("AudioUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LanguageId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("TourId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TourNarrationId");
+
+                    b.HasIndex("LanguageId");
+
+                    b.HasIndex("TourId", "LanguageId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("TourNarrations");
                 });
 
             modelBuilder.Entity("PLTour.Shared.Models.Entities.User", b =>
@@ -917,6 +1018,25 @@ namespace PLTour.API.Migrations
                     b.Navigation("Vendor");
                 });
 
+            modelBuilder.Entity("PLTour.Shared.Models.Entities.TourAudio", b =>
+                {
+                    b.HasOne("PLTour.Shared.Models.Entities.Language", "Language")
+                        .WithMany()
+                        .HasForeignKey("LanguageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PLTour.Shared.Models.Entities.Tour", "Tour")
+                        .WithMany()
+                        .HasForeignKey("TourId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Language");
+
+                    b.Navigation("Tour");
+                });
+
             modelBuilder.Entity("PLTour.Shared.Models.Entities.TourLocation", b =>
                 {
                     b.HasOne("PLTour.Shared.Models.Entities.Location", "Location")
@@ -932,6 +1052,25 @@ namespace PLTour.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Location");
+
+                    b.Navigation("Tour");
+                });
+
+            modelBuilder.Entity("PLTour.Shared.Models.Entities.TourNarration", b =>
+                {
+                    b.HasOne("PLTour.Shared.Models.Entities.Language", "Language")
+                        .WithMany()
+                        .HasForeignKey("LanguageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PLTour.Shared.Models.Entities.Tour", "Tour")
+                        .WithMany("TourNarrations")
+                        .HasForeignKey("TourId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Language");
 
                     b.Navigation("Tour");
                 });
@@ -1001,6 +1140,8 @@ namespace PLTour.API.Migrations
             modelBuilder.Entity("PLTour.Shared.Models.Entities.Tour", b =>
                 {
                     b.Navigation("TourLocations");
+
+                    b.Navigation("TourNarrations");
                 });
 
             modelBuilder.Entity("PLTour.Shared.Models.Entities.Vendor", b =>

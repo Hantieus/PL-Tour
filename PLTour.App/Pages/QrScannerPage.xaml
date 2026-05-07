@@ -1,21 +1,76 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
+             xmlns:pages="clr-namespace:PLTour.App.Pages"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.QrScannerPage"
-             Title="QR Scan">
+             Shell.NavBarIsVisible="False"
+             Title="{loc:Localization QrScannerTitle}"
+             BackgroundColor="#0B1020">
 
-    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="20" Padding="30">
-        <Label Text="📷" FontSize="80" HorizontalOptions="Center"/>
-        <Label Text="Quét Mã QR" FontSize="26" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#2A9D8F"/>
-        <Label Text="Tính năng này đang được phát triển. Sau này bạn có thể dùng để quét mã QR tại các trạm dừng chân để mở khóa nội dung thuyết minh." 
-               HorizontalTextAlignment="Center" 
-               TextColor="Gray"
-               FontSize="16"/>
-        <Button x:Name="btnDemoScan" 
-                Text="Mở Camera (Demo)" 
-                Clicked="BtnDemoScan_Clicked" 
-                BackgroundColor="#2A9D8F"
-                CornerRadius="10"
-                Margin="0,20,0,0"/>
-    </VerticalStackLayout>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Grid Grid.Row="0" Padding="16,14" ColumnDefinitions="Auto,*,Auto" BackgroundColor="#111827">
+            <Label Text="{loc:Localization QrScannerTitle}"
+                   Grid.Column="1"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   FontAttributes="Bold"
+                   FontSize="20"
+                   TextColor="White" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <zxing:CameraBarcodeReaderView x:Name="QrCameraView"
+                                           BarcodesDetected="QrCameraView_BarcodesDetected"
+                                           IsDetecting="True" />
+
+            <Border BackgroundColor="#22000000"
+                    Stroke="#66FFFFFF"
+                    StrokeShape="RoundRectangle 18"
+                    StrokeThickness="2"
+                    WidthRequest="250"
+                    HeightRequest="250"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center" />
+
+            <Border HorizontalOptions="Center"
+                    VerticalOptions="End"
+                    Margin="16,0,16,28"
+                    StrokeThickness="0"
+                    BackgroundColor="#CC111827"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="16,12">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{loc:Localization QrScannerHint}"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="White" />
+                    <Label x:Name="StatusLabel"
+                           Text="{loc:Localization QrReady}"
+                           HorizontalOptions="Center"
+                           TextColor="#D1D5DB"
+                           FontSize="12" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2" Padding="16,12" BackgroundColor="#111827">
+            <Button Text="{loc:Localization QrRescan}"
+                    Clicked="ScanAgain_Clicked"
+                    BackgroundColor="#2A9D8F"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HeightRequest="44"
+                    CornerRadius="12" />
+        </Grid>
+
+        <pages:PoiDetailPopupView x:Name="PoiDetailPopupView"
+                                  Grid.RowSpan="3"
+                                  IsVisible="False"
+                                  ZIndex="100"
+                                  CloseRequested="PoiDetailPopupView_CloseRequested"
+                                  SpeakRequested="PoiDetailPopupView_SpeakRequested"
+                                  ViewMapRequested="PoiDetailPopupView_ViewMapRequested" />
+    </Grid>
 </ContentPage>

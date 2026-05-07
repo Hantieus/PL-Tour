@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:controls="clr-namespace:PLTour.App.Controls"
+             xmlns:pages="clr-namespace:PLTour.App.Pages"
              xmlns:models="clr-namespace:PLTour.App.Models"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.TourDetailPage"
-             Title="Chi tiết Tour"
+             Title="{loc:Localization TourDetailTitle}"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F8F9FA">
 
@@ -41,7 +42,7 @@
                            TextColor="#1F2937" />
 
                     <Button Grid.Column="2"
-                            Text="Xem bản đồ"
+                            Text="{loc:Localization TourMapView}"
                             Padding="16,0"
                             HeightRequest="44"
                             CornerRadius="22"
@@ -65,13 +66,14 @@
                 </Border>
 
                 <Grid Grid.Row="2" ColumnDefinitions="*" ColumnSpacing="12">
-                    <Button Text="Nghe giới thiệu"
+                    <Button Text="{Binding Tour.PlayButtonText}"
                             HeightRequest="46"
                             CornerRadius="14"
-                            BackgroundColor="#E9ECEF"
+                            BackgroundColor="{Binding Tour.PlayButtonColor}"
                             TextColor="#111827"
                             FontAttributes="Bold"
-                            Clicked="SpeakIntro_Clicked" />
+                            Clicked="SpeakIntro_Clicked"
+                            CommandParameter="{Binding Tour}" />
                 </Grid>
             </Grid>
         </Border>
@@ -89,7 +91,7 @@
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="14">
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                     <Button x:Name="BtnTouristSpots"
-                            Text="Tham quan"
+                            Text="{loc:Localization TourSpots}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#2A9D8F"
@@ -98,7 +100,7 @@
                             Clicked="FilterTouristSpots_Clicked" />
                     <Button x:Name="BtnFoodPlaces"
                             Grid.Column="1"
-                            Text="Ăn uống"
+                            Text="{loc:Localization TourFood}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#E9ECEF"
@@ -107,7 +109,7 @@
                             Clicked="FilterFoodPlaces_Clicked" />
                     <Button x:Name="BtnEvents"
                             Grid.Column="2"
-                            Text="Sự kiện"
+                            Text="{loc:Localization TourEvents}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#E9ECEF"
@@ -117,7 +119,7 @@
                 </Grid>
 
                 <Label Grid.Row="1"
-                       Text="Các địa điểm trong Tour"
+                       Text="{loc:Localization TourLocations}"
                        FontSize="14"
                        FontAttributes="Bold"
                        TextColor="#6B7280" />
@@ -149,23 +151,27 @@
                                     </Border>
 
                                     <VerticalStackLayout Grid.Row="1" Spacing="8">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <Label Text="{Binding Name}"
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding LocalizedName}"
                                                    FontSize="16"
                                                    FontAttributes="Bold"
-                                                   TextColor="#111827" />
-                                            <Label Grid.Column="1"
-                                                   Text="{Binding Address}"
+                                                   TextColor="#111827"
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="2" />
+                                            <Label Text="{Binding Address}"
                                                    FontSize="12"
                                                    FontAttributes="Bold"
                                                    TextColor="#E76F51"
-                                                   VerticalOptions="Center" />
-                                        </Grid>
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="2" />
+                                        </VerticalStackLayout>
 
-                                        <Label Text="{Binding Category}"
+                                        <Label Text="{Binding LocalizedCategory}"
                                                FontSize="11"
                                                TextColor="#2A9D8F"
-                                               FontAttributes="Italic" />
+                                               FontAttributes="Italic"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="1" />
 
                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                             <Button Text="{Binding PlayButtonText}"
@@ -195,17 +201,13 @@
             </Grid>
         </Border>
 
-        <controls:PoiDetailPopup x:Name="PoiDetailPopup"
-                                 Grid.RowSpan="2"
-                                 IsVisible="False"
-                                 ZIndex="100"
-                                 CloseRequested="PoiDetailPopup_CloseRequested"
-                                 SpeakRequested="PoiDetailPopup_SpeakRequested"
-                                 ViewMapRequested="PoiDetailPopup_ViewMapRequested" />
+        <pages:PoiDetailPopupView x:Name="PoiDetailPopupView"
+                                  Grid.RowSpan="2"
+                                  IsVisible="False"
+                                  ZIndex="100"
+                                  CloseRequested="PoiDetailPopupView_CloseRequested"
+                                  SpeakRequested="PoiDetailPopupView_SpeakRequested"
+                                  ViewMapRequested="PoiDetailPopupView_ViewMapRequested" />
 
-        <toolkit:MediaElement x:Name="AudioPlayer"
-                              Grid.RowSpan="2"
-                              IsVisible="False"
-                              MediaEnded="AudioPlayer_MediaEnded" />
     </Grid>
 </ContentPage>

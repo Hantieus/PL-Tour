@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PLTour.Shared.Models.Entities;
@@ -28,6 +28,21 @@ public class Vendor
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
+    [StringLength(500)]
+    public string Address { get; set; } = string.Empty;
+
+    public int? CategoryId { get; set; }
+
+    [StringLength(1000)]
+    public string Description { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string LogoUrl { get; set; } = string.Empty;
+
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
+
     [StringLength(50)]
     public string Status { get; set; } = "Pending";
 
@@ -44,21 +59,9 @@ public class Vendor
     [StringLength(500)]
     public string? Notes { get; set; }
 
-    // Legacy fields giữ để không vỡ code cũ trong giai đoạn chuyển đổi
-    [StringLength(500)]
-    public string? Address { get; set; }
-
-    [StringLength(1000)]
-    public string? Description { get; set; }
-
-    [StringLength(500)]
-    public string? LogoUrl { get; set; }
-
-    public double? Latitude { get; set; }
-    public double? Longitude { get; set; }
-
-    public int? CategoryId { get; set; }
+    [ForeignKey("CategoryId")]
     public virtual Category? Category { get; set; }
+
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
@@ -66,5 +69,4 @@ public class Vendor
     public DateTime? ApprovedDate { get; set; }
 
     public virtual ICollection<VendorStore> Stores { get; set; } = new List<VendorStore>();
-
 }

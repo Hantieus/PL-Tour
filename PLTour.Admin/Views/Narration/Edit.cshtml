@@ -1,134 +1,77 @@
 ﻿@model PLTour.Shared.Models.Entities.Narration
-
 @{
+    var location = ViewBag.Location as PLTour.Shared.Models.Entities.Location;
     ViewData["Title"] = "Sửa bài thuyết minh";
 }
 
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
-            <form asp-action="Edit" method="post" enctype="multipart/form-data">
-                @Html.AntiForgeryToken()
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1">@ViewData["Title"]</h1>
+            <p class="text-muted mb-0">Chỉnh sửa narration cho địa điểm.</p>
+        </div>
+        <a asp-action="ByLocation" asp-route-locationId="@location?.LocationId" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Quay lại danh sách
+        </a>
+    </div>
 
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark">
+            <i class="fas fa-edit me-2"></i>Cập nhật narration
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post" enctype="multipart/form-data" class="row g-3">
+                @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="NarrationId" />
                 <input type="hidden" asp-for="LocationId" />
                 <input type="hidden" asp-for="Version" />
                 <input type="hidden" asp-for="CreatedDate" />
                 <input type="hidden" asp-for="AudioUrl" />
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Địa điểm</label>
-                    <input type="text" class="form-control" value="@ViewBag.Location?.Name" readonly />
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Địa điểm</label>
+                    <input type="text" class="form-control" value="@location?.Name" readonly />
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Ngôn ngữ</label>
-                    <input type="text" class="form-control" value="@ViewBag.LanguageName" readonly />
-                    <input type="hidden" asp-for="LanguageId" id="LanguageId" />
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Ngôn ngữ</label>
+                    <input type="text" class="form-control" value="@(ViewBag.LanguageName ?? string.Empty)" readonly />
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="Title" class="form-label fw-bold">Tiêu đề</label>
-                    <input asp-for="Title" class="form-control" />
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Content" class="form-label fw-bold">Nội dung</label>
-                    <textarea asp-for="Content" class="form-control" rows="5" id="ContentText"></textarea>
-                </div>
-
-                @if (!string.IsNullOrEmpty(Model.AudioUrl))
-                {
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Audio hiện tại</label>
-                        <audio controls class="w-100">
-                            <source src="@Model.AudioUrl" type="audio/mpeg">
-                        </audio>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" name="removeAudio" value="true">
-                            <label class="form-check-label text-danger">Xóa file audio</label>
-                        </div>
-                    </div>
-                }
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Thay đổi file audio</label>
-                    <input type="file" name="audioFile" class="form-control" accept="audio/*" />
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Duration" class="form-label">Thời lượng (giây)</label>
+                <div class="col-md-6">
+                    <label asp-for="Duration" class="form-label fw-semibold">Duration (giây)</label>
                     <input asp-for="Duration" class="form-control" type="number" min="0" />
                 </div>
 
-                <div class="form-check mb-2">
-                    <input asp-for="IsDefault" class="form-check-input" />
-                    <label asp-for="IsDefault" class="form-check-label">Đặt làm mặc định</label>
+                <div class="col-md-6">
+                    <label asp-for="Title" class="form-label fw-semibold">Title</label>
+                    <input asp-for="Title" class="form-control" />
                 </div>
 
-                <div class="form-check mb-3">
-                    <input asp-for="IsActive" class="form-check-input" />
-                    <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
+                <div class="col-md-6">
+                    <label asp-for="Content" class="form-label fw-semibold">Content</label>
+                    <textarea asp-for="Content" class="form-control" rows="7"></textarea>
                 </div>
 
-                <!-- NÚT DỊCH TỰ ĐỘNG -->
-                <div class="mt-3">
-                    <button type="button" id="autoTranslateBtn" class="btn btn-info">Dịch tự động</button>
-                    <div id="translateResult" class="mt-2"></div>
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input asp-for="IsDefault" class="form-check-input" />
+                        <label asp-for="IsDefault" class="form-check-label">Đặt làm mặc định</label>
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Cập nhật</button>
-                <a asp-action="ByLocation" asp-route-locationId="@Model.LocationId" class="btn btn-secondary">Hủy</a>
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label">Kích hoạt</label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a asp-action="ByLocation" asp-route-locationId="@location?.LocationId" class="btn btn-secondary">Hủy</a>
+                    <button type="submit" class="btn btn-warning">Cập nhật</button>
+                </div>
             </form>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#autoTranslateBtn').click(function() {
-                var locationId = $('#LocationId').val();
-                var languageId = $('#LanguageId').val();
-                var content = $('#ContentText').val();
-
-                if (!languageId) {
-                    alert('Vui lòng chọn ngôn ngữ gốc trước');
-                    return;
-                }
-
-                if (!content) {
-                    alert('Vui lòng nhập nội dung cần dịch');
-                    return;
-                }
-
-                var btn = $(this);
-                btn.prop('disabled', true).text('Đang dịch...');
-
-                $.ajax({
-                    url: '@Url.Action("AutoTranslate", "Narration")',
-                    type: 'POST',
-                    data: {
-                        locationId: locationId,
-                        sourceLanguageId: languageId,
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            $('#translateResult').html('<div class="alert alert-success">' + response.message + '</div>');
-                        } else {
-                            $('#translateResult').html('<div class="alert alert-danger">' + response.message + '</div>');
-                        }
-                    },
-                    error: function(xhr) {
-                        $('#translateResult').html('<div class="alert alert-danger">Lỗi: ' + xhr.responseText + '</div>');
-                    },
-                    complete: function() {
-                        btn.prop('disabled', false).text('Dịch tự động');
-                    }
-                });
-            });
-        });
-    </script>
-}

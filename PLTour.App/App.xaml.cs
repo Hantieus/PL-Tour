@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
 using PLTour.App.Pages;
 using PLTour.App.Services;
 
@@ -13,6 +14,10 @@ public partial class App : Application
     public App(LocationService locationService, DeviceMonitorService deviceMonitorService)
     {
         InitializeComponent();
+
+        var savedLang = Preferences.Default.Get("UserLanguage", "vi");
+        LocalizationService.Instance.ApplyLanguage(savedLang, persist: false);
+
         _loadingPage = new LoadingPage(locationService);
         _deviceMonitorService = deviceMonitorService;
     }
