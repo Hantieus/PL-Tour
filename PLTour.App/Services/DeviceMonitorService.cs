@@ -29,7 +29,9 @@ public class DeviceMonitorService
         Instance = this;
 
 #if DEBUG
-        _baseUrl = "http://192.168.2.6:5229/";
+        _baseUrl = "http://192.168.100.123:5229/";
+        //P:192.168.100.123:5229
+        //L:192.168.2.6:5229
 #else
         _baseUrl = "https://pl-tour-production.up.railway.app/";
 #endif
