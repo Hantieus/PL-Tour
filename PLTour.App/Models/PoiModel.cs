@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Globalization;
+using PLTour.App.Services;
 using Mapsui.Styles;
 using MapsuiColor = Mapsui.Styles.Color;
 
@@ -14,29 +16,81 @@ public static class PoiCategories
 
 public class PoiModel : INotifyPropertyChanged
 {
-    // 1. --- THÔNG TIN TỪ API (CHỈ LẤY NHỮNG GÌ THỰC SỰ CẦN) ---
+    public PoiModel()
+    {
+        LocalizationService.Instance.LanguageChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(LocalizedName));
+            OnPropertyChanged(nameof(LocalizedDescription));
+            OnPropertyChanged(nameof(LocalizedCategory));
+            OnPropertyChanged(nameof(LocalizedFullContent));
+            OnPropertyChanged(nameof(DistanceText));
+            OnPropertyChanged(nameof(PlayButtonText));
+        };
+    }
+
+    // 1. --- THÔNG TIN TỪ API ---
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty; // Mô tả ngắn (hiện trên danh sách)
+    public string? NameEn { get; set; }
+    public string? NameZh { get; set; }
+    public string? NameKo { get; set; }
+    public string? NameJa { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+    public string? DescriptionEn { get; set; }
+    public string? DescriptionZh { get; set; }
+    public string? DescriptionKo { get; set; }
+    public string? DescriptionJa { get; set; }
+
     public string ImageUrl { get; set; } = string.Empty;
     public int CategoryId { get; set; }
     public string Category { get; set; } = string.Empty;
+    public string? CategoryEn { get; set; }
+    public string? CategoryZh { get; set; }
+    public string? CategoryKo { get; set; }
+    public string? CategoryJa { get; set; }
     public double Lat { get; set; }
     public double Lng { get; set; }
     public double Radius { get; set; }
     public MapsuiColor PinColor { get; set; }
 
-    // --- DỮ LIỆU THUYẾT MINH (Lọc từ NarrationDto theo Ngôn ngữ) ---
+    // --- DỮ LIỆU THUYẾT MINH ---
     public int NarrationId { get; set; }
-    public string AudioUrl { get; set; } = string.Empty;    // Link MP3 từ Admin (Ưu tiên 1)
-    public string FullContent { get; set; } = string.Empty;  // Nội dung chi tiết để đọc TTS (Ưu tiên 2)
-    public string LanguageName { get; set; } = string.Empty; // Tên ngôn ngữ đang dùng (Ví dụ: Tiếng Việt)
-
-    // THÊM MỚI: Lấy thêm ID và Code của ngôn ngữ
+    public string AudioUrl { get; set; } = string.Empty;
+    public string? AudioUrlEn { get; set; }
+    public string? AudioUrlZh { get; set; }
+    public string? AudioUrlKo { get; set; }
+    public string? AudioUrlJa { get; set; }
+    public string FullContent { get; set; } = string.Empty;
+    public string? FullContentEn { get; set; }
+    public string? FullContentZh { get; set; }
+    public string? FullContentKo { get; set; }
+    public string? FullContentJa { get; set; }
+    public string LanguageName { get; set; } = string.Empty;
     public int LanguageId { get; set; }
     public string LanguageCode { get; set; } = string.Empty;
 
-    // 2. --- LOGIC XỬ LÝ KHOẢNG CÁCH (Tự động cập nhật giao diện) ---
+    public string LocalizedName => PickLocalized(Name, NameEn, NameZh, NameKo, NameJa);
+    public string LocalizedDescription => PickLocalized(Description, DescriptionEn, DescriptionZh, DescriptionKo, DescriptionJa);
+    public string LocalizedCategory => PickLocalized(Category, CategoryEn, CategoryZh, CategoryKo, CategoryJa);
+    public string LocalizedFullContent => PickLocalized(FullContent, FullContentEn, FullContentZh, FullContentKo, FullContentJa);
+    public string LocalizedAudioUrl => PickLocalized(AudioUrl, AudioUrlEn, AudioUrlZh, AudioUrlKo, AudioUrlJa);
+
+    private static string PickLocalized(string vi, string? en = null, string? zh = null, string? ko = null, string? ja = null)
+    {
+        var lang = LocalizationService.Instance.CurrentLanguageCode;
+        return lang switch
+        {
+            "en" when !string.IsNullOrWhiteSpace(en) => en!,
+            "zh" when !string.IsNullOrWhiteSpace(zh) => zh!,
+            "ko" when !string.IsNullOrWhiteSpace(ko) => ko!,
+            "ja" when !string.IsNullOrWhiteSpace(ja) => ja!,
+            _ => vi
+        };
+    }
+
+    // 2. --- KHOẢNG CÁCH ---
     private double _distanceMeters;
     private string _address = string.Empty;
 
@@ -64,14 +118,12 @@ public class PoiModel : INotifyPropertyChanged
     {
         get
         {
-            if (DistanceMeters <= 0) return "Đang đo...";
-            return DistanceMeters < 1000
-                ? $"{Math.Round(DistanceMeters)} m"
-                : $"{(DistanceMeters / 1000.0):F1} km";
+            if (DistanceMeters <= 0) return LocalizationService.Instance["LocationUnknown"];
+            return DistanceMeters < 1000 ? $"{Math.Round(DistanceMeters)} m" : $"{(DistanceMeters / 1000.0):F1} km";
         }
     }
 
-    // 3. --- TRẠNG THÁI PHÁT ÂM THANH (Dùng cho UX/UI) ---
+    // 3. --- TRẠNG THÁI PHÁT ÂM THANH ---
     private bool _isPlaying;
     public bool IsPlaying
     {
@@ -102,15 +154,17 @@ public class PoiModel : INotifyPropertyChanged
         }
     }
 
-    // Tự động đổi chữ trên nút bấm
-    public string PlayButtonText => IsPlaying ? "⏸️ Dừng" : "🔊 Nghe";
+    public string PlayButtonText => IsPlaying ? LocalizationService.Instance["Stop"] : LocalizationService.Instance["Listen"];
+    public Microsoft.Maui.Graphics.Color PlayButtonColor => IsPlaying ? Microsoft.Maui.Graphics.Color.FromArgb("#FFB4A2") : Microsoft.Maui.Graphics.Color.FromArgb("#E9ECEF");
 
-    // Tự động đổi màu nút khi đang phát (Cam nhạt khi phát, Xám nhẹ khi chờ)
-    public Microsoft.Maui.Graphics.Color PlayButtonColor =>
-        IsPlaying ? Microsoft.Maui.Graphics.Color.FromArgb("#FFB4A2") : Microsoft.Maui.Graphics.Color.FromArgb("#E9ECEF");
-
-    // --- SỰ KIỆN CẬP NHẬT GIAO DIỆN ---
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged(string propertyName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    public void RaiseLocalizedChanged()
+    {
+        OnPropertyChanged(nameof(LocalizedName));
+        OnPropertyChanged(nameof(LocalizedDescription));
+        OnPropertyChanged(nameof(LocalizedCategory));
+        OnPropertyChanged(nameof(LocalizedFullContent));
+        OnPropertyChanged(nameof(LocalizedAudioUrl));
+    }
+    protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

@@ -46,6 +46,7 @@ public partial class TourDetailPage : ContentPage
         _locationService = locationService;
         _audioService = audioService;
         _audioService.PlaybackStopped += AudioService_PlaybackStopped;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         PoiList.ItemsSource = PoiListSource;
         SetActiveFilter(PoiCategories.ThamQuan);
     }
@@ -95,6 +96,16 @@ public partial class TourDetailPage : ContentPage
 
         ApplyCurrentFilter();
         UpdateDistances();
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SetActiveFilter(GetActiveCategory());
+            if (_tour != null)
+                lblTourName.Text = _tour.Name;
+        });
     }
 
     private void StartTracking()

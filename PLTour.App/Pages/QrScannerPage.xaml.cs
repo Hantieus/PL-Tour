@@ -9,8 +9,12 @@ public partial class QrScannerPage : ContentPage
 {
     private readonly ApiService _apiService;
     private readonly IAudioService _audioService;
+    private readonly DeduplicationService _deduplicationService;
+    private readonly QueuedActionService _queueService;
     private PoiModel? _currentPoi;
     private bool _isHandlingScan;
+    private string? _lastScanValue;
+    private DateTime _lastScanAt = DateTime.MinValue;
 
     public QrScannerPage()
     {
@@ -19,6 +23,8 @@ public partial class QrScannerPage : ContentPage
         var services = Application.Current?.Handler?.MauiContext?.Services;
         _apiService = services?.GetService<ApiService>() ?? new ApiService();
         _audioService = services?.GetService<IAudioService>() ?? new AudioService();
+        _deduplicationService = services?.GetService<DeduplicationService>() ?? new DeduplicationService();
+        _queueService = services?.GetService<QueuedActionService>() ?? new QueuedActionService();
     }
 
     protected override async void OnAppearing()
@@ -65,23 +71,37 @@ public partial class QrScannerPage : ContentPage
         var result = e.Results?.FirstOrDefault()?.Value?.Trim();
         if (string.IsNullOrWhiteSpace(result)) return;
 
+        var dedupeKey = _deduplicationService.BuildKey("qr_scan", result.ToLowerInvariant());
+        if (!_deduplicationService.ShouldProcess(dedupeKey, TimeSpan.FromSeconds(5)))
+            return;
+
+        if (string.Equals(_lastScanValue, result, StringComparison.OrdinalIgnoreCase) &&
+            DateTime.UtcNow - _lastScanAt < TimeSpan.FromSeconds(5))
+            return;
+
+        _lastScanValue = result;
+        _lastScanAt = DateTime.UtcNow;
+
         _isHandlingScan = true;
         QrCameraView.IsDetecting = false;
 
-        await MainThread.InvokeOnMainThreadAsync(async () =>
+        await _queueService.EnqueueAsync(async () =>
         {
-            StatusLabel.Text = $"Đã quét: {result}";
-            var poi = await ResolvePoiFromQrAsync(result);
-            if (poi == null)
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                await DisplayAlertAsync("QR không hợp lệ", "Không tìm thấy địa điểm từ mã QR này.", "OK");
-                ResetScanner();
-                return;
-            }
+                StatusLabel.Text = $"Đã quét: {result}";
+                var poi = await ResolvePoiFromQrAsync(result);
+                if (poi == null)
+                {
+                    await DisplayAlertAsync("QR không hợp lệ", "Không tìm thấy địa điểm từ mã QR này.", "OK");
+                    ResetScanner();
+                    return;
+                }
 
-            _currentPoi = poi;
-            PoiDetailPopupView.ShowPopup(poi);
-            await SpeakPoiAsync(poi);
+                _currentPoi = poi;
+                PoiDetailPopupView.ShowPopup(poi);
+                await SpeakPoiAsync(poi);
+            });
         });
     }
 
@@ -120,6 +140,9 @@ public partial class QrScannerPage : ContentPage
     {
         try
         {
+            if (_currentPoi?.Id == poi.Id && _audioService.IsPlaying)
+                return;
+
             await _audioService.StopAsync();
             SetPlayingState(false);
 
@@ -127,7 +150,7 @@ public partial class QrScannerPage : ContentPage
 
             if (!string.IsNullOrWhiteSpace(poi.AudioUrl))
             {
-                await _audioService.PlayAudioAsync(poi.AudioUrl);
+                await _queueService.EnqueueAsync(() => _audioService.PlayAudioAsync(poi.AudioUrl));
             }
             else
             {
@@ -136,7 +159,7 @@ public partial class QrScannerPage : ContentPage
                     content = "Không có thông tin thuyết minh.";
 
                 var langCode = Preferences.Default.Get("UserLanguage", poi.LanguageCode ?? "vi");
-                await _audioService.PlayTextToSpeechAsync($"{poi.Name}. {content}", langCode);
+                await _queueService.EnqueueAsync(() => _audioService.PlayTextToSpeechAsync($"{poi.Name}. {content}", langCode));
             }
         }
         catch (Exception ex)
@@ -157,6 +180,7 @@ public partial class QrScannerPage : ContentPage
         PoiDetailPopupView.HidePopup();
         await _audioService.StopAsync();
         SetPlayingState(false);
+        _queueService.Clear();
         ResetScanner();
     }
 

@@ -4,8 +4,9 @@
              xmlns:pages="clr-namespace:PLTour.App.Pages"
              xmlns:models="clr-namespace:PLTour.App.Models"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.TourDetailPage"
-             Title="Chi tiết Tour"
+             Title="{loc:Localization TourDetailTitle}"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F8F9FA">
 
@@ -41,7 +42,7 @@
                            TextColor="#1F2937" />
 
                     <Button Grid.Column="2"
-                            Text="Xem bản đồ"
+                            Text="{loc:Localization TourMapView}"
                             Padding="16,0"
                             HeightRequest="44"
                             CornerRadius="22"
@@ -90,7 +91,7 @@
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="14">
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                     <Button x:Name="BtnTouristSpots"
-                            Text="Tham quan"
+                            Text="{loc:Localization TourSpots}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#2A9D8F"
@@ -99,7 +100,7 @@
                             Clicked="FilterTouristSpots_Clicked" />
                     <Button x:Name="BtnFoodPlaces"
                             Grid.Column="1"
-                            Text="Ăn uống"
+                            Text="{loc:Localization TourFood}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#E9ECEF"
@@ -108,7 +109,7 @@
                             Clicked="FilterFoodPlaces_Clicked" />
                     <Button x:Name="BtnEvents"
                             Grid.Column="2"
-                            Text="Sự kiện"
+                            Text="{loc:Localization TourEvents}"
                             HeightRequest="42"
                             CornerRadius="21"
                             BackgroundColor="#E9ECEF"
@@ -118,7 +119,7 @@
                 </Grid>
 
                 <Label Grid.Row="1"
-                       Text="Các địa điểm trong Tour"
+                       Text="{loc:Localization TourLocations}"
                        FontSize="14"
                        FontAttributes="Bold"
                        TextColor="#6B7280" />
@@ -151,7 +152,7 @@
 
                                     <VerticalStackLayout Grid.Row="1" Spacing="8">
                                         <VerticalStackLayout Spacing="2">
-                                            <Label Text="{Binding Name}"
+                                            <Label Text="{Binding LocalizedName}"
                                                    FontSize="16"
                                                    FontAttributes="Bold"
                                                    TextColor="#111827"
@@ -165,7 +166,7 @@
                                                    MaxLines="2" />
                                         </VerticalStackLayout>
 
-                                        <Label Text="{Binding Category}"
+                                        <Label Text="{Binding LocalizedCategory}"
                                                FontSize="11"
                                                TextColor="#2A9D8F"
                                                FontAttributes="Italic"

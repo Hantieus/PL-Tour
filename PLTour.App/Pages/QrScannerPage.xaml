@@ -3,14 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.Maui.Controls"
              xmlns:pages="clr-namespace:PLTour.App.Pages"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.QrScannerPage"
              Shell.NavBarIsVisible="False"
-             Title="QR Scan"
+             Title="{loc:Localization QrScannerTitle}"
              BackgroundColor="#0B1020">
 
     <Grid RowDefinitions="Auto,*,Auto">
         <Grid Grid.Row="0" Padding="16,14" ColumnDefinitions="Auto,*,Auto" BackgroundColor="#111827">
-            <Label Text="QR Scanner"
+            <Label Text="{loc:Localization QrScannerTitle}"
                    Grid.Column="1"
                    HorizontalOptions="Center"
                    VerticalOptions="Center"
@@ -41,12 +42,12 @@
                     StrokeShape="RoundRectangle 16"
                     Padding="16,12">
                 <VerticalStackLayout Spacing="4">
-                    <Label Text="Đưa mã QR vào giữa khung"
+                    <Label Text="{loc:Localization QrScannerHint}"
                            FontAttributes="Bold"
                            HorizontalOptions="Center"
                            TextColor="White" />
                     <Label x:Name="StatusLabel"
-                           Text="Sẵn sàng quét..."
+                           Text="{loc:Localization QrReady}"
                            HorizontalOptions="Center"
                            TextColor="#D1D5DB"
                            FontSize="12" />
@@ -55,7 +56,7 @@
         </Grid>
 
         <Grid Grid.Row="2" Padding="16,12" BackgroundColor="#111827">
-            <Button Text="Quét lại"
+            <Button Text="{loc:Localization QrRescan}"
                     Clicked="ScanAgain_Clicked"
                     BackgroundColor="#2A9D8F"
                     TextColor="White"

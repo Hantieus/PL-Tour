@@ -3,8 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:pages="clr-namespace:PLTour.App.Pages"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.MapPage"
-             Title="Map"
+             Title="{loc:Localization Map}"
              Shell.NavBarIsVisible="False"
              BackgroundColor="#F3F6F9">
 
@@ -36,7 +37,7 @@
                         Padding="12,0"
                         HeightRequest="44">
                     <Entry x:Name="txtSearch"
-                           Placeholder="Tìm kiếm địa điểm..."
+                           Placeholder="{loc:Localization SearchPlaceHolder}"
                            BackgroundColor="Transparent"
                            ClearButtonVisibility="WhileEditing"
                            TextColor="#111827"
@@ -76,7 +77,7 @@
                                  Spacing="10"
                                  ZIndex="10">
                 <Button x:Name="BtnToggleMap"
-                        Text="Mở rộng"
+                        Text="{loc:Localization Expand}"
                         WidthRequest="104"
                         HeightRequest="42"
                         CornerRadius="21"
@@ -129,7 +130,7 @@
 
                         <CollectionView x:Name="PoiListView"
                                         SelectionMode="None"
-                                        EmptyView="Chưa có địa điểm phù hợp">
+                                        EmptyView="{loc:Localization NoPoiMatch}">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="0,0,0,12"
@@ -152,14 +153,14 @@
                                                         StrokeThickness="0"
                                                         StrokeShape="RoundRectangle 10"
                                                         Padding="8,4">
-                                                    <Label Text="Đang chọn"
+                                                    <Label Text="{loc:Localization Selected}"
                                                            FontSize="10"
                                                            TextColor="White"
                                                            FontAttributes="Bold" />
                                                 </Border>
 
                                                 <Label Grid.Column="1"
-                                                       Text="{Binding Name}"
+                                                       Text="{Binding LocalizedName}"
                                                        FontAttributes="Bold"
                                                        FontSize="16"
                                                        TextColor="#111827"
@@ -189,7 +190,7 @@
                                                         HorizontalOptions="End"
                                                         VerticalOptions="Start"
                                                         Margin="10">
-                                                    <Label Text="Đang chọn"
+                                                    <Label Text="{loc:Localization Selected}"
                                                            FontSize="10"
                                                            TextColor="White"
                                                            FontAttributes="Bold"
@@ -199,7 +200,7 @@
 
                                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="0,4,0,0">
                                                 <Button Grid.Column="0"
-                                                        Text="📍 Bản đồ"
+                                                        Text="{loc:Localization MapButton}"
                                                         Clicked="BtnViewMap_Clicked"
                                                         CommandParameter="{Binding .}"
                                                         HeightRequest="36"
@@ -217,7 +218,7 @@
                                                         FontSize="12"
                                                         Padding="0" />
                                                 <Button Grid.Column="2"
-                                                        Text="🧭 Đi"
+                                                        Text="{loc:Localization GoButton}"
                                                         Clicked="BtnRoute_Clicked"
                                                         CommandParameter="{Binding .}"
                                                         HeightRequest="36"

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.SettingsPage"
              Title="Cài đặt">
     <VerticalStackLayout Padding="20" Spacing="20">
@@ -23,5 +24,26 @@
                 </x:Array>
             </Picker.ItemsSource>
         </Picker>
+
+        <Border StrokeThickness="1" Stroke="#D1D5DB" Padding="16" StrokeShape="RoundRectangle 16">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Hàng đợi monitoring" FontAttributes="Bold" />
+                <Label Text="{Binding QueueStatusText}" FontSize="13" />
+                <ProgressBar Progress="{Binding QueueProgress}" HeightRequest="8" />
+                <Label Text="{Binding QueueHintText}" FontSize="12" TextColor="#6B7280" />
+            </VerticalStackLayout>
+        </Border>
+
+        <Border StrokeThickness="1" Stroke="#D1D5DB" Padding="16" StrokeShape="RoundRectangle 16">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Auto-play gần POI" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="Bật tự động phát khi vào vùng POI" VerticalOptions="Center" />
+                    <Switch x:Name="AutoPlaySwitch" Toggled="AutoPlaySwitch_Toggled" HorizontalOptions="EndAndExpand" />
+                </HorizontalStackLayout>
+                <Label Text="Khi bật, app sẽ tự phát thuyết minh một lần khi bạn đi vào bán kính của POI." FontSize="12" TextColor="#6B7280" />
+            </VerticalStackLayout>
+        </Border>
+
     </VerticalStackLayout>
 </ContentPage>

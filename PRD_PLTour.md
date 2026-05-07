@@ -54,10 +54,10 @@
 
 **Trong phạm vi (theo solution):**
 
-- `PLTour.API` — REST, JWT, Locations, Tours, Narrations, Auth.  
-- `PLTour.Admin` — quản trị nội dung, thống kê.  
+- `PLTour.API` — REST, JWT, Locations, Tours, Narrations, Auth, monitoring heartbeat/event.  
+- `PLTour.Admin` — quản trị nội dung, thống kê, monitor thiết bị.  
 - `PLTour.Vendor` — kênh đối tác.  
-- `PLTour.App` — client du khách.  
+- `PLTour.App` — client du khách, gửi heartbeat và analytics.  
 - `PLTour.Shared` — entity + DTO.
 
 **Hạn chế / ghi chú:**
@@ -78,6 +78,9 @@
 | F-API-03 | Chi tiết | `GET api/Locations/{id}`. |
 | F-API-04 | Tour | `GET api/tours` — `TourLocation.OrderIndex`, narrations theo ngôn ngữ. |
 | F-API-05 | Swagger + Bearer | Mô tả và thử API. |
+| F-API-06 | Monitor heartbeat | `POST /api/monitor/heartbeat` nhận `DeviceId`, thông tin máy, pin, vị trí và cập nhật `ActiveDevices`. |
+| F-API-07 | Monitor event | `POST /api/monitor/event` lưu sự kiện app vào `analytics_events`. |
+| F-API-08 | Monitor status | `GET /api/monitor/active-devices` và `GET /api/monitor/active-devices/{deviceId}` trả trạng thái online/stale/offline. |
 
 ### 4.2. Admin
 
@@ -86,6 +89,8 @@
 | F-ADM-01 | Cookie authentication, `[Authorize]`. |
 | F-ADM-02 | Dashboard: đếm location, vendor, pending, user; chart category. |
 | F-ADM-03 | CRUD Category, Location, Narration, quản Vendor. |
+| F-ADM-04 | Màn hình `Monitor thiết bị`: xem danh sách device online/stale/offline, last heartbeat, pin, model. |
+| F-ADM-05 | Popup `Thống kê` trong Monitor: biểu đồ event theo loại, top device hoạt động, heartbeat theo giờ, online theo thời gian. |
 
 ### 4.3. Vendor
 
@@ -103,6 +108,9 @@
 | F-APP-03 | Chọn narration theo `UserLanguage` (default `vi`), fallback `IsDefault`. |
 | F-APP-04 | Audio URL → stream play; không URL → TTS. |
 | F-APP-05 | Reload map khi `OnAppearing` (đổi ngôn ngữ). |
+| F-APP-06 | Chống xử lý trùng và điều phối hàng đợi cho QR scan, audio, tracking và monitoring. |
+| F-APP-07 | Auto-play thuyết minh khi người dùng vừa bước vào vùng POI; không phát lại khi vẫn ở trong vùng; chỉ phát lại khi đã rời vùng rồi quay lại. |
+| F-APP-08 | Cho phép bật/tắt Auto-play gần POI trong `SettingsPage`. |
 
 ### 4.5. Quy tắc dữ liệu
 
@@ -110,6 +118,17 @@
 - `Narration`: unique filter `(LocationId, IsDefault=1)`.  
 - `TourLocation`: khóa `{TourId, LocationId}`, có `OrderIndex`.  
 - Seed: Languages, Categories, user admin.
+
+### 4.6. Monitor thiết bị & analytics
+
+| ID | Yêu cầu |
+|----|--------|
+| F-MON-01 | Ứng dụng gửi heartbeat định kỳ về `POST /api/monitor/heartbeat`. |
+| F-MON-02 | API lưu và cập nhật `ActiveDevices` với `DeviceId`, `DeviceName`, `DeviceModel`, `OsVersion`, `AppVersion`, pin, vị trí và trạng thái. |
+| F-MON-03 | Ứng dụng gửi analytics event về `POST /api/monitor/event` khi mở app, vào màn hình, đổi ngôn ngữ, xem POI hoặc phát audio. |
+| F-MON-04 | Admin có màn hình `Monitor thiết bị` để xem danh sách device online/stale/offline, last heartbeat và chi tiết thiết bị. |
+| F-MON-05 | Admin có popup `Thống kê` trong Monitor để xem 4 biểu đồ: event theo loại, top device hoạt động nhiều nhất, heartbeat theo giờ, online theo thời gian. |
+| F-MON-06 | Trạng thái device được cập nhật tự động theo timeout heartbeat; trang Admin hiển thị giờ local để dễ theo dõi. |
 
 ---
 
@@ -119,9 +138,12 @@
 |------|--------|
 | Bảo mật | BCrypt password; JWT secret cấu hình; HTTPS (Kestrel). |
 | Hiệu năng | HttpClient timeout 15s app; có thể cache tour. |
-| Khả dụng | Phụ thuộc SQL Server. |
+| Khả dụng | Phụ thuộc PostgreSQL / Neon hoặc SQL Server tùy môi trường triển khai. |
 | Đa nền tảng | MAUI: Android (+ iOS/Windows/Mac theo csproj). |
 | Bảo trì | Shared models giảm trùng lặp. |
+| Độ tin cậy | Có chống trùng, queue, retry và persist tạm cho monitoring để giảm mất dữ liệu khi mạng yếu. |
+| Trải nghiệm người dùng | Auto-play chỉ kích hoạt một lần khi vừa vào vùng POI; không lặp khi vẫn ở trong vùng; chỉ phát lại khi rời vùng rồi quay lại. |
+| Giám sát thiết bị | Heartbeat định kỳ, trạng thái online/stale/offline được cập nhật tự động, hiển thị giờ local trên Admin Monitor. |
 
 ---
 
@@ -143,6 +165,86 @@ flowchart LR
   Vendor -->|EF Core| DB
   API -->|EF Core| DB
 ```
+
+### 6.1. Kiến trúc xử lý trùng, hàng đợi, monitoring và auto-play trong app
+
+Phần này mô tả lớp xử lý được thêm vào `PLTour.App` để tăng độ ổn định khi người dùng thao tác nhanh, quét QR nhiều lần, phát thuyết minh liên tục, tự động phát khi vào vùng POI hoặc khi mạng không ổn định.
+
+```mermaid
+flowchart TB
+  U[Người dùng]
+
+  subgraph AppUI[PLTour.App - UI / Pages]
+    QR[QrScannerPage]
+    MAP[MapPage]
+    SET[SettingsPage]
+  end
+
+  subgraph AppServices[PLTour.App - Services]
+    DG[DeduplicationService]
+    QA[QueuedActionService]
+    MQ[MonitorQueueService]
+    QS[MonitorQueueStore]
+    AM[AnalyticsService]
+    DM[DeviceMonitorService]
+  end
+
+  subgraph Media[Audio / TTS]
+    AUD[IAudioService / AudioService]
+  end
+
+  subgraph Remote[Remote API]
+    MONAPI[API /api/monitor/*]
+    TOURS[API /api/tours, /api/Locations]
+  end
+
+  U --> QR
+  U --> MAP
+  U --> SET
+
+  QR --> DG
+  QR --> QA
+  QR --> AUD
+  QR --> TOURS
+
+  MAP --> DG
+  MAP --> QA
+  MAP --> AM
+  MAP --> AUD
+  MAP --> TOURS
+
+  SET --> DM
+
+  AM --> DM
+  DM --> MQ
+  MQ --> QS
+  MQ --> MONAPI
+  MQ --> QS
+
+  DG -->|Kiểm tra key + thời gian| QR
+  DG -->|Kiểm tra key + thời gian| MAP
+  QA -->|Xử lý tuần tự| AUD
+  QA -->|Xử lý tuần tự| QR
+  MQ -->|Queue + retry + persist| QS
+```
+
+**Ý nghĩa các lớp trong sơ đồ:**
+
+- `DeduplicationService`: chặn xử lý trùng theo key và khoảng thời gian, áp dụng cho scan QR, phát audio, tracking sự kiện và auto-play.
+- `QueuedActionService`: điều phối các thao tác UI/audio theo thứ tự, tránh callback chồng chéo.
+- `AutoPlayPreferenceService`: lưu trạng thái bật/tắt auto-play gần POI trong `SettingsPage`.
+- `DeviceMonitorService`: gom các sự kiện `screen_view`, `location_ping`, `listen_*`, `language_change` trước khi gửi.
+- `MonitorQueueService`: xếp hàng các request monitoring, tự retry và lưu tạm để không mất dữ liệu khi app bị tắt đột ngột.
+- `MonitorQueueStore`: lưu trạng thái queue xuống local storage và khôi phục khi app mở lại.
+
+**Giá trị đưa vào báo cáo:**
+
+Sơ đồ này thể hiện app không gửi sự kiện trực tiếp theo kiểu “fire-and-forget”, mà có một tầng trung gian để:
+1. loại bỏ sự kiện trùng,
+2. sắp xếp tác vụ theo hàng đợi,
+3. retry khi lỗi mạng,
+4. lưu tạm dữ liệu monitoring,
+5. kiểm soát auto-play gần POI theo trạng thái vào/rời vùng.
 
 ---
 
@@ -1223,7 +1325,9 @@ flowchart TB
 2. Tạo location + ≥2 narration (khác ngôn ngữ); app hiển thị đúng theo `UserLanguage`.  
 3. Tour trả đúng thứ tự điểm.  
 4. Map: phát audio từ URL; không URL thì TTS đọc được.  
-5. Vendor pending xuất hiện trên dashboard admin.
+5. Vendor pending xuất hiện trên dashboard admin.  
+6. Auto-play gần POI chỉ phát một lần khi vừa bước vào vùng, không lặp khi còn ở trong vùng, và phát lại khi ra ngoài rồi quay lại.  
+7. Monitoring event được chống trùng, xếp hàng, retry và có lưu tạm để giảm mất dữ liệu.
 
 ---
 

@@ -23,6 +23,7 @@ public partial class HomePage : ContentPage
         _deviceMonitorService = deviceMonitorService;
         _audioService = audioService;
         _audioService.PlaybackStopped += AudioService_PlaybackStopped;
+        LocalizationService.Instance.LanguageChanged += (_, __) => OnPropertyChanged(string.Empty);
         BindingContext = this;
     }
 
@@ -79,12 +80,14 @@ public partial class HomePage : ContentPage
                     {
                         var tourLoc = new Microsoft.Maui.Devices.Sensors.Location(tour.Latitude, tour.Longitude);
                         double distance = Microsoft.Maui.Devices.Sensors.Location.CalculateDistance(userLoc, tourLoc, DistanceUnits.Kilometers);
-                        tour.DistanceDisplay = $"Cách bạn: {distance:F1} km";
+                        tour.DistanceDisplay = string.Format(LocalizationService.Instance["DistanceFromYou"], distance.ToString("F1"));
                     }
                     else
                     {
-                        tour.DistanceDisplay = "Vị trí chưa xác định";
+                        tour.DistanceDisplay = LocalizationService.Instance["LocationUnknown"];
                     }
+
+                    tour.DistanceDisplay = tour.DistanceDisplay;
                 }
 
                 await MainThread.InvokeOnMainThreadAsync(() =>
@@ -97,7 +100,7 @@ public partial class HomePage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[HOME_ERROR] LoadTours: {ex}");
-            await this.DisplayAlertAsync("Lỗi", "Không thể kết nối đến máy chủ để tải dữ liệu tour.", "OK");
+            await this.DisplayAlertAsync(LocalizationService.Instance["Error"], LocalizationService.Instance["CannotLoadTourData"], LocalizationService.Instance["OK"]);
         }
         finally
         {
@@ -127,9 +130,9 @@ public partial class HomePage : ContentPage
         await _audioService.StopAsync();
 
         // Kiểm tra nội dung
-        if (string.IsNullOrWhiteSpace(tour.IntroText) && string.IsNullOrEmpty(tour.IntroAudioUrl))
+        if (string.IsNullOrWhiteSpace(tour.LocalizedIntroText) && string.IsNullOrEmpty(tour.LocalizedIntroAudioUrl))
         {
-            await DisplayAlert("Thông báo", "Tour này hiện chưa có nội dung thuyết minh.", "OK");
+            await DisplayAlert(LocalizationService.Instance["Information"], LocalizationService.Instance["NoNarrationYet"], LocalizationService.Instance["OK"]);
             return;
         }
 
@@ -142,15 +145,15 @@ public partial class HomePage : ContentPage
 
         try
         {
-            string audioUrl = FixAudioUrl(tour.IntroAudioUrl);
+            string audioUrl = FixAudioUrl(tour.LocalizedIntroAudioUrl);
             if (!string.IsNullOrEmpty(audioUrl))
             {
                 await _audioService.PlayAudioAsync(audioUrl);
             }
-            else if (!string.IsNullOrWhiteSpace(tour.IntroText))
+            else if (!string.IsNullOrWhiteSpace(tour.LocalizedIntroText))
             {
                 string langCode = Preferences.Default.Get("UserLanguage", "vi");
-                await _audioService.PlayTextToSpeechAsync(tour.IntroText, langCode);
+                await _audioService.PlayTextToSpeechAsync(tour.LocalizedIntroText, langCode);
             }
         }
         catch (Exception ex)

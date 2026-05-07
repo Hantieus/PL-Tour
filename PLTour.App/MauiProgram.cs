@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Hosting;
+using CommunityToolkit.Maui.Views;
 using PLTour.App.Pages;
 using PLTour.App.Services;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -16,6 +17,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
             .UseSkiaSharp()
             .UseMauiCommunityToolkitMediaElement(true)
             .UseBarcodeReader()
@@ -32,6 +34,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<LocationService>();
         builder.Services.AddSingleton<ApiService>();
         builder.Services.AddSingleton<DeviceMonitorService>();
+        builder.Services.AddSingleton<DeduplicationService>();
+        builder.Services.AddSingleton<QueuedActionService>();
+        builder.Services.AddSingleton<AutoPlayPreferenceService>();
+        builder.Services.AddSingleton<AutoPlayHistoryService>();
         builder.Services.AddSingleton<IAudioService, AudioService>();
 
         builder.Services.AddTransient<LoadingPage>();

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:PLTour.App.Converters"
              x:Class="PLTour.App.Pages.PoiDetailPopupView"
              BackgroundColor="#99000000"
              IsVisible="False">
@@ -45,7 +46,7 @@
                     </Grid>
                 </Border>
 
-                <Button Text="✕"
+                <Button Text="{loc:Localization Close}"
                         BackgroundColor="#00000066"
                         TextColor="White"
                         CornerRadius="18"
@@ -65,13 +66,13 @@
                             StrokeShape="RoundRectangle 16"
                             Padding="14">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="📍 Thông tin địa điểm"
+                            <Label Text="{loc:Localization PoiInfoTitle}"
                                    FontAttributes="Bold"
                                    FontSize="15"
                                    TextColor="#2A9D8F" />
 
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
-                                <Label Text="Địa chỉ"
+                                <Label Text="{loc:Localization Address}"
                                        FontSize="13"
                                        TextColor="#6B7280" />
                                 <Label Grid.Column="1"
@@ -82,7 +83,7 @@
                                        LineBreakMode="WordWrap" />
 
                                 <Label Grid.Row="1"
-                                       Text="Danh mục"
+                                       Text="{loc:Localization Category}"
                                        FontSize="13"
                                        TextColor="#6B7280" />
                                 <Label Grid.Row="1"
@@ -93,7 +94,7 @@
                                        LineBreakMode="WordWrap" />
 
                                 <Label Grid.Row="2"
-                                       Text="Khoảng cách"
+                                       Text="{loc:Localization Distance}"
                                        FontSize="13"
                                        TextColor="#6B7280" />
                                 <Label Grid.Row="2"
@@ -111,7 +112,7 @@
                             StrokeShape="RoundRectangle 16"
                             Padding="14">
                         <VerticalStackLayout Spacing="10">
-                            <Label Text="📖 Nội dung chi tiết"
+                            <Label Text="{loc:Localization PoiContentTitle}"
                                    FontAttributes="Bold"
                                    FontSize="15"
                                    TextColor="#2A9D8F" />
@@ -124,7 +125,7 @@
             </ScrollView>
 
             <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="12" Padding="20,0,20,20">
-                <Button Text="Xem bản đồ"
+                <Button Text="{loc:Localization ViewMap}"
                         BackgroundColor="#EAF2F2"
                         TextColor="#111827"
                         FontAttributes="Bold"

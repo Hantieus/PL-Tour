@@ -12,6 +12,7 @@ public class AnalyticsService
     public static AnalyticsService Instance => _instance ??= new AnalyticsService();
 
     private readonly DeviceMonitorService _monitorService = DeviceMonitorService.Instance ?? new DeviceMonitorService();
+    private readonly DeduplicationService _deduplicationService = new();
 
     public string SessionId => _monitorService.SessionId;
     public string DeviceId => _monitorService.DeviceId;
@@ -37,16 +38,28 @@ public class AnalyticsService
     /// <summary> Gửi vị trí hiện tại (dùng cho heatmap) </summary>
     public async Task TrackLocationPingAsync(double lat, double lng)
     {
+        var key = _deduplicationService.BuildKey("location_ping", Math.Round(lat, 4), Math.Round(lng, 4));
+        if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
+            return;
+
         await Task.Run(() => TrackEvent("location_ping", new AnalyticsEventDto { Latitude = lat, Longitude = lng }));
     }
 
     public async Task TrackPoiViewAsync(int locationId)
     {
+        var key = _deduplicationService.BuildKey("view_location", locationId);
+        if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
+            return;
+
         await Task.Run(() => TrackEvent("view_location", new AnalyticsEventDto { LocationId = locationId }));
     }
 
     public async Task TrackAudioStartAsync(int locationId, string languageCode, bool isOnSite)
     {
+        var key = _deduplicationService.BuildKey("audio_start", locationId, languageCode, isOnSite);
+        if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(5)))
+            return;
+
         _playbackStartTime = DateTime.UtcNow;
         _currentTrackedLocationId = locationId;
         string eventType = isOnSite ? "listen_onsite" : "listen_remote";

@@ -15,20 +15,37 @@ public class ApiService
     // Base URL của Backend (Server)
     private readonly string _baseUrl;
 
+    private const string DevTunnelUrl = "https://q0x087zj-5229.asse.devtunnels.ms/";
+    private const string LanUrl = "http://192.168.100.123:5229/";
+    //P: 192.168.100.123:5229
+    //L: 192.168.2.6:5229
+    //L lop: 192.168.31.247:5229
+    private const string RenderUrl = "https://pl-tour.onrender.com/";
+
     public ApiService()
     {
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        // IP LAN của máy tính: dùng cho điện thoại thật bắt chung mạng wifi với máy tính
-        _baseUrl = "http://192.168.2.6:5229/";
-        //P: 192.168.100.123:5229
-        //L: 192.168.2.6:5229
-        //L lop: 192.168.31.247:5229
+        // Mặc định dùng Dev Tunnel
+        _baseUrl = DevTunnelUrl;
 #else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
-        // Thay bằng domain hoặc IP server thật của bạn
-        _baseUrl = "https://pl-tour-production.up.railway.app/"; 
+        // Mặc định dùng Render
+        _baseUrl = RenderUrl;
 #endif
+
+        // Cho phép đổi sang LAN hoặc Render bằng biến môi trường
+        // PLTOUR_API_MODE = devtunnel | lan | render
+        var apiMode = Environment.GetEnvironmentVariable("PLTOUR_API_MODE")?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(apiMode))
+        {
+            _baseUrl = apiMode switch
+            {
+                "lan" => LanUrl,
+                "render" => RenderUrl,
+                _ => DevTunnelUrl
+            };
+        }
 
         System.Diagnostics.Debug.WriteLine($"[API_LOG] App đang kết nối tới: {_baseUrl}");
 
@@ -161,10 +178,10 @@ public class ApiService
 
     private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
     {
-        string selectedLangCode = Preferences.Default.Get("UserLanguage", "vi");
+        string selectedLangCode = LocalizationService.Instance.CurrentLanguageCode;
 
-        var narration = loc.Narrations?.FirstOrDefault(n => 
-                            !string.IsNullOrEmpty(n.LanguageCode) && 
+        var narration = loc.Narrations?.FirstOrDefault(n =>
+                            !string.IsNullOrEmpty(n.LanguageCode) &&
                             n.LanguageCode.StartsWith(selectedLangCode, StringComparison.OrdinalIgnoreCase));
 
         if (selectedLangCode != "vi" && narration == null)
@@ -200,7 +217,7 @@ public class ApiService
             ImageUrl = poiImageUrl,
             NarrationId = narration?.NarrationId ?? 0,
             AudioUrl = FormatAudioUrl(narration?.AudioUrl),
-            FullContent = narration?.Content,
+            FullContent = narration?.Content ?? string.Empty,
             LanguageName = narration?.LanguageName ?? "Tiếng Việt",
             LanguageId = narration?.LanguageId ?? 1,
             LanguageCode = narration?.LanguageCode ?? "vi",
@@ -208,10 +225,10 @@ public class ApiService
             Lat = loc.Latitude,
             Lng = loc.Longitude,
             Radius = loc.Radius > 0 ? loc.Radius : 150,
-            Description = loc.Description ?? "",
-            Address = loc.Address ?? "",
+            Description = loc.Description ?? string.Empty,
+            Address = loc.Address ?? string.Empty,
             CategoryId = loc.CategoryId,
-            Category = !string.IsNullOrEmpty(loc.CategoryName) ? loc.CategoryName : MapCategoryName(loc.CategoryId),
+            Category = MapCategoryName(loc.CategoryId),
             PinColor = GetPinColor(loc.CategoryId)
         };
     }
@@ -245,10 +262,10 @@ public class ApiService
 
     private string MapCategoryName(int categoryId) => categoryId switch
     {
-        1 => "Tham quan",
-        2 => "Ăn uống",
-        3 => "Sự kiện",
-        _ => "Tham quan"
+        1 => LocalizationService.Instance["CategoryTourism"],
+        2 => LocalizationService.Instance["CategoryFood"],
+        3 => LocalizationService.Instance["CategoryEvent"],
+        _ => LocalizationService.Instance["CategoryTourism"]
     };
 
     private MapsuiColor GetPinColor(int categoryId) => categoryId switch

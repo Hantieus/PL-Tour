@@ -1,12 +1,32 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using PLTour.App.Services;
 
 namespace PLTour.App.Models;
 
 public class TourModel : INotifyPropertyChanged
 {
+    public TourModel()
+    {
+        LocalizationService.Instance.LanguageChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(LocalizedName));
+            OnPropertyChanged(nameof(LocalizedIntroText));
+            OnPropertyChanged(nameof(DurationDisplay));
+            OnPropertyChanged(nameof(DistanceDisplay));
+            OnPropertyChanged(nameof(PlayButtonText));
+            OnPropertyChanged(nameof(PlayButtonColor));
+        };
+    }
+
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public string? NameEn { get; init; }
+    public string? NameZh { get; init; }
+    public string? NameKo { get; init; }
+    public string? NameJa { get; init; }
+
+    public string LocalizedName => PickLocalized(Name, NameEn, NameZh, NameKo, NameJa);
 
     // 1. Lưu tổng số phút bằng số nguyên
     public int Duration { get; init; }
@@ -16,29 +36,53 @@ public class TourModel : INotifyPropertyChanged
     {
         get
         {
-            if (Duration <= 0) return "Đang cập nhật";
+            if (Duration <= 0) return LocalizationService.Instance["Updating"];
 
             int hours = Duration / 60;
             int minutes = Duration % 60;
 
             if (hours > 0 && minutes > 0)
-                return $"{hours} tiếng {minutes} phút";
+                return string.Format(LocalizationService.Instance["DurationHoursMinutes"], hours, minutes);
             else if (hours > 0)
-                return $"{hours} tiếng";
+                return string.Format(LocalizationService.Instance["DurationHours"], hours);
             else
-                return $"{minutes} phút";
+                return string.Format(LocalizationService.Instance["DurationMinutes"], minutes);
         }
     }
 
     public string IntroText { get; init; } = string.Empty;
+    public string? IntroTextEn { get; init; }
+    public string? IntroTextZh { get; init; }
+    public string? IntroTextKo { get; init; }
+    public string? IntroTextJa { get; init; }
+    public string LocalizedIntroText => PickLocalized(IntroText, IntroTextEn, IntroTextZh, IntroTextKo, IntroTextJa);
+
     public string? IntroAudioUrl { get; init; }
+    public string? IntroAudioUrlEn { get; init; }
+    public string? IntroAudioUrlZh { get; init; }
+    public string? IntroAudioUrlKo { get; init; }
+    public string? IntroAudioUrlJa { get; init; }
+    public string? LocalizedIntroAudioUrl => PickLocalized(IntroAudioUrl, IntroAudioUrlEn, IntroAudioUrlZh, IntroAudioUrlKo, IntroAudioUrlJa);
+
     public List<PoiModel> Pois { get; init; } = new List<PoiModel>();
 
     public double Latitude { get; init; }
     public double Longitude { get; init; }
     public string ImageUrl { get; init; } = "tour_thumb.jpg";
 
-    public string DistanceDisplay { get; set; } = "Đang tính...";
+    private string _distanceDisplay = LocalizationService.Instance["Calculating"];
+    public string DistanceDisplay
+    {
+        get => _distanceDisplay;
+        set
+        {
+            if (_distanceDisplay != value)
+            {
+                _distanceDisplay = value;
+                OnPropertyChanged(nameof(DistanceDisplay));
+            }
+        }
+    }
 
     // --- TRẠNG THÁI PHÁT ÂM THANH (Dùng cho UX/UI) ---
     private bool _isPlaying;
@@ -57,14 +101,24 @@ public class TourModel : INotifyPropertyChanged
         }
     }
 
-    // Tự động đổi chữ trên nút bấm
-    public string PlayButtonText => IsPlaying ? "⏸️ Dừng" : "🔊 Nghe";
+    public string PlayButtonText => IsPlaying ? LocalizationService.Instance["Stop"] : LocalizationService.Instance["Listen"];
 
-    // Tự động đổi màu nút khi đang phát (Cam nhạt khi phát, Xám nhẹ khi chờ)
     public Microsoft.Maui.Graphics.Color PlayButtonColor =>
         IsPlaying ? Microsoft.Maui.Graphics.Color.FromArgb("#FFB4A2") : Microsoft.Maui.Graphics.Color.FromArgb("#F8F9FA");
 
-    // --- SỰ KIỆN CẬP NHẬT GIAO DIỆN ---
+    private static string PickLocalized(string vi, string? en = null, string? zh = null, string? ko = null, string? ja = null)
+    {
+        var lang = LocalizationService.Instance.CurrentLanguageCode;
+        return lang switch
+        {
+            "en" when !string.IsNullOrWhiteSpace(en) => en!,
+            "zh" when !string.IsNullOrWhiteSpace(zh) => zh!,
+            "ko" when !string.IsNullOrWhiteSpace(ko) => ko!,
+            "ja" when !string.IsNullOrWhiteSpace(ja) => ja!,
+            _ => vi
+        };
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

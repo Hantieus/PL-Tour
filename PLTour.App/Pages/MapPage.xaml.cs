@@ -34,7 +34,7 @@ public partial class MapPage : ContentPage
     private bool _isQrSearchActive;
     private bool _pendingInitialCamera;
     private bool _pendingScannedPoiSearch;
-    private string _mapModeText = "Chế độ tự do";
+    private string _mapModeText = LocalizationService.Instance["MapFreeMode"];
     private string _tourName = string.Empty;
 
     public string MapModeText
@@ -58,10 +58,10 @@ public partial class MapPage : ContentPage
     public string TourHeaderText
         => !string.IsNullOrWhiteSpace(TourName)
             ? TourName
-            : (_isQrSearchActive ? "Kết quả từ QR" : "Địa điểm gần bạn");
+            : (_isQrSearchActive ? LocalizationService.Instance["MapQrResult"] : LocalizationService.Instance["MapNearbyPlaces"]);
 
     public string HeaderHintText
-        => _isQrSearchActive ? "Đang lọc theo POI quét được" : "Chọn tab để lọc";
+        => _isQrSearchActive ? LocalizationService.Instance["MapFilteringQrPoi"] : LocalizationService.Instance["MapChooseTabHint"];
 
     public string TourId
     {
@@ -70,7 +70,7 @@ public partial class MapPage : ContentPage
         {
             _tourId = value;
             _pendingInitialCamera = true;
-            MapModeText = !string.IsNullOrWhiteSpace(value) ? "Chế độ theo tour" : "Chế độ tự do";
+            MapModeText = !string.IsNullOrWhiteSpace(value) ? LocalizationService.Instance["MapTourMode"] : LocalizationService.Instance["MapFreeMode"];
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _isQrSearchActive = false;
@@ -95,7 +95,7 @@ public partial class MapPage : ContentPage
             _pendingInitialCamera = true;
             _isQrSearchActive = true;
             TourName = string.Empty;
-            MapModeText = "Chế độ tự do";
+            MapModeText = LocalizationService.Instance["MapFreeMode"];
             OnPropertyChanged(nameof(TourHeaderText));
             OnPropertyChanged(nameof(HeaderHintText));
             System.Diagnostics.Debug.WriteLine($"[MAP] ScannedPoiName received: '{_scannedPoiName}'");
@@ -127,6 +127,9 @@ public partial class MapPage : ContentPage
     private readonly LocationService _locationService;
     private readonly DeviceMonitorService _deviceMonitorService;
     private readonly IAudioService _audioService;
+    private readonly DeduplicationService _deduplicationService;
+    private readonly QueuedActionService _queueService;
+    private readonly AutoPlayPreferenceService _autoPlayPreferenceService;
     private static readonly HttpClient _sharedHttpClient = new HttpClient();
     private readonly ObservableCollection<PoiModel> _visiblePois = new();
     private CancellationTokenSource? _trackingCts;
@@ -140,6 +143,10 @@ public partial class MapPage : ContentPage
     private Location _lastSentLocation;
     private DateTime _lastSentTime = DateTime.MinValue;
     private Location? _lastDistanceUpdateLocation;
+    private int? _lastAutoPlayedPoiId;
+    private DateTime _lastAutoPlayedAt = DateTime.MinValue;
+    private bool _isAutoPlayingPoi;
+    private readonly HashSet<int> _poisCurrentlyInside = new();
 
     public MapPage(LocationService locationService, DeviceMonitorService deviceMonitorService, IAudioService audioService)
     {
@@ -148,7 +155,11 @@ public partial class MapPage : ContentPage
         _locationService = locationService;
         _deviceMonitorService = deviceMonitorService;
         _audioService = audioService;
+        _deduplicationService = Application.Current?.Handler?.MauiContext?.Services.GetService<DeduplicationService>() ?? new DeduplicationService();
+        _queueService = Application.Current?.Handler?.MauiContext?.Services.GetService<QueuedActionService>() ?? new QueuedActionService();
+        _autoPlayPreferenceService = Application.Current?.Handler?.MauiContext?.Services.GetService<AutoPlayPreferenceService>() ?? AutoPlayPreferenceService.Instance;
         _audioService.PlaybackStopped += AudioService_PlaybackStopped;
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
 
         // Khởi tạo ban đầu
         PoiListView.ItemsSource = _visiblePois;
@@ -253,6 +264,11 @@ public partial class MapPage : ContentPage
                         _lastDistanceUpdateLocation = location;
                     }
 
+                    if (_autoPlayPreferenceService.IsEnabled)
+                    {
+                        TryAutoPlayNearbyPoi(location);
+                    }
+
                     // Chỉ gửi location_ping khi vị trí thay đổi > 30m HOẶC đã qua 30 giây
                     var distanceChanged = _lastSentLocation == null ||
                         CalculateDistance(location.Latitude, location.Longitude,
@@ -301,7 +317,7 @@ public partial class MapPage : ContentPage
                 {
                     _allPois = selectedTour.Pois.Where(p => p != null).ToList();
                     TourName = selectedTour.Name;
-                    MapModeText = "Chế độ theo tour";
+                    MapModeText = LocalizationService.Instance["MapTourMode"];
                     System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode from API tour. TourId={TourId}, TourName={selectedTour.Name}, POIs={_allPois.Count}");
                     foreach (var p in _allPois)
                         System.Diagnostics.Debug.WriteLine($"[MAP] POI {p.Id} {p.Name} lat={p.Lat} lng={p.Lng} active={p.IsPlaying}");
@@ -309,15 +325,15 @@ public partial class MapPage : ContentPage
                 else
                 {
                     _allPois = new List<PoiModel>();
-                    TourName = "Không tìm thấy tour";
-                    MapModeText = "Chế độ theo tour";
+                    TourName = LocalizationService.Instance["MapTourNotFound"];
+                    MapModeText = LocalizationService.Instance["MapTourMode"];
                     System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode but tour not found or no POIs. TourId={TourId}");
                 }
             }
             else
             {
                 _allPois = await _apiService.GetAllLocationsAsync() ?? new List<PoiModel>();
-                MapModeText = "Chế độ tự do";
+                MapModeText = LocalizationService.Instance["MapFreeMode"];
                 TourName = string.Empty;
                 System.Diagnostics.Debug.WriteLine($"[MAP] Free mode. POIs={_allPois.Count}");
             }
@@ -541,6 +557,89 @@ public partial class MapPage : ContentPage
         });
     }
 
+    private void TryAutoPlayNearbyPoi(Location currentLocation)
+    {
+        if (_isAutoPlayingPoi || _allPois == null || _allPois.Count == 0)
+            return;
+
+        var insidePois = _allPois
+            .Where(p => IsValidCoordinate(p.Lat, p.Lng))
+            .Where(p => CalculateDistance(currentLocation.Latitude, currentLocation.Longitude, p.Lat, p.Lng) <= p.Radius)
+            .ToList();
+
+        foreach (var poi in _allPois)
+        {
+            var isInside = insidePois.Any(x => x.Id == poi.Id);
+            if (isInside)
+            {
+                if (_poisCurrentlyInside.Add(poi.Id))
+                {
+                    var now = DateTime.UtcNow;
+                    if (_lastAutoPlayedPoiId == poi.Id && now - _lastAutoPlayedAt < TimeSpan.FromSeconds(45))
+                        continue;
+
+                    var dedupeKey = _deduplicationService.BuildKey("autoplay_enter_poi", poi.Id);
+                    if (!_deduplicationService.ShouldProcess(dedupeKey, TimeSpan.FromSeconds(45)))
+                        continue;
+
+                    _lastAutoPlayedPoiId = poi.Id;
+                    _lastAutoPlayedAt = now;
+                    _ = QueueAutoPlayNearbyPoiAsync(poi, currentLocation);
+                }
+            }
+            else
+            {
+                _poisCurrentlyInside.Remove(poi.Id);
+            }
+        }
+    }
+
+    private async Task QueueAutoPlayNearbyPoiAsync(PoiModel poi, Location currentLocation)
+    {
+        if (poi == null) return;
+
+        _isAutoPlayingPoi = true;
+        await _queueService.EnqueueAsync(async () =>
+        {
+            try
+            {
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    MarkSelectedPoi(poi);
+                    PoiDetailPopupView.ShowPopup(poi);
+
+                    var isOnSite = poi.DistanceMeters <= poi.Radius;
+                    _ = AnalyticsService.Instance.TrackAudioStartAsync(poi.Id, poi.LanguageCode ?? "vi", isOnSite);
+
+                    if (!string.IsNullOrWhiteSpace(poi.AudioUrl))
+                    {
+                        await _audioService.PlayAudioAsync(FixLocalhostUrl(poi.AudioUrl));
+                    }
+                    else
+                    {
+                        await ReadTextOffline(poi);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MAP] Auto play error: {ex.Message}");
+            }
+            finally
+            {
+                _isAutoPlayingPoi = false;
+            }
+        });
+    }
+
+    private void UpdatePoiLocalizedTexts()
+    {
+        foreach (var poi in _allPois)
+        {
+            poi.RaiseLocalizedChanged();
+        }
+    }
+
     private bool ShouldUpdateDistanceUI(Location currentLocation)
     {
         if (_lastDistanceUpdateLocation == null) return true;
@@ -608,10 +707,10 @@ public partial class MapPage : ContentPage
         {
             CategoryTabsContainer.Children.Clear();
 
-            CategoryTabsContainer.Children.Add(CreateTabButton(0, "Tất cả"));
-            CategoryTabsContainer.Children.Add(CreateTabButton(1, "Tham quan"));
-            CategoryTabsContainer.Children.Add(CreateTabButton(2, "Ăn uống"));
-            CategoryTabsContainer.Children.Add(CreateTabButton(3, "Sự kiện"));
+            CategoryTabsContainer.Children.Add(CreateTabButton(0, LocalizationService.Instance["CategoryAll"]));
+            CategoryTabsContainer.Children.Add(CreateTabButton(1, LocalizationService.Instance["CategoryTourism"]));
+            CategoryTabsContainer.Children.Add(CreateTabButton(2, LocalizationService.Instance["CategoryFood"]));
+            CategoryTabsContainer.Children.Add(CreateTabButton(3, LocalizationService.Instance["CategoryEvent"]));
         });
     }
 
@@ -645,7 +744,7 @@ public partial class MapPage : ContentPage
         _currentCategoryId = (int)btn.CommandParameter;
         if (string.IsNullOrWhiteSpace(TourId))
         {
-            MapModeText = "Chế độ tự do";
+            MapModeText = LocalizationService.Instance["MapFreeMode"];
             TourName = string.Empty;
         }
 
@@ -672,8 +771,22 @@ public partial class MapPage : ContentPage
     private void ToggleMapSize_Clicked(object sender, EventArgs e)
     {
         isMapExpanded = !isMapExpanded;
-        if (isMapExpanded) { Grid.SetRowSpan(MapSection, 2); InfoPanel.IsVisible = false; BtnToggleMap.Text = "Small 📂"; }
-        else { Grid.SetRowSpan(MapSection, 1); InfoPanel.IsVisible = true; BtnToggleMap.Text = "Full 🔲"; }
+        if (isMapExpanded) { Grid.SetRowSpan(MapSection, 2); InfoPanel.IsVisible = false; BtnToggleMap.Text = LocalizationService.Instance["Collapse"]; }
+        else { Grid.SetRowSpan(MapSection, 1); InfoPanel.IsVisible = true; BtnToggleMap.Text = LocalizationService.Instance["Expand"]; }
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            OnPropertyChanged(nameof(MapModeText));
+            OnPropertyChanged(nameof(TourHeaderText));
+            OnPropertyChanged(nameof(HeaderHintText));
+            GenerateCategoryTabs();
+            BtnToggleMap.Text = isMapExpanded ? LocalizationService.Instance["Collapse"] : LocalizationService.Instance["Expand"];
+            UpdatePoiLocalizedTexts();
+            UpdateDistancesAndSort();
+        });
     }
 
     private void CurrentLocation_Clicked(object sender, EventArgs e)
@@ -832,6 +945,14 @@ public partial class MapPage : ContentPage
         var poi = (sender as Button)?.CommandParameter as PoiModel;
         if (poi == null) return;
 
+        var dedupeKey = _deduplicationService.BuildKey("poi_speak", poi.Id);
+        if (!_deduplicationService.ShouldProcess(dedupeKey, TimeSpan.FromSeconds(3)) && _audioService.IsPlaying)
+            return;
+
+        _lastAutoPlayedPoiId = poi.Id;
+        _lastAutoPlayedAt = DateTime.UtcNow;
+        _poisCurrentlyInside.Add(poi.Id);
+
         // Bấm để Dừng (Kích hoạt tracking Duration)
         if (poi.IsPlaying)
         {
@@ -847,9 +968,11 @@ public partial class MapPage : ContentPage
         {
             if (poi.DistanceMeters > poi.Radius)
             {
-                bool confirm = await DisplayAlert("Bạn đang ở xa",
-                    $"Bạn cách {poi.Name} khoảng {Math.Round(poi.DistanceMeters)}m. Bạn có muốn nghe thuyết minh ảo từ xa không?",
-                    "Nghe", "Hủy bỏ");
+                bool confirm = await DisplayAlert(
+                    LocalizationService.Instance["FarAwayTitle"],
+                    string.Format(LocalizationService.Instance["FarAwayMessage"], poi.Name, Math.Round(poi.DistanceMeters)),
+                    LocalizationService.Instance["Listen"],
+                    LocalizationService.Instance["Cancel"]);
                 if (!confirm) return;
             }
             else
@@ -892,6 +1015,7 @@ public partial class MapPage : ContentPage
         await _audioService.StopAsync();
 
         if (_currentPlayingPoi == poi) _currentPlayingPoi = null;
+        _isAutoPlayingPoi = false;
 
         // Gửi Tracking: Báo server là kết thúc nghe
         _ = AnalyticsService.Instance.TrackAudioStopAsync();
@@ -914,10 +1038,10 @@ public partial class MapPage : ContentPage
     private async Task ReadTextOffline(PoiModel poi)
     {
         string content = string.IsNullOrWhiteSpace(poi.FullContent) ? poi.Description : poi.FullContent;
-        if (string.IsNullOrWhiteSpace(content)) content = "Không có thông tin thuyết minh.";
+        if (string.IsNullOrWhiteSpace(content)) content = LocalizationService.Instance["NoNarrationContent"];
 
         string langCode = Preferences.Default.Get("UserLanguage", poi.LanguageCode ?? "vi");
-        await _audioService.PlayTextToSpeechAsync($"{poi.Name}. {content}", langCode);
+        await _queueService.EnqueueAsync(() => _audioService.PlayTextToSpeechAsync($"{poi.Name}. {content}", langCode));
     }
 
     // ==========================================
@@ -955,7 +1079,7 @@ public partial class MapPage : ContentPage
         {
             Grid.SetRowSpan(MapSection, 1);
             InfoPanel.IsVisible = true;
-            BtnToggleMap.Text = "Mở rộng";
+            BtnToggleMap.Text = LocalizationService.Instance["Expand"];
             isMapExpanded = false;
         }
     }
