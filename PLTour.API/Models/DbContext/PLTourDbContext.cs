@@ -24,6 +24,7 @@ namespace PLTour.API.Models.DbContext
         public DbSet<TourNarration> TourNarrations { get; set; }
         public DbSet<TourLocation> TourLocations { get; set; }
         public DbSet<ActiveDevice> ActiveDevices { get; set; }
+        public DbSet<VendorSubscriptionTransaction> VendorSubscriptionTransactions { get; set; }
 
         // BỔ SUNG CHO TÍNH NĂNG ANALYTICS
         public DbSet<AnalyticsEvent> AnalyticsEvents { get; set; }
@@ -87,7 +88,10 @@ namespace PLTour.API.Models.DbContext
             // 5. Cấu hình các mối quan hệ hiện có
             modelBuilder.Entity<Location>().HasOne(l => l.Category).WithMany(c => c.Locations).HasForeignKey(l => l.CategoryId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Vendor>().HasOne(v => v.Category).WithMany(c => c.Vendors).HasForeignKey(v => v.CategoryId).OnDelete(DeleteBehavior.SetNull);
-            modelBuilder.Entity<Product>().HasOne(p => p.Vendor).WithMany(v => v.Products).HasForeignKey(p => p.VendorId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<VendorStore>().HasOne(s => s.Vendor).WithMany(v => v.Stores).HasForeignKey(s => s.VendorId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<VendorStore>().HasOne(s => s.Location).WithMany().HasForeignKey(s => s.LocationId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Product>().HasOne(p => p.Vendor).WithMany(v => v.Products).HasForeignKey(p => p.VendorId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Product>().HasOne(p => p.Store).WithMany(s => s.Products).HasForeignKey(p => p.StoreId).OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<VendorImage>().HasOne(vi => vi.Vendor).WithMany().HasForeignKey(vi => vi.VendorId).OnDelete(DeleteBehavior.Cascade);
 
             // 6. Cấu hình Tour

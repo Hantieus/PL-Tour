@@ -23,16 +23,16 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label asp-for="ShopName" class="form-label fw-bold">Tên cửa hàng</label>
-                            <input asp-for="ShopName" class="form-control" />
-                            <span asp-validation-for="ShopName" class="text-danger"></span>
+                            <label asp-for="BusinessName" class="form-label fw-bold">Tên cửa hàng</label>
+                            <input asp-for="BusinessName" class="form-control" />
+                            <span asp-validation-for="BusinessName" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label asp-for="OwnerName" class="form-label fw-bold">Chủ cửa hàng</label>
-                            <input asp-for="OwnerName" class="form-control" />
-                            <span asp-validation-for="OwnerName" class="text-danger"></span>
+                            <label asp-for="ContactName" class="form-label fw-bold">Người liên hệ</label>
+                            <input asp-for="ContactName" class="form-control" />
+                            <span asp-validation-for="ContactName" class="text-danger"></span>
                         </div>
                     </div>
                 </div>
@@ -86,24 +86,24 @@
                     </div>
                 </div>
 
-                <!-- Logo hiện tại -->
+                <!-- Avatar hiện tại -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Logo hiện tại</label>
-                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    <label class="form-label fw-bold">Avatar hiện tại</label>
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
                     {
                         <div>
-                            <img src="@Model.LogoUrl" alt="Logo" style="max-height: 100px; border-radius: 8px;" />
+                            <img src="@Model.AvatarUrl" alt="Avatar" style="max-height: 100px; border-radius: 8px;" />
                         </div>
                     }
                     else
                     {
-                        <p class="text-muted">Chưa có logo</p>
+                        <p class="text-muted">Chưa có avatar</p>
                     }
                 </div>
 
-                <!-- Upload logo mới -->
+                <!-- Upload avatar mới -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Thay đổi logo</label>
+                    <label class="form-label fw-bold">Thay đổi avatar</label>
                     <input type="file" name="logoFile" class="form-control" accept="image/*" />
                     <small class="text-muted">Chấp nhận .jpg, .png, .gif (tối đa 2MB)</small>
                 </div>

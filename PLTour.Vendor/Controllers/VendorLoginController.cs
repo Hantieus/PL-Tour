@@ -54,7 +54,7 @@ namespace PLTour.Vendor.Controllers
             // Tạo session cho vendor
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, vendor.ShopName),
+                new Claim(ClaimTypes.Name, vendor.BusinessName),
                 new Claim(ClaimTypes.Email, vendor.Email),
                 new Claim("VendorId", vendor.VendorId.ToString()),
                 new Claim("Role", "Vendor")

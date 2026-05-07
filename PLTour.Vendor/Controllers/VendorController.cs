@@ -30,8 +30,8 @@ namespace PLTour.Vendor.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                query = query.Where(v => v.ShopName.Contains(searchString)
-                                      || v.OwnerName.Contains(searchString)
+                query = query.Where(v => v.BusinessName.Contains(searchString)
+                                      || v.ContactName.Contains(searchString)
                                       || v.Email.Contains(searchString));
             }
 
@@ -149,8 +149,8 @@ namespace PLTour.Vendor.Controllers
                     var existingVendor = await _context.Vendors.FindAsync(id);
                     if (existingVendor == null) return NotFound();
 
-                    existingVendor.ShopName = vendor.ShopName;
-                    existingVendor.OwnerName = vendor.OwnerName;
+                    existingVendor.BusinessName = vendor.BusinessName;
+                    existingVendor.ContactName = vendor.ContactName;
                     existingVendor.Email = vendor.Email;
                     existingVendor.Phone = vendor.Phone;
                     existingVendor.Address = vendor.Address;

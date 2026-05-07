@@ -42,7 +42,17 @@ namespace PLTour.Vendor.Controllers
             var vendor = await _context.Vendors.FindAsync(vendorId);
             if (vendor == null) return Redirect("/vendor-login/login");
 
-            ViewBag.ProductCount = await _context.Products.CountAsync(p => p.VendorId == vendorId);
+            var stores = await _context.Set<VendorStore>()
+                .Where(s => s.VendorId == vendorId)
+                .OrderByDescending(s => s.IsDefault)
+                .ThenByDescending(s => s.CreatedDate)
+                .ToListAsync();
+
+            var storeIds = stores.Select(s => s.StoreId).ToList();
+
+            ViewBag.Stores = stores;
+            ViewBag.StoreCount = stores.Count;
+            ViewBag.ProductCount = await _context.Products.CountAsync(p => p.StoreId.HasValue && storeIds.Contains(p.StoreId.Value));
             ViewBag.ImageCount = await _context.VendorImages.CountAsync(i => i.VendorId == vendorId);
 
             return View(vendor);
@@ -59,7 +69,7 @@ namespace PLTour.Vendor.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProfile(PLTour.Shared.Models.Entities.Vendor vendor, IFormFile? logoFile)
+        public async Task<IActionResult> EditProfile(PLTour.Shared.Models.Entities.Vendor vendor, IFormFile? avatarFile)
         {
             var vendorId = GetVendorId();
             var existingVendor = await _context.Vendors.FindAsync(vendorId);
@@ -67,27 +77,26 @@ namespace PLTour.Vendor.Controllers
             if (existingVendor == null) return NotFound();
 
             // Upload logo mới qua cloudinary 
-            if (logoFile != null && logoFile.Length > 0)
+            if (avatarFile != null && avatarFile.Length > 0)
             {
-                // Xóa logo cũ
-                if (!string.IsNullOrEmpty(existingVendor.LogoUrl))
+                // Xóa ảnh cũ
+                if (!string.IsNullOrEmpty(existingVendor.AvatarUrl))
                 {
-                    var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingVendor.LogoUrl);
+                    var publicId = _cloudinaryService.ExtractPublicIdFromUrl(existingVendor.AvatarUrl);
                     if (!string.IsNullOrEmpty(publicId))
                         await _cloudinaryService.DeleteFileAsync(publicId);
                 }
 
-                // Upload logo mới
-                var logoUrl = await _cloudinaryService.UploadImageAsync(logoFile, "vendors");
-                existingVendor.LogoUrl = logoUrl;
+                // Upload ảnh mới
+                var avatarUrl = await _cloudinaryService.UploadImageAsync(avatarFile, "vendors");
+                existingVendor.AvatarUrl = avatarUrl;
             }
 
-            existingVendor.ShopName = vendor.ShopName;
+            existingVendor.BusinessName = vendor.BusinessName;
+            existingVendor.ContactName = vendor.ContactName;
             existingVendor.Description = vendor.Description;
-            existingVendor.Address = vendor.Address;
             existingVendor.Phone = vendor.Phone;
-            existingVendor.Latitude = vendor.Latitude;
-            existingVendor.Longitude = vendor.Longitude;
+            existingVendor.AvatarUrl = existingVendor.AvatarUrl;
             existingVendor.UpdatedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

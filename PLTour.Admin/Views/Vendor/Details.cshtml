@@ -27,9 +27,9 @@
                     <h5 class="mb-0"><i class="fas fa-store me-2"></i>Logo</h5>
                 </div>
                 <div class="card-body text-center">
-                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
                     {
-                        <img src="@Model.LogoUrl" alt="@Model.ShopName" class="img-fluid rounded" style="max-height: 200px;" />
+                        <img src="@Model.AvatarUrl" alt="@Model.BusinessName" class="img-fluid rounded" style="max-height: 200px;" />
                     }
                     else
                     {
@@ -63,11 +63,11 @@
                     <table class="table table-bordered">
                         <tr>
                             <th style="width: 150px;">Tên cửa hàng</th>
-                            <td>@Model.ShopName</td>
+                            <td>@Model.BusinessName</td>
                         </tr>
                         <tr>
-                            <th>Chủ cửa hàng</th>
-                            <td>@Model.OwnerName</td>
+                            <th>Người liên hệ</th>
+                            <td>@Model.ContactName</td>
                         </tr>
                         <tr>
                             <th>Email</th>

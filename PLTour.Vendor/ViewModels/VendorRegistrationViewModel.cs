@@ -7,12 +7,12 @@ namespace PLTour.Vendor.ViewModels
         [Required(ErrorMessage = "Tên cửa hàng không được để trống")]
         [StringLength(200, ErrorMessage = "Tên cửa hàng không quá 200 ký tự")]
         [Display(Name = "Tên cửa hàng")]
-        public string ShopName { get; set; } = string.Empty;
+        public string BusinessName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Tên chủ cửa hàng không được để trống")]
-        [StringLength(100, ErrorMessage = "Tên chủ cửa hàng không quá 100 ký tự")]
-        [Display(Name = "Tên chủ cửa hàng")]
-        public string OwnerName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Tên người liên hệ không được để trống")]
+        [StringLength(100, ErrorMessage = "Tên người liên hệ không quá 100 ký tự")]
+        [Display(Name = "Tên người liên hệ")]
+        public string ContactName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email không được để trống")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
@@ -34,10 +34,6 @@ namespace PLTour.Vendor.ViewModels
         [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
         public string ConfirmPassword { get; set; } = string.Empty;
 
-        [StringLength(500, ErrorMessage = "Địa chỉ không quá 500 ký tự")]
-        [Display(Name = "Địa chỉ")]
-        public string Address { get; set; } = string.Empty;
-
         [Display(Name = "Danh mục kinh doanh")]
         public int? CategoryId { get; set; }
 
@@ -45,13 +41,10 @@ namespace PLTour.Vendor.ViewModels
         [Display(Name = "Mô tả cửa hàng")]
         public string Description { get; set; } = string.Empty;
 
-        [Display(Name = "Logo cửa hàng")]
-        public IFormFile? LogoFile { get; set; }
+        [Display(Name = "Avatar / logo")]
+        public IFormFile? AvatarFile { get; set; }
 
-        [Display(Name = "Vị trí trên bản đồ (kinh độ)")]
-        public double? Longitude { get; set; }
-
-        [Display(Name = "Vị trí trên bản đồ (vĩ độ)")]
-        public double? Latitude { get; set; }
+        [Display(Name = "Gói đăng ký")]
+        public string Plan { get; set; } = "Free";
     }
 }

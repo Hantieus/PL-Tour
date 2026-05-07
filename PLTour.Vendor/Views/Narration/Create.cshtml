@@ -1,0 +1,79 @@
+@model PLTour.Shared.Models.Entities.Narration
+@{
+    ViewData["Title"] = "Thêm thuyết minh";
+    Layout = "_VendorLayout";
+    var location = ViewBag.Location as PLTour.Shared.Models.Entities.Location;
+    var languages = ViewBag.Languages as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-microphone-alt me-2"></i>@ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    @if (location != null)
+                    {
+                        <div class="alert alert-info">
+                            <strong>Địa điểm:</strong> @location.Name
+                        </div>
+                    }
+
+                    <form asp-controller="Narration" asp-action="Create" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="LocationId" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="LanguageId" class="form-label fw-bold">Ngôn ngữ</label>
+                            <select asp-for="LanguageId" class="form-select" asp-items="languages">
+                                <option value="">-- Chọn ngôn ngữ --</option>
+                            </select>
+                            <span asp-validation-for="LanguageId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label fw-bold">Tiêu đề</label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Content" class="form-label fw-bold">Nội dung</label>
+                            <textarea asp-for="Content" class="form-control" rows="6"></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Duration" class="form-label fw-bold">Thời lượng (giây)</label>
+                                    <input asp-for="Duration" class="form-control" type="number" min="0" />
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check mb-3">
+                                    <input asp-for="IsDefault" class="form-check-input" />
+                                    <label asp-for="IsDefault" class="form-check-label">Đặt làm mặc định</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Audio file</label>
+                            <input type="file" name="audioFile" class="form-control" accept="audio/*" />
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-controller="VendorStore" asp-action="Details" asp-route-id="@location?.LocationId" class="btn btn-secondary">Quay lại</a>
+                            <button type="submit" class="btn btn-primary">Lưu thuyết minh</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,6 @@
 ﻿@model PLTour.Shared.Models.Entities.Product
 @{
-    ViewData["Title"] = "Sửa món ăn";
+    ViewData["Title"] = "Sửa sản phẩm";
     Layout = "_VendorLayout";
 }
 
@@ -21,13 +21,13 @@
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                         <div class="mb-3">
-                            <label asp-for="Name" class="form-label fw-bold">Tên món ăn</label>
+                            <label asp-for="Name" class="form-label fw-bold">Tên sản phẩm</label>
                             <input asp-for="Name" class="form-control" />
                             <span asp-validation-for="Name" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Description" class="form-label fw-bold">Mô tả</label>
+                            <label asp-for="Description" class="form-label fw-bold">Mô tả sản phẩm</label>
                             <textarea asp-for="Description" class="form-control" rows="4"></textarea>
                         </div>
 
@@ -48,6 +48,11 @@
                                     <input asp-for="StockQuantity" class="form-control" type="number" min="0" />
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Cửa hàng</label>
+                            <input class="form-control" value="@(Model.Store?.StoreName ?? "Chưa rõ")" disabled />
                         </div>
 
                         <div class="mb-3">

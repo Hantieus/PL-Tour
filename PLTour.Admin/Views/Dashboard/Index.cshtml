@@ -21,6 +21,22 @@
         </div>
     </div>
     <div class="col-md-2">
+        <div class="card bg-secondary text-white h-100">
+            <div class="card-body">
+                <h6 class="card-title">Free</h6>
+                <h2 class="mb-0">@ViewBag.FreeVendors</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-warning text-dark h-100">
+            <div class="card-body">
+                <h6 class="card-title">Premium</h6>
+                <h2 class="mb-0">@ViewBag.PremiumVendors</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
         <div class="card bg-warning text-white h-100">
             <div class="card-body">
                 <h6 class="card-title">Chờ duyệt</h6>
@@ -82,7 +98,7 @@
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="mb-0">@vendor.ShopName</h6>
+                                        <h6 class="mb-0">@vendor.BusinessName</h6>
                                         <small class="text-muted">
                                             <i class="far fa-calendar-alt me-1"></i>
                                             @vendor.CreatedDate.ToString("dd/MM/yyyy HH:mm")

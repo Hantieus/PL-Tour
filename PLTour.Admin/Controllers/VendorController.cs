@@ -20,7 +20,7 @@ namespace PLTour.Admin.Controllers
         }
 
         // GET: Vendor
-        public async Task<IActionResult> Index(string searchString, string status = "", int page = 1)
+        public async Task<IActionResult> Index(string searchString, string status = "", string plan = "", int page = 1)
         {
             int pageSize = 10;
 
@@ -30,14 +30,19 @@ namespace PLTour.Admin.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                query = query.Where(v => v.ShopName.Contains(searchString)
-                                      || v.OwnerName.Contains(searchString)
+                query = query.Where(v => v.BusinessName.Contains(searchString)
+                                      || v.ContactName.Contains(searchString)
                                       || v.Email.Contains(searchString));
             }
 
             if (!string.IsNullOrEmpty(status))
             {
                 query = query.Where(v => v.Status == status);
+            }
+
+            if (!string.IsNullOrEmpty(plan))
+            {
+                query = query.Where(v => v.Plan == plan);
             }
 
             var totalItems = await query.CountAsync();
@@ -51,6 +56,7 @@ namespace PLTour.Admin.Controllers
             ViewBag.CurrentPage = page;
             ViewBag.SearchString = searchString;
             ViewBag.SelectedStatus = status;
+            ViewBag.SelectedPlan = plan;
 
             var statusCounts = await _context.Vendors
                 .GroupBy(v => v.Status)
@@ -98,6 +104,7 @@ namespace PLTour.Admin.Controllers
 
             var normalizedStatus = status?.Trim();
             var allowedStatuses = new[] { "Pending", "Approved", "Rejected", "Suspended" };
+
             if (string.IsNullOrWhiteSpace(normalizedStatus) || !allowedStatuses.Contains(normalizedStatus))
             {
                 ModelState.AddModelError("status", "Trạng thái vendor không hợp lệ.");
@@ -107,6 +114,7 @@ namespace PLTour.Admin.Controllers
             vendor.Status = normalizedStatus;
             vendor.Notes = notes?.Trim() ?? string.Empty;
             vendor.IsActive = normalizedStatus == "Approved";
+
             vendor.UpdatedDate = DateTime.UtcNow;
             vendor.ApprovedDate = normalizedStatus == "Approved" ? DateTime.UtcNow : vendor.ApprovedDate;
 
@@ -127,14 +135,14 @@ namespace PLTour.Admin.Controllers
             if (vendor == null) return NotFound();
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.CurrentLogo = vendor.LogoUrl; // Thêm dòng này để hiển thị logo cũ
+            ViewBag.CurrentLogo = vendor.AvatarUrl;
             return View(vendor);
         }
 
         // POST: Vendor/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("VendorId,ShopName,OwnerName,Email,Phone,Address,CategoryId,Description,Status,IsActive,Latitude,Longitude")] Vendor vendor, IFormFile? logoFile)
+        public async Task<IActionResult> Edit(int id, [Bind("VendorId,BusinessName,ContactName,Email,Phone,Address,CategoryId,Description,Status,IsActive,Latitude,Longitude,AvatarUrl")] Vendor vendor, IFormFile? logoFile)
         {
             if (id != vendor.VendorId) return NotFound();
 
@@ -158,18 +166,34 @@ namespace PLTour.Admin.Controllers
                     if (!ModelState.IsValid)
                     {
                         ViewBag.Categories = await _context.Categories.ToListAsync();
-                        ViewBag.CurrentLogo = existingVendor.LogoUrl;
+                        ViewBag.CurrentLogo = existingVendor.AvatarUrl;
                         return View(vendor);
                     }
 
                     if (logoFile != null && logoFile.Length > 0)
                     {
                         var uploadUrl = await _cloudinaryService.UploadImageAsync(logoFile, "vendors");
-                        existingVendor.LogoUrl = uploadUrl;
+                        existingVendor.AvatarUrl = uploadUrl;
                     }
 
-                    existingVendor.ShopName = vendor.ShopName;
-                    existingVendor.OwnerName = vendor.OwnerName;
+                    existingVendor.BusinessName = vendor.BusinessName;
+                    existingVendor.ContactName = vendor.ContactName;
+
+                    if (!ModelState.IsValid)
+                    {
+                        ViewBag.Categories = await _context.Categories.ToListAsync();
+                        ViewBag.CurrentLogo = existingVendor.AvatarUrl;
+                        return View(vendor);
+                    }
+
+                    if (logoFile != null && logoFile.Length > 0)
+                    {
+                        var uploadUrl = await _cloudinaryService.UploadImageAsync(logoFile, "vendors");
+                        existingVendor.AvatarUrl = uploadUrl;
+                    }
+
+                    existingVendor.BusinessName = vendor.BusinessName;
+                    existingVendor.ContactName = vendor.ContactName;
                     existingVendor.Email = vendor.Email;
                     existingVendor.Phone = vendor.Phone;
                     existingVendor.Address = vendor.Address;
@@ -177,6 +201,8 @@ namespace PLTour.Admin.Controllers
                     existingVendor.Description = vendor.Description;
                     existingVendor.Status = vendor.Status;
                     existingVendor.IsActive = vendor.IsActive;
+                    existingVendor.Plan = existingVendor.Plan ?? "Free";
+                    existingVendor.AvatarUrl = vendor.AvatarUrl ?? existingVendor.AvatarUrl;
                     existingVendor.Latitude = vendor.Latitude;
                     existingVendor.Longitude = vendor.Longitude;
                     existingVendor.UpdatedDate = DateTime.UtcNow;

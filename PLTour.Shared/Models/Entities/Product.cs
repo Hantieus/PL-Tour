@@ -24,7 +24,9 @@ public class Product
     [StringLength(200)]
     public string? ImageUrl { get; set; }
 
-    public int VendorId { get; set; }
+    public int? StoreId { get; set; }
+
+    public int? VendorId { get; set; }
 
     public int? CategoryId { get; set; }
 
@@ -37,6 +39,9 @@ public class Product
     public DateTime? UpdatedDate { get; set; }
 
     // Navigation properties
+    [ForeignKey("StoreId")]
+    public virtual VendorStore? Store { get; set; }
+
     [ForeignKey("VendorId")]
     public virtual Vendor? Vendor { get; set; }
 

@@ -11,11 +11,11 @@ public class Vendor
 
     [Required]
     [StringLength(200)]
-    public string ShopName { get; set; } = string.Empty;
+    public string BusinessName { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100)]
-    public string OwnerName { get; set; } = string.Empty;
+    public string ContactName { get; set; } = string.Empty;
 
     [Required]
     [EmailAddress]
@@ -29,7 +29,7 @@ public class Vendor
     public string PasswordHash { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string Address { get; set; } = string.Empty;
+    public string? Address { get; set; }
 
     public int? CategoryId { get; set; }
 
@@ -37,7 +37,7 @@ public class Vendor
     public string Description { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string LogoUrl { get; set; } = string.Empty;
+    public string? LogoUrl { get; set; }
 
     public double? Latitude { get; set; }
 
@@ -48,18 +48,25 @@ public class Vendor
 
     public bool IsActive { get; set; } = false;
 
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    [StringLength(30)]
+    public string Plan { get; set; } = "Free";
 
+    public DateTime? PlanExpiresAt { get; set; }
+
+    [StringLength(200)]
+    public string? AvatarUrl { get; set; }
+
+    [StringLength(500)]
+    public string? Notes { get; set; }
+
+    [ForeignKey("CategoryId")]
+    public virtual Category? Category { get; set; }
+
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedDate { get; set; }
     public DateTime? ApprovedDate { get; set; }
 
-    public DateTime? UpdatedDate { get; set; }
-
-    public string Notes { get; set; } = string.Empty;
-
-    // Navigation properties
-    [ForeignKey("CategoryId")]
-    public virtual Category Category { get; set; } = default!;
-
-    // THÊM DÒNG NÀY: Collection products
-    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+    public virtual ICollection<VendorStore> Stores { get; set; } = new List<VendorStore>();
 }

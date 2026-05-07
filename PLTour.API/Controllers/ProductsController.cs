@@ -25,12 +25,13 @@ namespace PLTour.API.Controllers
         {
             var query = _context.Products
                 .Include(p => p.Vendor)
+                .Include(p => p.Store)
                 .Include(p => p.Category)
                 .AsQueryable();
 
             if (vendorId.HasValue)
             {
-                query = query.Where(p => p.VendorId == vendorId);
+                query = query.Where(p => p.VendorId == vendorId.Value);
             }
 
             if (isAvailable.HasValue)
@@ -49,8 +50,8 @@ namespace PLTour.API.Controllers
                 Description = p.Description,
                 Price = p.Price,
                 ImageUrl = p.ImageUrl,
-                VendorId = p.VendorId,
-                VendorName = p.Vendor?.ShopName ?? "",
+                VendorId = p.VendorId ?? 0,
+                VendorName = p.Store?.StoreName ?? p.Vendor?.BusinessName ?? "",
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category?.Name ?? "",
                 IsAvailable = p.IsAvailable,
@@ -67,6 +68,7 @@ namespace PLTour.API.Controllers
         {
             var product = await _context.Products
                 .Include(p => p.Vendor)
+                .Include(p => p.Store)
                 .Include(p => p.Category)
                 .FirstOrDefaultAsync(p => p.ProductId == id);
 
@@ -82,8 +84,8 @@ namespace PLTour.API.Controllers
                 Description = product.Description,
                 Price = product.Price,
                 ImageUrl = product.ImageUrl,
-                VendorId = product.VendorId,
-                VendorName = product.Vendor?.ShopName ?? "",
+                VendorId = product.VendorId ?? 0,
+                VendorName = product.Store?.StoreName ?? product.Vendor?.BusinessName ?? "",
                 CategoryId = product.CategoryId,
                 CategoryName = product.Category?.Name ?? "",
                 IsAvailable = product.IsAvailable,
@@ -98,6 +100,7 @@ namespace PLTour.API.Controllers
         {
             var products = await _context.Products
                 .Include(p => p.Vendor)
+                .Include(p => p.Store)
                 .Include(p => p.Category)
                 .Where(p => p.VendorId == vendorId && p.IsAvailable)
                 .OrderByDescending(p => p.CreatedDate)
@@ -110,8 +113,8 @@ namespace PLTour.API.Controllers
                 Description = p.Description,
                 Price = p.Price,
                 ImageUrl = p.ImageUrl,
-                VendorId = p.VendorId,
-                VendorName = p.Vendor?.ShopName ?? "",
+                VendorId = p.VendorId ?? 0,
+                VendorName = p.Store?.StoreName ?? p.Vendor?.BusinessName ?? "",
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category?.Name ?? "",
                 IsAvailable = p.IsAvailable,

@@ -30,8 +30,14 @@ namespace PLTour.Vendor.Controllers
         public async Task<IActionResult> Index()
         {
             var vendorId = GetVendorId();
+            var storeIds = await _context.Set<VendorStore>()
+                .Where(s => s.VendorId == vendorId)
+                .Select(s => s.StoreId)
+                .ToListAsync();
+
             var products = await _context.Products
-                .Where(p => p.VendorId == vendorId)
+                .Include(p => p.Store)
+                .Where(p => p.StoreId.HasValue && storeIds.Contains(p.StoreId.Value))
                 .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
             return View(products);
@@ -39,8 +45,15 @@ namespace PLTour.Vendor.Controllers
 
         // Thêm món ăn
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            var vendorId = GetVendorId();
+            var stores = await _context.Set<VendorStore>()
+                .Where(s => s.VendorId == vendorId)
+                .OrderByDescending(s => s.CreatedDate)
+                .ToListAsync();
+
+            ViewBag.Stores = stores;
             return View();
         }
 
@@ -54,8 +67,40 @@ namespace PLTour.Vendor.Controllers
             // Xóa validation không cần thiết
             ModelState.Remove("Vendor");
             ModelState.Remove("Category");
+            ModelState.Remove("Store");
+
+            var store = product.StoreId.HasValue
+                ? await _context.Set<VendorStore>().Include(s => s.Location).FirstOrDefaultAsync(s => s.StoreId == product.StoreId.Value && s.VendorId == vendorId)
+                : null;
+            if (store == null)
+            {
+                ModelState.AddModelError(nameof(product.StoreId), "Cửa hàng không hợp lệ.");
+            }
+            else if (store.LocationId.HasValue)
+            {
+                var location = await _context.Locations.FirstOrDefaultAsync(l => l.LocationId == store.LocationId.Value);
+                ViewBag.LocationName = location?.Name;
+            }
 
             product.VendorId = vendorId;
+            if (product.StoreId == null)
+            {
+                ModelState.AddModelError(nameof(product.StoreId), "Vui lòng chọn cửa hàng.");
+            }
+
+            var productCountForStore = product.StoreId.HasValue
+                ? await _context.Products.CountAsync(p => p.StoreId == product.StoreId.Value)
+                : 0;
+            var storeLimit = 10;
+            if (store != null && store.Plan == "Premium")
+            {
+                storeLimit = 100;
+            }
+
+            if (productCountForStore >= storeLimit)
+            {
+                ModelState.AddModelError(string.Empty, $"Cửa hàng này đã đạt giới hạn {storeLimit} sản phẩm cho gói hiện tại.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -128,6 +173,7 @@ namespace PLTour.Vendor.Controllers
                 existingProduct.Price = product.Price;
                 existingProduct.IsAvailable = product.IsAvailable;
                 existingProduct.StockQuantity = product.StockQuantity;
+                existingProduct.StoreId = product.StoreId;
                 existingProduct.UpdatedDate = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();

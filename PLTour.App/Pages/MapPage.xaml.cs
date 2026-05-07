@@ -8,6 +8,8 @@ using Mapsui.Styles;
 using Mapsui.Tiling;
 using Mapsui.UI.Maui;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices.Sensors;
 using PLTour.App.Models;
 using PLTour.App.Services;
 using PLTour.Shared.Models.DTO;

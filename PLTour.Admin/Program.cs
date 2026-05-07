@@ -115,11 +115,93 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
-// Tạo database nếu chưa có
-using (var scope = app.Services.CreateScope())
+// Tạo database nếu chưa có và tự động bổ sung các cột mới cho Vendors
+try
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<PLTourDbContext>();
+
     dbContext.Database.EnsureCreated();
+    dbContext.Database.ExecuteSqlRaw(@"
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""BusinessName"" character varying(200) NOT NULL DEFAULT '';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""ContactName"" character varying(100) NOT NULL DEFAULT '';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Email"" character varying(255) NOT NULL DEFAULT '';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Phone"" character varying(20) NOT NULL DEFAULT '';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""PasswordHash"" text NOT NULL DEFAULT '';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Status"" character varying(50) NOT NULL DEFAULT 'Pending';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""IsActive"" boolean NOT NULL DEFAULT false;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Plan"" character varying(30) NOT NULL DEFAULT 'Free';
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""PlanExpiresAt"" timestamp with time zone NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""AvatarUrl"" character varying(200) NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Notes"" character varying(500) NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Address"" character varying(500) NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Description"" character varying(1000) NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""LogoUrl"" character varying(500) NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Latitude"" double precision NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""Longitude"" double precision NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""CategoryId"" integer NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""CreatedDate"" timestamp with time zone NOT NULL DEFAULT NOW();
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""UpdatedDate"" timestamp with time zone NULL;
+
+        ALTER TABLE ""Vendors""
+        ADD COLUMN IF NOT EXISTS ""ApprovedDate"" timestamp with time zone NULL;
+
+        UPDATE ""Vendors""
+        SET ""BusinessName"" = COALESCE(""BusinessName"", ""ShopName"", '')
+        WHERE ""BusinessName"" = '';
+
+        UPDATE ""Vendors""
+        SET ""ContactName"" = COALESCE(""ContactName"", ""OwnerName"", '')
+        WHERE ""ContactName"" = '';
+
+        ALTER TABLE ""Vendors"" DROP COLUMN IF EXISTS ""ShopName"";
+        ALTER TABLE ""Vendors"" DROP COLUMN IF EXISTS ""OwnerName"";
+
+        UPDATE ""Vendors""
+        SET ""Plan"" = 'Free'
+        WHERE ""Plan"" IS NULL OR ""Plan"" = '';
+    ");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Database init skipped: {ex.Message}");
 }
 
 app.Run();
