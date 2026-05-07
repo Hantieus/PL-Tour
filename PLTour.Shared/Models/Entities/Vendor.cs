@@ -11,55 +11,60 @@ public class Vendor
 
     [Required]
     [StringLength(200)]
-    public string ShopName { get; set; }
+    public string BusinessName { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100)]
-    public string OwnerName { get; set; }
+    public string ContactName { get; set; } = string.Empty;
 
     [Required]
     [EmailAddress]
-    public string Email { get; set; }
+    public string Email { get; set; } = string.Empty;
 
     [Required]
     [StringLength(20)]
-    public string Phone { get; set; }
+    public string Phone { get; set; } = string.Empty;
 
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
-
-    [StringLength(500)]
-    public string Address { get; set; }
-
-    public int? CategoryId { get; set; }
-
-    [StringLength(1000)]
-    public string Description { get; set; }
-
-    [StringLength(500)]
-    public string LogoUrl { get; set; }
-
-    public double? Latitude { get; set; }
-
-    public double? Longitude { get; set; }
 
     [StringLength(50)]
     public string Status { get; set; } = "Pending";
 
     public bool IsActive { get; set; } = false;
 
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    [StringLength(30)]
+    public string Plan { get; set; } = "Free";
 
+    public DateTime? PlanExpiresAt { get; set; }
+
+    [StringLength(200)]
+    public string? AvatarUrl { get; set; }
+
+    [StringLength(500)]
+    public string? Notes { get; set; }
+
+    // Legacy fields giữ để không vỡ code cũ trong giai đoạn chuyển đổi
+    [StringLength(500)]
+    public string? Address { get; set; }
+
+    [StringLength(1000)]
+    public string? Description { get; set; }
+
+    [StringLength(500)]
+    public string? LogoUrl { get; set; }
+
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
+    public int? CategoryId { get; set; }
+    public virtual Category? Category { get; set; }
+    public virtual ICollection<Product> Products { get; set; } = new List<Product>();
+
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedDate { get; set; }
     public DateTime? ApprovedDate { get; set; }
 
-    public DateTime? UpdatedDate { get; set; }
+    public virtual ICollection<VendorStore> Stores { get; set; } = new List<VendorStore>();
 
-    public string Notes { get; set; }
-
-    // Navigation properties
-    [ForeignKey("CategoryId")]
-    public virtual Category Category { get; set; }
-
-    // THÊM DÒNG NÀY: Collection products
-    public virtual ICollection<Product> Products { get; set; }
 }

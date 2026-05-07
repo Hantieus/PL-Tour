@@ -7,6 +7,13 @@ namespace PLTour.App.Services;
 
 public class LocationService
 {
+    public static LocationService? Shared { get; private set; }
+
+    public LocationService()
+    {
+        Shared = this;
+    }
+
     // THÊM BIẾN NÀY ĐỂ FIX LỖI: Thuộc tính này sẽ tự động đọc/ghi vào bộ nhớ máy (Preferences)
     public Location CurrentLocation
     {

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PLTour.App.Controls.PoiDetailPopup"
+             x:Name="ThisControl"
+             IsVisible="False"
+             BackgroundColor="#80000000">
+
+    <Grid Padding="20" HorizontalOptions="Fill" VerticalOptions="Fill">
+        <Border BackgroundColor="White"
+                Stroke="#E5E7EB"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 24"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                WidthRequest="380"
+                MaximumWidthRequest="420">
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.2" Radius="18" Offset="0,8" />
+            </Border.Shadow>
+
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" Padding="16">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Chi tiết địa điểm" FontSize="20" FontAttributes="Bold" TextColor="#111827" />
+                    <Button Grid.Column="1" Text="Đóng" BackgroundColor="Transparent" TextColor="#6B7280" Clicked="ClosePopup_Clicked" />
+                </Grid>
+
+                <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Spacing="12">
+                        <Border StrokeShape="RoundRectangle 18" StrokeThickness="0">
+                            <Image Source="{Binding PoiData.ImageUrl, Source={x:Reference ThisControl}}"
+                                   HeightRequest="210"
+                                   Aspect="AspectFill" />
+                        </Border>
+
+                        <Label Text="{Binding PoiData.Name, Source={x:Reference ThisControl}}"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="#111827" />
+
+                        <Label Text="{Binding PoiData.Category, Source={x:Reference ThisControl}}"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="#2A9D8F" />
+
+                        <Label Text="{Binding PoiData.Description, Source={x:Reference ThisControl}}"
+                               FontSize="14"
+                               TextColor="#374151"
+                               LineBreakMode="WordWrap" />
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button Grid.Column="0"
+                            Text="Xem bản đồ"
+                            CornerRadius="14"
+                            BackgroundColor="#EEF2F7"
+                            TextColor="#1F2937"
+                            Clicked="BtnViewMap_Clicked" />
+                    <Button Grid.Column="1"
+                            Text="{Binding PoiData.PlayButtonText, Source={x:Reference ThisControl}}"
+                            CornerRadius="14"
+                            BackgroundColor="{Binding PoiData.PlayButtonColor, Source={x:Reference ThisControl}}"
+                            TextColor="#111827"
+                            Clicked="BtnSpeak_Clicked" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

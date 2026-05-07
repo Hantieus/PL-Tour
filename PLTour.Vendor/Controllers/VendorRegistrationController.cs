@@ -6,7 +6,6 @@ using PLTour.Shared.Models.Entities;
 using PLTour.Vendor.ViewModels;
 using PLTour.Shared.Services;
 
-
 namespace PLTour.Vendor.Controllers
 {
     public class VendorRegistrationController : Controller
@@ -28,6 +27,11 @@ namespace PLTour.Vendor.Controllers
             ViewBag.Categories = await _context.Categories
                 .Where(c => c.IsActive)
                 .ToListAsync();
+            ViewBag.Plans = new[]
+            {
+                new { Value = "Free", Text = "Free - Miễn phí" },
+                new { Value = "Premium", Text = "Premium - Nâng cấp" }
+            };
             return View();
         }
 
@@ -59,28 +63,26 @@ namespace PLTour.Vendor.Controllers
                     }
 
                     // Xử lý upload logo qua API
-                    string? logoUrl = null;
-                    if (model.LogoFile != null && model.LogoFile.Length > 0)
+                    string? avatarUrl = null;
+                    if (model.AvatarFile != null && model.AvatarFile.Length > 0)
                     {
-                        logoUrl = await _cloudinaryService.UploadImageAsync(model.LogoFile, "vendors");
+                        avatarUrl = await _cloudinaryService.UploadImageAsync(model.AvatarFile, "vendors");
                     }
 
                     // Tạo vendor mới
                     var vendor = new PLTour.Shared.Models.Entities.Vendor
                     {
-                        ShopName = model.ShopName,
-                        OwnerName = model.OwnerName,
+                        BusinessName = model.BusinessName,
+                        ContactName = model.ContactName,
                         Email = model.Email,
                         Phone = model.Phone,
-                        Address = model.Address,
                         CategoryId = model.CategoryId,
                         Description = model.Description,
-                        LogoUrl = logoUrl,
-                        Latitude = model.Latitude,
-                        Longitude = model.Longitude,
+                        AvatarUrl = avatarUrl,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
                         Notes = "",
                         Status = "Pending",
+                        Plan = string.IsNullOrWhiteSpace(model.Plan) ? "Free" : model.Plan,
                         IsActive = false,
                         CreatedDate = DateTime.UtcNow,
                         UpdatedDate = DateTime.UtcNow
@@ -94,11 +96,19 @@ namespace PLTour.Vendor.Controllers
                 }
                 catch (Exception ex)
                 {
-                    ModelState.AddModelError("", "Có lỗi xảy ra: " + ex.Message);
+                    var errorMsg = ex.Message;
+                    if (ex.InnerException != null)
+                        errorMsg += " | Inner: " + ex.InnerException.Message;
+                    ModelState.AddModelError("", "Có lỗi xảy ra: " + errorMsg);
                 }
             }
 
             ViewBag.Categories = await _context.Categories.ToListAsync();
+            ViewBag.Plans = new[]
+            {
+                new { Value = "Free", Text = "Free - Miễn phí" },
+                new { Value = "Premium", Text = "Premium - Nâng cấp" }
+            };
             return View(model);
         }
 

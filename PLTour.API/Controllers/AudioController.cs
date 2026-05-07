@@ -5,32 +5,45 @@
 public class AudioController : ControllerBase
 {
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<AudioController> _logger;
+    private readonly HttpClient _httpClient;
 
-    public AudioController(IWebHostEnvironment env)
+    public AudioController(IWebHostEnvironment env, ILogger<AudioController> logger, IHttpClientFactory httpClientFactory)
     {
         _env = env;
+        _logger = logger;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     [HttpGet("generate")]
     public async Task<IActionResult> GenerateAudio([FromQuery] string text, [FromQuery] string langCode, [FromQuery] int narrationId)
     {
-        if (string.IsNullOrEmpty(text)) return BadRequest("Nội dung rỗng");
+        if (string.IsNullOrWhiteSpace(text)) return BadRequest("Nội dung rỗng");
+        if (string.IsNullOrWhiteSpace(_env.WebRootPath)) return StatusCode(500, "WebRootPath chưa được cấu hình");
 
-        // 1. Tạo thư mục lưu file tạm trên server
         string audioFolder = Path.Combine(_env.WebRootPath, "audio");
-        if (!Directory.Exists(audioFolder)) Directory.CreateDirectory(audioFolder);
+        if (!Directory.Exists(audioFolder))
+        {
+            try
+            {
+                Directory.CreateDirectory(audioFolder);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "Không có quyền ghi thư mục audio: {AudioFolder}", audioFolder);
+                return StatusCode(500, "Không có quyền ghi thư mục audio");
+            }
+        }
 
-        // 2. Kiểm tra xem file này đã từng được tạo chưa (dựa vào ID) để tránh gọi lại VoiceRSS
         string fileName = $"audio_narration_{narrationId}_{langCode}.mp3";
         string filePath = Path.Combine(audioFolder, fileName);
         string fileUrl = $"{Request.Scheme}://{Request.Host}/audio/{fileName}";
 
         if (System.IO.File.Exists(filePath))
         {
-            return Ok(new { url = fileUrl }); // Đã có file thì trả link luôn
+            return Ok(new { url = fileUrl });
         }
 
-        // 3. Nếu chưa có, gọi VoiceRSS API để tạo mới
         string voiceLang = langCode switch
         {
             "vi" => "vi-vn",
@@ -42,12 +55,9 @@ public class AudioController : ControllerBase
 
         string apiKey = "7d62828e8c0d49e58a472b35ffa64f17";
         string encodedText = Uri.EscapeDataString(text);
-        string requestUrl = $"http://api.voicerss.org/?key={apiKey}&hl={voiceLang}&src={encodedText}&c=MP3&f=16khz_16bit_mono";
+        string requestUrl = $"https://api.voicerss.org/?key={apiKey}&hl={voiceLang}&src={encodedText}&c=MP3&f=16khz_16bit_mono";
 
-        using var httpClient = new HttpClient();
-        byte[] audioBytes = await httpClient.GetByteArrayAsync(requestUrl);
-
-        // 4. Lưu file vào server
+        byte[] audioBytes = await _httpClient.GetByteArrayAsync(requestUrl);
         await System.IO.File.WriteAllBytesAsync(filePath, audioBytes);
 
         return Ok(new { url = fileUrl });

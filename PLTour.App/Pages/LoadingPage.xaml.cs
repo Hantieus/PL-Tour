@@ -1,3 +1,5 @@
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
 using PLTour.App.Services;
 
 namespace PLTour.App.Pages;
@@ -45,7 +47,7 @@ public partial class LoadingPage : ContentPage
         // Chuyển trang an toàn trên luồng chính (Main UI Thread)
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            Application.Current.MainPage = new AppShell();
+            Application.Current!.Windows[0].Page = new AppShell();
         });
     }
 }

@@ -1,0 +1,69 @@
+@model IEnumerable<PLTour.Shared.Models.Entities.VendorStore>
+@{
+    ViewData["Title"] = "Quản lý cửa hàng";
+    Layout = "_VendorLayout";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Quản lý cửa hàng</h2>
+            <p class="text-muted mb-0">Mỗi tài khoản vendor có thể quản lý nhiều cửa hàng.</p>
+        </div>
+        <a href="/vendor-store/create" class="btn btn-primary">+ Thêm cửa hàng</a>
+    </div>
+
+    <div class="alert alert-info">
+        Free: tối đa 1 cửa hàng. Premium: tối đa 5 cửa hàng. Gói Premium chỉ có hiệu lực khi còn hạn.
+    </div>
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="row g-3">
+        @foreach (var store in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-@(store.IsDefault ? "primary" : "light")">
+                    @if (!string.IsNullOrWhiteSpace(store.LogoUrl))
+                    {
+                        <img src="@store.LogoUrl" class="card-img-top" alt="@store.StoreName" style="height: 180px; object-fit: cover;" />
+                    }
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@store.StoreName</h5>
+                            <div class="d-flex gap-2">
+                                @if (store.IsDefault)
+                                {
+                                    <span class="badge bg-primary">Mặc định</span>
+                                }
+                                <span class="badge bg-@(store.Plan == "Premium" ? "warning" : "secondary")">@store.Plan</span>
+                            </div>
+                        </div>
+                        <p class="text-muted">@store.Description</p>
+                        <div class="small text-muted mb-2">
+                            <div>Địa chỉ: @(store.Address ?? "Chưa có")</div>
+                            <div>Trạng thái: @(store.IsActive ? "Hoạt động" : "Tạm tắt")</div>
+                            <div>Map POI: @(store.Location?.Name ?? "Chưa gắn Location")</div>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="/vendor-store/details/@store.StoreId" class="btn btn-sm btn-outline-secondary">Chi tiết</a>
+                            <a href="/vendor-store/edit/@store.StoreId" class="btn btn-sm btn-outline-primary">Sửa</a>
+                            <form asp-action="SetDefault" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@store.StoreId" />
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mặc định</button>
+                            </form>
+                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xóa cửa hàng này?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@store.StoreId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

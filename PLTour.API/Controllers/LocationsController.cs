@@ -28,7 +28,9 @@ namespace PLTour.API.Controllers
                 .Include(l => l.Category)
                 .Include(l => l.Narrations)
                     .ThenInclude(n => n.Language)
-                .Where(l => l.IsActive);
+                .Where(l => l.IsActive)
+                .OrderBy(l => l.OrderIndex)
+                .ThenBy(l => l.Name);
 
             if (lat.HasValue && lng.HasValue && radiusInMeters.HasValue)
             {

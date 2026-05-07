@@ -1,6 +1,6 @@
 ﻿@model PLTour.Shared.Models.Entities.Product
 @{
-    ViewData["Title"] = "Thêm món ăn";
+    ViewData["Title"] = "Thêm sản phẩm";
     Layout = "_VendorLayout";
 }
 
@@ -17,14 +17,14 @@
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                         <div class="mb-3">
-                            <label asp-for="Name" class="form-label fw-bold">Tên món ăn <span class="text-danger">*</span></label>
-                            <input asp-for="Name" class="form-control" placeholder="Ví dụ: Phở bò tái, Bún chả Hà Nội..." />
+                            <label asp-for="Name" class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
+                            <input asp-for="Name" class="form-control" placeholder="Ví dụ: Phở bò tái, combo, menu item..." />
                             <span asp-validation-for="Name" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="Description" class="form-label fw-bold">Mô tả</label>
-                            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Mô tả về món ăn, nguyên liệu, cách chế biến..."></textarea>
+                            <textarea asp-for="Description" class="form-control" rows="4" placeholder="Mô tả sản phẩm, món, dịch vụ..."></textarea>
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
@@ -41,8 +41,26 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label asp-for="StoreId" class="form-label fw-bold">Cửa hàng <span class="text-danger">*</span></label>
+                                    <select asp-for="StoreId" class="form-select" asp-items="@(new SelectList(ViewBag.Stores, "StoreId", "StoreName"))">
+                                        <option value="">-- Chọn cửa hàng --</option>
+                                    </select>
+                                    <span asp-validation-for="StoreId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label asp-for="StockQuantity" class="form-label">Số lượng tồn</label>
                                     <input asp-for="StockQuantity" class="form-control" type="number" min="0" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ghi chú</label>
+                                    <input class="form-control" value="Sản phẩm sẽ tự thuộc về cửa hàng đã chọn" disabled />
                                 </div>
                             </div>
                         </div>

@@ -1,0 +1,228 @@
+@model PLTour.Admin.ViewModels.MonitorDashboardViewModel
+@{
+    ViewData["Title"] = "Monitor Dashboard";
+}
+
+<style>
+    .stats-trigger {
+        border-radius: 0.375rem;
+        font-weight: 600;
+        min-height: 38px;
+    }
+    .chart-box {
+        position: relative;
+        min-height: 320px;
+    }
+    .chart-box canvas {
+        width: 100% !important;
+        height: 320px !important;
+    }
+    #statsLoading {
+        min-height: 260px;
+    }
+</style>
+
+<div class="row mb-3 align-items-end">
+    <div class="col-md-3 mb-2">
+        <label class="form-label">Lọc trạng thái</label>
+        <select id="statusFilter" class="form-select">
+            <option value="all">Tất cả</option>
+            <option value="online">Online</option>
+            <option value="stale">Stale</option>
+            <option value="offline">Offline</option>
+        </select>
+    </div>
+    <div class="col-md-3 mb-2">
+        <button id="refreshNow" class="btn btn-primary w-100">Refresh ngay</button>
+    </div>
+    <div class="col-md-3 mb-2">
+        <button id="showStats" class="btn btn-dark w-100 stats-trigger" data-bs-toggle="modal" data-bs-target="#monitorStatsModal">
+            <i class="fas fa-chart-pie me-2"></i>Thống kê
+            <span class="badge bg-light text-dark ms-2">4</span>
+        </button>
+    </div>
+    <div class="col-md-3 mb-2 text-md-end text-muted">
+        Tự động refresh mỗi 15 giây
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Tổng thiết bị</h6>
+                <h2 class="mb-0" id="totalCount">@Model.ActiveCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Online</h6>
+                <h2 class="mb-0" id="onlineCount">@Model.OnlineCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h6 class="card-title">Stale</h6>
+                <h2 class="mb-0" id="staleCount">@Model.StaleCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h6 class="card-title">Offline</h6>
+                <h2 class="mb-0" id="offlineCount">@Model.OfflineCount</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_StatsModal")
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Danh sách thiết bị</h5>
+        <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Index", "Dashboard")">Về Dashboard</a>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>DeviceId</th>
+                    <th>Tên máy</th>
+                    <th>Model</th>
+                    <th>OS</th>
+                    <th>App</th>
+                    <th>Pin</th>
+                    <th>Heartbeat</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="monitorTableBody">
+                @foreach (var item in Model.Devices)
+                {
+                    @await Html.PartialAsync("_MonitorRow", item)
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const refreshUrl = '@Url.Action("Index", "Monitor")';
+        const statsUrl = '@Url.Action("Stats", "Monitor")';
+        const refreshIntervalMs = 15000;
+        let statsCharts = {};
+        let statsLoaded = false;
+
+        function applyFilter() {
+            const selected = document.getElementById('statusFilter').value;
+            document.querySelectorAll('#monitorTableBody tr').forEach(row => {
+                const status = row.getAttribute('data-status');
+                row.style.display = (selected === 'all' || status === selected) ? '' : 'none';
+            });
+        }
+
+        async function refreshMonitor() {
+            const response = await fetch(refreshUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            const newBody = doc.querySelector('#monitorTableBody');
+            const newTotal = doc.querySelector('#totalCount');
+            const newOnline = doc.querySelector('#onlineCount');
+            const newStale = doc.querySelector('#staleCount');
+            const newOffline = doc.querySelector('#offlineCount');
+
+            if (newBody) document.getElementById('monitorTableBody').innerHTML = newBody.innerHTML;
+            if (newTotal) document.getElementById('totalCount').textContent = newTotal.textContent;
+            if (newOnline) document.getElementById('onlineCount').textContent = newOnline.textContent;
+            if (newStale) document.getElementById('staleCount').textContent = newStale.textContent;
+            if (newOffline) document.getElementById('offlineCount').textContent = newOffline.textContent;
+
+            applyFilter();
+        }
+
+        function destroyStatsCharts() {
+            Object.values(statsCharts).forEach(chart => chart && chart.destroy());
+            statsCharts = {};
+            statsLoaded = false;
+        }
+
+        function renderLoadingState() {
+            const modalBody = document.querySelector('#monitorStatsModal .modal-body');
+            modalBody.innerHTML = '<div id="statsLoading" class="d-flex flex-column align-items-center justify-content-center"><div class="spinner-border text-primary" role="status"></div><div class="mt-3 text-muted">Đang tải thống kê...</div></div>';
+        }
+
+        function ensureChartCanRender() {
+            return document.getElementById('eventTypeChart') && document.getElementById('topDevicesChart') && document.getElementById('heartbeatChart') && document.getElementById('onlineChart');
+        }
+
+        async function loadStats() {
+            if (statsLoaded) return;
+            renderLoadingState();
+            try {
+                const response = await fetch(statsUrl);
+                const data = await response.json();
+                const modalBody = document.querySelector('#monitorStatsModal .modal-body');
+                modalBody.innerHTML = document.getElementById('statsTabsWrapper').innerHTML;
+                statsLoaded = true;
+                destroyStatsCharts();
+                if (!ensureChartCanRender()) return;
+
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                };
+
+                statsCharts.eventTypeChart = new Chart(document.getElementById('eventTypeChart'), {
+                    type: 'bar',
+                    data: { labels: data.eventTypeChart.labels, datasets: [{ data: data.eventTypeChart.values, backgroundColor: '#0d6efd' }] },
+                    options: commonOptions
+                });
+
+                statsCharts.topDevicesChart = new Chart(document.getElementById('topDevicesChart'), {
+                    type: 'bar',
+                    data: { labels: data.topDevicesChart.labels, datasets: [{ data: data.topDevicesChart.values, backgroundColor: '#198754' }] },
+                    options: commonOptions
+                });
+
+                statsCharts.heartbeatChart = new Chart(document.getElementById('heartbeatChart'), {
+                    type: 'line',
+                    data: { labels: data.heartbeatByHourChart.labels, datasets: [{ data: data.heartbeatByHourChart.values, borderColor: '#fd7e14', tension: 0.3 }] },
+                    options: commonOptions
+                });
+
+                statsCharts.onlineChart = new Chart(document.getElementById('onlineChart'), {
+                    type: 'line',
+                    data: { labels: data.onlineByTimeChart.labels, datasets: [{ data: data.onlineByTimeChart.values, borderColor: '#6f42c1', tension: 0.3 }] },
+                    options: commonOptions
+                });
+            } catch (e) {
+                const modalBody = document.querySelector('#monitorStatsModal .modal-body');
+                modalBody.innerHTML = '<div class="alert alert-danger">Không tải được thống kê.</div>';
+                statsLoaded = false;
+            }
+        }
+
+        document.getElementById('statusFilter').addEventListener('change', applyFilter);
+        document.getElementById('refreshNow').addEventListener('click', async () => {
+            await refreshMonitor();
+        });
+
+        const modalEl = document.getElementById('monitorStatsModal');
+        modalEl.addEventListener('show.bs.modal', loadStats);
+        modalEl.addEventListener('hidden.bs.modal', destroyStatsCharts);
+
+        setInterval(refreshMonitor, refreshIntervalMs);
+        applyFilter();
+    </script>
+}

@@ -9,10 +9,10 @@ public class Location
 
     [Required]
     [StringLength(200)]
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     [StringLength(500)]
-    public string? Description { get; set; } // Mô tả ngắn (có thể dùng chung)
+    public string Description { get; set; } = string.Empty; // Mô tả ngắn (có thể dùng chung)
 
     [Required]
     public double Latitude { get; set; }
@@ -21,7 +21,7 @@ public class Location
     public double Longitude { get; set; }
 
     [StringLength(500)]
-    public string? Address { get; set; }
+    public string Address { get; set; } = string.Empty;
 
     public int CategoryId { get; set; }
 

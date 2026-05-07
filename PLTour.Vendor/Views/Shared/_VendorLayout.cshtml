@@ -25,17 +25,17 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="VendorProduct" asp-action="Index">
-                            <i class="fas fa-utensils me-2"></i>Món ăn
+                            <i class="fas fa-utensils me-2"></i>Sản phẩm theo cửa hàng
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="VendorImage" asp-action="Index">
-                            <i class="fas fa-images me-1"></i>Thư viện ảnh
+                            <i class="fas fa-images me-1"></i>Ảnh thương hiệu
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="VendorDashboard" asp-action="EditProfile">
-                            <i class="fas fa-store me-1"></i>Thông tin quán
+                            <i class="fas fa-store me-1"></i>Hồ sơ vendor
                         </a>
                     </li>
                     <li class="nav-item">
@@ -50,7 +50,7 @@
                             <i class="fas fa-user-circle me-1"></i>@User.Identity?.Name
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/vendor/profile"><i class="fas fa-store me-2"></i>Thông tin quán</a></li>
+                            <li><a class="dropdown-item" href="/vendor-dashboard/editprofile"><i class="fas fa-store me-2"></i>Hồ sơ vendor</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="/vendor-login/logout"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
                         </ul>

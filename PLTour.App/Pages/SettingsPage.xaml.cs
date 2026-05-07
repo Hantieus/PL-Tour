@@ -1,3 +1,5 @@
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
 using System.Globalization;
 
@@ -45,6 +47,7 @@ public partial class SettingsPage : ContentPage
 
         // Lưu
         Preferences.Default.Set("UserLanguage", langCode);
+        _ = PLTour.App.Services.DeviceMonitorService.Instance.TrackEventAsync("language_change", new PLTour.Shared.Models.DTO.AnalyticsEventDto { LanguageCode = langCode, Keyword = "settings" });
 
         // Đổi ngôn ngữ hệ thống
         var culture = new CultureInfo(langCode);
