@@ -29,7 +29,7 @@ public class Vendor
     public string PasswordHash { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string Address { get; set; } = string.Empty;
+    public string? Address { get; set; }
 
     public int? CategoryId { get; set; }
 
@@ -37,7 +37,7 @@ public class Vendor
     public string Description { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string LogoUrl { get; set; } = string.Empty;
+    public string? LogoUrl { get; set; }
 
     public double? Latitude { get; set; }
 
