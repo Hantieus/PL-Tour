@@ -1,12 +1,28 @@
 # PRD — PL-Tour
 
-**Phiên bản:** 1.2  
+**Phiên bản:** 1.3  
 **Ngày cập nhật:** 08/05/2026  
 **Phạm vi:** Hệ thống PL-Tour gồm API, Admin, Vendor, và Mobile App
 
 ---
 
-## 1. Tóm tắt sản phẩm
+## Mục lục
+
+1. [Tổng quan sản phẩm](#1-tổng-quan-sản-phẩm)
+2. [Mục tiêu và phạm vi](#2-mục-tiêu-và-phạm-vi)
+3. [Đối tượng sử dụng](#3-đối-tượng-sử-dụng)
+4. [Yêu cầu chức năng](#4-yêu-cầu-chức-năng)
+5. [Yêu cầu phi chức năng](#5-yêu-cầu-phi-chức-năng)
+6. [Sơ đồ nghiệp vụ](#6-sơ-đồ-nghiệp-vụ)
+7. [Luồng nghiệp vụ chính](#7-luồng-nghiệp-vụ-chính)
+8. [Dữ liệu chính](#8-dữ-liệu-chính)
+9. [Rủi ro và giả định](#9-rủi-ro-và-giả-định)
+10. [Tiêu chí hoàn thành](#10-tiêu-chí-hoàn-thành)
+11. [Ghi chú triển khai](#11-ghi-chú-triển-khai)
+
+---
+
+## 1. Tổng quan sản phẩm
 
 PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá địa điểm, xem tour trên bản đồ, quét QR, nghe thuyết minh đa ngôn ngữ, và theo dõi thông tin dịch vụ từ các vendor. Hệ thống gồm:
 
@@ -18,7 +34,9 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 
 ---
 
-## 2. Mục tiêu
+## 2. Mục tiêu và phạm vi
+
+### 2.1 Mục tiêu
 
 1. Hỗ trợ khách du lịch tra cứu điểm đến nhanh và trực quan.
 2. Cung cấp trải nghiệm thuyết minh theo ngôn ngữ và audio.
@@ -26,9 +44,22 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 4. Cho phép vendor đăng ký, được duyệt, rồi quản lý cửa hàng/sản phẩm.
 5. Đảm bảo app mobile có thể gửi heartbeat và analytics để admin giám sát.
 
+### 2.2 Phạm vi
+
+#### Trong phạm vi
+- API đọc/ghi dữ liệu tour, location, narration, vendor, monitor.
+- Admin dashboard và monitor thiết bị.
+- Vendor đăng ký, đăng nhập, cập nhật profile, quản lý sản phẩm.
+- Mobile app xem bản đồ, nghe narration, gửi heartbeat.
+
+#### Ngoài phạm vi
+- Thanh toán online phức tạp.
+- Booking engine riêng.
+- Offline sync đầy đủ hai chiều.
+
 ---
 
-## 3. Người dùng mục tiêu
+## 3. Đối tượng sử dụng
 
 ### 3.1 Khách du lịch
 - Dùng app mobile để xem tour, bản đồ, POI, nghe audio/TTS.
@@ -46,7 +77,7 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 
 ---
 
-## 4. Phạm vi chức năng
+## 4. Yêu cầu chức năng
 
 ### 4.1 API
 - Đăng nhập và cấp JWT.
@@ -78,29 +109,7 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 
 ---
 
-## 5. Yêu cầu chi tiết
-
-### 5.1 Mobile App
-- Tải dữ liệu từ API thành công khi app khởi động hoặc `OnAppearing`.
-- Hiển thị POI trên bản đồ.
-- Hỗ trợ auto-play thuyết minh khi vào vùng POI nếu được bật.
-- Chặn phát lặp khi người dùng vẫn còn ở trong vùng.
-- Gửi heartbeat theo chu kỳ để admin monitor nhận biết thiết bị.
-- Gửi analytics event khi mở app, mở màn hình, chọn ngôn ngữ, phát audio, quét QR.
-
-### 5.2 Admin Monitor
-- Hiển thị danh sách device và trạng thái theo heartbeat gần nhất.
-- Hiển thị thông tin thiết bị: tên máy, model, OS, app version, pin, vị trí, thời gian heartbeat.
-- Tự động phân loại `online`, `stale`, `offline` theo thời gian.
-
-### 5.3 Vendor
-- Đăng ký vendor với thông tin cửa hàng và liên hệ.
-- Chờ admin duyệt trước khi login được.
-- Cho phép sửa profile, upload logo, cập nhật địa chỉ và mô tả.
-
----
-
-## 6. Yêu cầu phi chức năng
+## 5. Yêu cầu phi chức năng
 
 - **Tính ổn định:** retry queue cho heartbeat/analytics khi mạng yếu.
 - **Tính nhất quán:** entity shared giữa các project phải đồng bộ với schema DB.
@@ -110,9 +119,9 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 
 ---
 
-## 7. Sơ đồ nghiệp vụ chính
+## 6. Sơ đồ nghiệp vụ
 
-### 7.1 Sơ đồ ngữ cảnh hệ thống
+### 6.1 Sơ đồ ngữ cảnh hệ thống
 
 ```mermaid
 flowchart LR
@@ -137,7 +146,7 @@ flowchart LR
   VEN --> DB
 ```
 
-### 7.2 Sơ đồ use case tổng hợp
+### 6.2 Sơ đồ use case tổng hợp
 
 ```mermaid
 flowchart TB
@@ -168,7 +177,7 @@ flowchart TB
   U3 --> UC8
 ```
 
-### 7.3 Activity — khách mở app và tải dữ liệu
+### 6.3 Activity — khách mở app và tải dữ liệu
 
 ```mermaid
 flowchart TD
@@ -184,7 +193,7 @@ flowchart TD
   E --> End
 ```
 
-### 7.4 Sequence — app gửi heartbeat cho admin
+### 6.4 Sequence — app gửi heartbeat cho admin
 
 ```mermaid
 sequenceDiagram
@@ -206,7 +215,7 @@ sequenceDiagram
   API-->>ADM: JSON danh sách thiết bị
 ```
 
-### 7.5 Activity — admin duyệt vendor
+### 6.5 Activity — admin duyệt vendor
 
 ```mermaid
 flowchart TD
@@ -222,7 +231,7 @@ flowchart TD
   H --> End([Kết thúc])
 ```
 
-### 7.6 Sequence — vendor đăng ký và login
+### 6.6 Sequence — vendor đăng ký và login
 
 ```mermaid
 sequenceDiagram
@@ -244,7 +253,7 @@ sequenceDiagram
   API-->>WEB: Cookie / lỗi chờ duyệt
 ```
 
-### 7.7 Activity — phát narration trong app
+### 6.7 Activity — phát narration trong app
 
 ```mermaid
 flowchart TD
@@ -260,22 +269,22 @@ flowchart TD
 
 ---
 
-## 8. Luồng nghiệp vụ chính
+## 7. Luồng nghiệp vụ chính
 
-### 8.1 Khách mở app
+### 7.1 Khách mở app
 1. App tải tour/location từ API.
 2. Map render POI.
 3. App chọn narration theo ngôn ngữ hiện tại.
 4. Nếu có `AudioUrl` thì phát audio, nếu không thì dùng TTS.
 5. App gửi heartbeat và analytics về API.
 
-### 8.2 Admin theo dõi thiết bị
+### 7.2 Admin theo dõi thiết bị
 1. App gửi heartbeat về `POST /api/monitor/heartbeat`.
 2. API cập nhật hoặc tạo record thiết bị trong bảng `ActiveDevices`.
 3. Admin mở trang Monitor để xem danh sách thiết bị.
 4. Trang Monitor đọc dữ liệu từ `GET /api/monitor/active-devices`.
 
-### 8.3 Vendor đăng ký và được duyệt
+### 7.3 Vendor đăng ký và được duyệt
 1. Vendor đăng ký gian hàng.
 2. Tài khoản ở trạng thái pending.
 3. Admin duyệt vendor.
@@ -283,9 +292,9 @@ flowchart TD
 
 ---
 
-## 9. Dữ liệu chính
+## 8. Dữ liệu chính
 
-### 9.1 Shared entities
+### 8.1 Shared entities
 - `Vendor`
 - `Product`
 - `Tour`
@@ -297,23 +306,24 @@ flowchart TD
 - `ActiveDevice`
 - `AnalyticsEvent`
 
-### 9.2 Các điểm cần lưu ý
+### 8.2 Các điểm cần lưu ý
 - Một số cột trong DB có thể là null.
 - Model cần khớp schema hiện tại để tránh lỗi cast.
 - Base URL API của app và heartbeat phải đồng nhất hoặc được cấu hình rõ ràng.
 
 ---
 
-## 10. Rủi ro hiện tại
+## 9. Rủi ro và giả định
 
 1. Sai base URL giữa app data và heartbeat.
 2. Schema DB và entity dễ bị lệch khi merge nhiều nhánh.
 3. Một số cột nullable trong DB có thể gây runtime exception nếu model không cho phép null.
 4. Vendor/Admin/App dùng chung entity nên cần đồng bộ rất cẩn thận.
+5. Giả định hệ thống sẽ chạy với mạng ổn định đủ để gửi heartbeat định kỳ.
 
 ---
 
-## 11. Tiêu chí hoàn thành
+## 10. Tiêu chí hoàn thành
 
 - App tải dữ liệu tour/location thành công.
 - Admin Monitor nhận heartbeat và hiển thị thiết bị.
@@ -323,14 +333,9 @@ flowchart TD
 
 ---
 
-## 12. Ghi chú triển khai
+## 11. Ghi chú triển khai
 
 - Nên dùng một cấu hình base URL tập trung cho app.
 - Nên có migration/backfill nếu DB có dữ liệu cũ thiếu cột mới.
 - Khi cập nhật entity `Vendor`, phải kiểm tra toàn bộ Admin + Vendor + API.
-
----
-
-## 13. Kết luận
-
-PL-Tour tập trung vào trải nghiệm du lịch theo bản đồ, QR, audio đa ngôn ngữ, đồng thời cung cấp bộ công cụ quản trị và vendor để vận hành hệ thống. PRD này nên được cập nhật khi schema hoặc luồng nghiệp vụ thay đổi.
+- PRD này nên được cập nhật theo mỗi lần thay đổi schema hoặc luồng nghiệp vụ.
