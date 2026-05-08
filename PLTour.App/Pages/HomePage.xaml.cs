@@ -168,7 +168,7 @@ public partial class HomePage : ContentPage
         if (string.IsNullOrEmpty(url)) return url;
         if (url.Contains("localhost"))
         {
-            url = url.Replace("localhost:7291", "q0x087zj-7291.asse.devtunnels.ms");
+            url = url.Replace("localhost:7291", "q0x087zj-5229.asse.devtunnels.ms");
             url = url.Replace("http://", "https://");
         }
         return url;

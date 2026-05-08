@@ -28,13 +28,40 @@ public class DeviceMonitorService
     {
         Instance = this;
 
+        const string DevTunnelUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
+        const string LanUrl = "http://192.168.100.123:5229/";
+        const string RenderUrl = "https://pl-tour-production.up.railway.app/";
+
 #if DEBUG
-        _baseUrl = "http://192.168.100.123:5229/";
-        //P:192.168.100.123:5229
-        //L:192.168.2.6:5229
+        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
+        // Mặc định dùng Dev Tunnel
+        _baseUrl = DevTunnelUrl;
 #else
-        _baseUrl = "https://pl-tour-production.up.railway.app/";
+        // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
+        // Mặc định dùng Render
+        _baseUrl = RenderUrl;
 #endif
+
+        // Cho phép đổi sang LAN hoặc Render bằng biến môi trường
+        // PLTOUR_MONITOR_MODE = devtunnel | lan | render
+        var monitorMode = Environment.GetEnvironmentVariable("PLTOUR_MONITOR_MODE")?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(monitorMode))
+        {
+            _baseUrl = monitorMode switch
+            {
+                "lan" => LanUrl,
+                "render" => RenderUrl,
+                _ => DevTunnelUrl
+            };
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] App đang kết nối tới: {_baseUrl}");
+
+        var handler = new HttpClientHandler
+        {
+            // Bỏ qua lỗi chứng chỉ SSL khi chạy HTTP ở local
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+        };
 
         _heartbeatUrl = $"{_baseUrl.TrimEnd('/')}/api/monitor/heartbeat";
         _eventUrl = $"{_baseUrl.TrimEnd('/')}/api/monitor/event";

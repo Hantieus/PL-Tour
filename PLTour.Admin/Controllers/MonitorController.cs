@@ -19,8 +19,8 @@ public class MonitorController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var cutoffOnline = DateTime.UtcNow.AddMinutes(-2);
-        var cutoffStale = DateTime.UtcNow.AddMinutes(-10);
+        var cutoffOnline = DateTime.UtcNow.AddMinutes(-1);
+        var cutoffStale = DateTime.UtcNow.AddMinutes(-2);
 
         var devices = await _context.ActiveDevices
             .OrderByDescending(x => x.LastHeartbeat)
@@ -60,8 +60,8 @@ public class MonitorController : Controller
         if (device == null)
             return NotFound();
 
-        var cutoffOnline = DateTime.UtcNow.AddMinutes(-2);
-        var cutoffStale = DateTime.UtcNow.AddMinutes(-10);
+        var cutoffOnline = DateTime.UtcNow.AddMinutes(-1);
+        var cutoffStale = DateTime.UtcNow.AddMinutes(-2);
         var status = device.LastHeartbeat >= cutoffOnline ? "online" : device.LastHeartbeat >= cutoffStale ? "stale" : "offline";
 
         return View(new ActiveDeviceDto
@@ -82,7 +82,7 @@ public class MonitorController : Controller
         });
     }
 
-    [HttpGet("stats")]
+    [HttpGet]
     public async Task<IActionResult> Stats()
     {
         var since24Hours = DateTime.UtcNow.AddHours(-24);
@@ -123,6 +123,8 @@ public class MonitorController : Controller
             onlineTimeline.Add(new LabelValuePoint { Label = label, Value = onlineCount });
         }
 
+        var onlineTimelinePoints = onlineTimeline;
+
         var vm = new MonitorStatsViewModel
         {
             EventTypeChart = new ChartDataViewModel
@@ -142,8 +144,8 @@ public class MonitorController : Controller
             },
             OnlineByTimeChart = new ChartDataViewModel
             {
-                Labels = onlineTimeline.Select(x => x.Label).ToList(),
-                Values = onlineTimeline.Select(x => x.Value).ToList()
+                Labels = onlineTimelinePoints.Select(x => x.Label).ToList(),
+                Values = onlineTimelinePoints.Select(x => x.Value).ToList()
             }
         };
 

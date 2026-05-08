@@ -167,12 +167,16 @@
 
         async function loadStats() {
             if (statsLoaded) return;
+            const tabsTemplate = document.getElementById('statsTabsWrapper');
+            if (!tabsTemplate) return;
+
+            const tabsHtml = tabsTemplate.innerHTML;
             renderLoadingState();
             try {
                 const response = await fetch(statsUrl);
                 const data = await response.json();
                 const modalBody = document.querySelector('#monitorStatsModal .modal-body');
-                modalBody.innerHTML = document.getElementById('statsTabsWrapper').innerHTML;
+                modalBody.innerHTML = tabsHtml;
                 statsLoaded = true;
                 destroyStatsCharts();
                 if (!ensureChartCanRender()) return;
