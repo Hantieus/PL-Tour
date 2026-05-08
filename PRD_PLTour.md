@@ -1,6 +1,6 @@
 # PRD — PL-Tour
 
-**Phiên bản:** 1.4  
+**Phiên bản:** 1.5  
 **Ngày cập nhật:** 08/05/2026  
 **Phạm vi:** Hệ thống PL-Tour gồm API, Admin, Vendor, và Mobile App
 
@@ -9,16 +9,18 @@
 ## Mục lục
 
 1. [Tổng quan sản phẩm](#1-tổng-quan-sản-phẩm)
-2. [Mục tiêu và phạm vi](#2-mục-tiêu-và-phạm-vi)
-3. [Đối tượng sử dụng](#3-đối-tượng-sử-dụng)
-4. [Danh mục chức năng](#4-danh-mục-chức-năng)
-5. [Trạng thái hoàn thiện chức năng](#5-trạng-thái-hoàn-thiện-chức-năng)
-6. [Sơ đồ nghiệp vụ đầy đủ](#6-sơ-đồ-nghiệp-vụ-đầy-đủ)
-7. [Luồng nghiệp vụ chính](#7-luồng-nghiệp-vụ-chính)
-8. [Dữ liệu chính](#8-dữ-liệu-chính)
-9. [Rủi ro, giả định và điểm còn thiếu](#9-rủi-ro-giả-định-và-điểm-còn-thiếu)
-10. [Tiêu chí hoàn thành](#10-tiêu-chí-hoàn-thành)
-11. [Ghi chú triển khai](#11-ghi-chú-triển-khai)
+2. [Kiến trúc hệ thống](#2-kiến-trúc-hệ-thống)
+3. [Phân rã chức năng](#3-phân-rã-chức-năng)
+4. [Chương chức năng Mobile App](#4-chương-chức-năng-mobile-app)
+5. [Chương chức năng Admin](#5-chương-chức-năng-admin)
+6. [Chương chức năng Vendor](#6-chương-chức-năng-vendor)
+7. [Chương chức năng API](#7-chương-chức-năng-api)
+8. [Sơ đồ nghiệp vụ chi tiết theo chức năng](#8-sơ-đồ-nghiệp-vụ-chi-tiết-theo-chức-năng)
+9. [Trạng thái hoàn thiện](#9-trạng-thái-hoàn-thiện)
+10. [Dữ liệu chính](#10-dữ-liệu-chính)
+11. [Rủi ro, giả định và điểm còn thiếu](#11-rủi-ro-giả-định-và-điểm-còn-thiếu)
+12. [Tiêu chí hoàn thành](#12-tiêu-chí-hoàn-thành)
+13. [Ghi chú triển khai](#13-ghi-chú-triển-khai)
 
 ---
 
@@ -34,369 +36,963 @@ PL-Tour là nền tảng du lịch thông minh giúp người dùng khám phá �
 
 ---
 
-## 2. Mục tiêu và phạm vi
+## 2. Kiến trúc hệ thống
 
-### 2.1 Mục tiêu
+### 2.1 Thành phần
 
-1. Hỗ trợ khách du lịch tra cứu điểm đến nhanh và trực quan.
-2. Cung cấp trải nghiệm thuyết minh theo ngôn ngữ và audio.
-3. Cho phép admin quản lý nội dung, vendor, và thiết bị monitor.
-4. Cho phép vendor đăng ký, được duyệt, rồi quản lý cửa hàng/sản phẩm.
-5. Đảm bảo app mobile có thể gửi heartbeat và analytics để admin giám sát.
+- **Mobile App (`PLTour.App`)**: hiển thị tour, map, POI, QR, narration, heartbeat.
+- **Admin (`PLTour.Admin`)**: quản trị nội dung, vendor, analytics, monitor.
+- **Vendor (`PLTour.Vendor`)**: đăng ký, đăng nhập, quản lý cửa hàng/sản phẩm.
+- **API (`PLTour.API`)**: xử lý nghiệp vụ, lưu DB, trả dữ liệu cho các client.
+- **Shared (`PLTour.Shared`)**: entity/DTO dùng chung.
 
-### 2.2 Phạm vi
+### 2.2 Nguyên tắc phân rã
 
-#### Trong phạm vi
-- API đọc/ghi dữ liệu tour, location, narration, vendor, monitor.
-- Admin dashboard, analytics, và monitor thiết bị.
-- Vendor đăng ký, đăng nhập, cập nhật profile, quản lý cửa hàng/sản phẩm/ảnh.
-- Mobile app xem bản đồ, quét QR, nghe narration, gửi heartbeat và analytics.
+Mỗi chức năng nên được mô tả riêng để:
 
-#### Ngoài phạm vi
-- Thanh toán online phức tạp end-to-end.
-- Booking engine riêng.
-- Offline sync đầy đủ hai chiều.
-- Push notification realtime.
+- Đếm được có bao nhiêu chức năng.
+- Biết chức năng nào đã xong, chức năng nào còn thiếu.
+- Mỗi chức năng có 1 sequence riêng.
+- Sequence phải chỉ rõ service / controller / method nào gọi method nào.
 
 ---
 
-## 3. Đối tượng sử dụng
+## 3. Phân rã chức năng
 
-### 3.1 Khách du lịch
-- Dùng app mobile để xem tour, bản đồ, POI, nghe audio/TTS.
-- Quét QR để mở nhanh nội dung liên quan.
-- Theo dõi lịch sử phát âm thanh và thao tác gần nhất.
+### 3.1 Chức năng của Mobile App
 
-### 3.2 Admin
-- Quản lý category, location, tour, narration, vendor.
-- Xem dashboard, analytics, monitor thiết bị.
-- Theo dõi tình trạng heartbeat, online/stale/offline.
+1. Khởi tạo ứng dụng.
+2. Chọn ngôn ngữ.
+3. Tải tour và location.
+4. Hiển thị bản đồ và POI.
+5. Xem chi tiết địa điểm.
+6. Quét QR.
+7. Phát narration audio.
+8. Đọc narration bằng TTS.
+9. Ghi lịch sử phát.
+10. Gửi heartbeat thiết bị.
+11. Gửi analytics event.
+12. Quản lý queue khi mạng yếu.
+13. Tự động phát theo lịch sử / preference.
 
-### 3.3 Vendor
-- Đăng ký gian hàng.
-- Đăng nhập sau khi được duyệt.
-- Cập nhật hồ sơ, logo, ảnh, cửa hàng, sản phẩm.
+### 3.2 Chức năng của Admin
 
----
+1. Đăng nhập admin.
+2. Xem dashboard tổng quan.
+3. Quản lý category.
+4. Quản lý location.
+5. Quản lý tour.
+6. Quản lý narration.
+7. Duyệt vendor.
+8. Quản lý vendor.
+9. Xem monitor thiết bị.
+10. Xem chi tiết thiết bị.
+11. Xem analytics dashboard.
+12. Lọc / thống kê dữ liệu monitor.
 
-## 4. Danh mục chức năng
+### 3.3 Chức năng của Vendor
 
-### 4.1 API
+1. Đăng ký vendor.
+2. Đăng nhập vendor.
+3. Cập nhật profile.
+4. Quản lý store.
+5. Quản lý sản phẩm.
+6. Quản lý ảnh vendor.
+7. Quản lý subscription.
 
-#### Đã có / đang vận hành
-- Đăng nhập và cấp JWT cho các luồng cần auth.
-- Trả danh sách tour và location.
-- Trả narration theo ngôn ngữ.
-- Ghi nhận heartbeat thiết bị.
-- Ghi nhận analytics event.
-- Trả danh sách thiết bị đang hoạt động.
-- Trả chi tiết thiết bị theo `DeviceId`.
-- Ghi nhận dữ liệu QR / audio / tour theo controller hiện có.
+### 3.4 Chức năng của API
 
-#### Chưa hoàn chỉnh / cần kiểm tra thêm
-- Chuẩn hóa phân trang và lọc cho các endpoint danh sách.
-- Thống nhất chuẩn trả lỗi API.
-- Bổ sung validation chặt hơn cho payload heartbeat/event.
-- Tối ưu đồng bộ dữ liệu monitor giữa nhiều session của cùng thiết bị.
-
-### 4.2 Admin
-
-#### Đã có / đang vận hành
-- Dashboard thống kê.
-- CRUD category, location, tour, narration.
-- Duyệt vendor.
-- Monitor thiết bị và trạng thái online/stale/offline.
-- Xem chi tiết thiết bị.
-- Xem analytics dashboard.
-
-#### Chưa hoàn chỉnh / cần kiểm tra thêm
-- Chuẩn hóa hiển thị trạng thái thiết bị theo session.
-- Bổ sung tìm kiếm/lọc nâng cao cho monitor.
-- Làm rõ dashboard thống kê theo khoảng thời gian và theo loại sự kiện.
-- Đồng bộ giữa màn hình danh sách và màn hình chi tiết monitor.
-
-### 4.3 Vendor
-
-#### Đã có / đang vận hành
-- Đăng ký tài khoản.
-- Đăng nhập.
-- Cập nhật profile cửa hàng.
-- Quản lý sản phẩm.
-- Quản lý ảnh/logo.
-- Quản lý store/vendor data.
-
-#### Chưa hoàn chỉnh / cần kiểm tra thêm
-- Flow duyệt vendor/reject vendor cần chuẩn hóa thông báo.
-- Validation form đăng ký/chỉnh sửa chưa đồng nhất toàn bộ.
-- Một số màn hình cần kiểm tra lại UX khi dữ liệu rỗng.
-
-### 4.4 Mobile App
-
-#### Đã có / đang vận hành
-- Tải tour/location từ API.
-- Hiển thị bản đồ và POI.
-- Phát audio hoặc TTS.
-- Chọn ngôn ngữ hiển thị/narration.
-- Gửi heartbeat và analytics.
-- Lưu trạng thái lịch sử phát và cấu hình tự động phát.
-
-#### Chưa hoàn chỉnh / cần kiểm tra thêm
-- Cần chuẩn hóa base URL giữa môi trường debug/prod.
-- Cần xác nhận heartbeat chạy đúng trên nhiều thiết bị.
-- Cần kiểm tra lại việc giữ session monitor khi app restart.
-- Cần bổ sung quy tắc retry/backoff cho queue khi mạng yếu.
+1. Xác thực và phân quyền.
+2. Trả tour/location/narration.
+3. Lưu heartbeat.
+4. Lưu analytics event.
+5. Trả active devices.
+6. Quản lý vendor và store.
+7. Quản lý tour/location/narration/category.
+8. Quản lý upload / audio / QR.
+9. Cung cấp dữ liệu thống kê.
 
 ---
 
-## 5. Trạng thái hoàn thiện chức năng
+## 4. Chương chức năng Mobile App
 
-### 5.1 Bảng trạng thái tổng hợp
+### 4.1 Chương 1 — Khởi tạo ứng dụng
 
-| Nhóm chức năng | Trạng thái | Ghi chú |
-|---|---|---|
-| API tour/location/narration | Hoàn chỉnh cơ bản | Có thể dùng cho luồng chính |
-| API monitor/heartbeat | Hoàn chỉnh cơ bản | Cần kiểm tra đồng bộ nhiều device/session |
-| API analytics event | Hoàn chỉnh cơ bản | Cần chuẩn hóa báo cáo theo thời gian |
-| Admin dashboard | Hoàn chỉnh cơ bản | Có thể cần mở rộng filter |
-| Admin monitor thiết bị | Chưa hoàn chỉnh hoàn toàn | Cần làm rõ hiển thị multi-session |
-| Admin vendor approval | Hoàn chỉnh cơ bản | Cần chuẩn hóa UX và feedback |
-| Vendor register/login | Hoàn chỉnh cơ bản | Cần kiểm tra validate/edge case |
-| Vendor quản lý sản phẩm | Hoàn chỉnh cơ bản | Cần kiểm tra màn hình trống |
-| Mobile map/POI/narration | Hoàn chỉnh cơ bản | Luồng chính đã có |
-| Mobile heartbeat queue | Chưa hoàn chỉnh hoàn toàn | Cần xác nhận retry hoạt động ổn |
-| Báo cáo analytics nâng cao | Chưa hoàn chỉnh | Cần thêm dashboard theo KPI |
+**Mục tiêu:** Khởi tạo app, load ngôn ngữ, khởi chạy dịch vụ monitor.
 
-### 5.2 Danh sách chức năng đã hoàn thành
+**Thành phần liên quan:** `App.xaml.cs`, `MauiProgram.cs`, `LocalizationService`, `DeviceMonitorService`, `LocationService`.
 
-- Load tour/location trên app.
-- Hiển thị POI trên bản đồ.
-- Phát narration audio/TTS.
-- Quét QR để mở nội dung.
-- Vendor đăng ký, đăng nhập, quản lý dữ liệu.
-- Admin duyệt vendor và quản lý nội dung.
-- Ghi nhận heartbeat và analytics.
-- Monitor thiết bị online/stale/offline.
+**Luồng chính:**
 
-### 5.3 Danh sách chức năng chưa hoàn chỉnh
+1. `App.CreateWindow()` được gọi.
+2. `App` gọi `DeviceMonitorService.Start()`.
+3. `LocalizationService.ApplyLanguage()` áp dụng ngôn ngữ đã lưu.
 
-- Phân biệt đầy đủ nhiều session của cùng thiết bị ở monitor.
-- Thống kê monitor và analytics nâng cao theo thời gian thực hơn.
-- Chuẩn hóa nhiều màn hình admin/vendor về UX và empty state.
-- Đồng bộ cấu hình base URL / môi trường triển khai.
-- Bổ sung kiểm thử tích hợp cho luồng heartbeat/analytics.
-
----
-
-## 6. Sơ đồ nghiệp vụ đầy đủ
-
-### 6.1 Sơ đồ ngữ cảnh hệ thống
+**Sequence:**
 
 ```mermaid
-flowchart LR
-  K[Khách du lịch]
-  AD[Admin]
-  VE[Vendor]
-  APP[PLTour.App]
-  ADM[PLTour.Admin]
-  VEN[PLTour.Vendor]
-  API[PLTour.API]
-  DB[(Database)]
+sequenceDiagram
+  autonumber
+  participant OS as OS
+  participant App as PLTour.App/App.xaml.cs
+  participant Loc as LocalizationService
+  participant DMS as DeviceMonitorService
 
-  K --> APP
-  AD --> ADM
-  VE --> VEN
-
-  APP --> API
-  ADM --> API
-  VEN --> API
-  API --> DB
-  ADM --> DB
-  VEN --> DB
+  OS->>App: CreateWindow()
+  App->>Loc: ApplyLanguage(savedLang, persist: false)
+  App->>DMS: Start()
+  DMS->>DMS: StartHeartbeatLoop()
 ```
 
-### 6.2 Sơ đồ use case tổng hợp
+---
+
+### 4.2 Chương 2 — Tải tour và location
+
+**Mục tiêu:** Lấy dữ liệu tour/location từ API.
+
+**Thành phần liên quan:** `ApiService`, `HomePage`, `MapPage`, `TourDetailPage`.
+
+**Sequence:**
 
 ```mermaid
-flowchart TB
-  subgraph Actors["Tác nhân"]
-    U1((Khách du lịch))
-    U2((Admin))
-    U3((Vendor))
+sequenceDiagram
+  autonumber
+  participant UI as HomePage/MapPage
+  participant Api as ApiService
+  participant API as PLTour.API
+
+  UI->>Api: GetToursAsync()
+  Api->>API: GET /api/tours
+  API-->>Api: TourDto[]
+  Api-->>UI: Map sang TourModel
+
+  UI->>Api: GetLocationsAsync()
+  Api->>API: GET /api/locations
+  API-->>Api: LocationDto[]
+  Api-->>UI: Map sang PoiModel
+```
+
+---
+
+### 4.3 Chương 3 — Xem bản đồ và POI
+
+**Mục tiêu:** Hiển thị bản đồ, marker, và POI.
+
+**Thành phần liên quan:** `MapPage.xaml.cs`, `LocationService`, `PoiModel`, `TourModel`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as MapPage
+  participant LS as LocationService
+  participant Api as ApiService
+  participant API as PLTour.API
+
+  UI->>LS: LoadCurrentLocationAsync()
+  LS->>Api: GetCurrentLocation()
+  UI->>Api: GetLocationsAsync()
+  Api->>API: GET /api/locations
+  API-->>Api: LocationDto[]
+  UI->>UI: Render markers/POI
+```
+
+---
+
+### 4.4 Chương 4 — Quét QR và mở chi tiết
+
+**Mục tiêu:** Người dùng quét QR để mở chi tiết location/tour.
+
+**Thành phần liên quan:** `QrScannerPage`, `ApiService`, `LocationService`, `TourDetailPage`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as QrScannerPage
+  participant Api as ApiService
+  participant API as PLTour.API
+  participant Nav as Navigation
+
+  UI->>UI: Scan QR code
+  UI->>Api: GetLocationByQrAsync(qrCode)
+  Api->>API: GET /api/locations/qr/{code}
+  API-->>Api: LocationDto
+  UI->>Nav: Open detail page
+```
+
+---
+
+### 4.5 Chương 5 — Phát narration audio
+
+**Mục tiêu:** Nếu có audio thì phát file audio.
+
+**Thành phần liên quan:** `AudioService`, `ApiService`, `TourDetailPage`, `IAudioService`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as TourDetailPage
+  participant Api as ApiService
+  participant AS as AudioService
+  participant API as PLTour.API
+
+  UI->>Api: GetNarrationAsync(locationId, language)
+  Api->>API: GET /api/narrations
+  API-->>Api: NarrationDto
+  UI->>AS: PlayAsync(audioUrl)
+  AS->>AS: Download and stream audio
+```
+
+---
+
+### 4.6 Chương 6 — Đọc narration bằng TTS
+
+**Mục tiêu:** Khi không có `AudioUrl`, app dùng TTS.
+
+**Thành phần liên quan:** `AudioService`, `TourDetailPage`, `EdgeTtsService` phía API nếu có luồng tạo audio.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as TourDetailPage
+  participant AS as AudioService
+
+  UI->>UI: Check AudioUrl
+  alt Không có audio
+    UI->>AS: SpeakTextAsync(content)
+    AS->>AS: TextToSpeech đọc nội dung
   end
-
-  subgraph System["Hệ thống PL-Tour"]
-    UC1((Xem tour / bản đồ))
-    UC2((Quét QR / xem POI))
-    UC3((Nghe narration audio/TTS))
-    UC4((Gửi heartbeat thiết bị))
-    UC5((Gửi analytics event))
-    UC6((Xem dashboard / monitor))
-    UC7((Duyệt vendor))
-    UC8((Đăng ký / đăng nhập vendor))
-    UC9((Quản lý sản phẩm / hồ sơ vendor))
-    UC10((Quản lý category / location / tour / narration))
-  end
-
-  U1 --> UC1
-  U1 --> UC2
-  U1 --> UC3
-  U1 --> UC4
-  U1 --> UC5
-  U2 --> UC6
-  U2 --> UC7
-  U2 --> UC10
-  U3 --> UC8
-  U3 --> UC9
 ```
 
-### 6.3 Activity — khách mở app và tải dữ liệu
+---
+
+### 4.7 Chương 7 — Gửi heartbeat thiết bị
+
+**Mục tiêu:** Ghi nhận trạng thái thiết bị định kỳ.
+
+**Thành phần liên quan:** `DeviceMonitorService`, `MonitorQueueService`, `MonitorQueueStore`, `PLTour.API.Controllers.MonitorController`.
+
+**Sequence:**
 
 ```mermaid
-flowchart TD
-  Start([Bắt đầu]) --> A[Người dùng mở app]
-  A --> B[App khởi tạo ApiService]
-  B --> C[Gọi API tải tour/location]
-  C --> D{API phản hồi thành công?}
-  D -->|Không| E[Hiển thị lỗi / fallback]
-  D -->|Có| F[Map dữ liệu sang model]
-  F --> G[Load ngôn ngữ đang dùng]
-  G --> H[Hiển thị bản đồ, POI, nội dung]
-  H --> I[Cho phép quét QR / mở chi tiết]
-  I --> J[Track analytics]
-  J --> End([Kết thúc])
-  E --> End
+sequenceDiagram
+  autonumber
+  participant DMS as DeviceMonitorService
+  participant MQ as MonitorQueueService
+  participant API as PLTour.API/MonitorController
+  participant DB as Database
+
+  DMS->>DMS: SendHeartbeatAsync(reason)
+  DMS->>MQ: EnqueueAsync(_heartbeatUrl, payload, "heartbeat")
+  MQ->>API: POST /api/monitor/heartbeat
+  API->>DB: MonitorController.Heartbeat(dto)
+  DB-->>API: Save ActiveDevice
+  API-->>MQ: OK
 ```
 
-### 6.4 Sequence — app gửi heartbeat cho admin
+---
+
+### 4.8 Chương 8 — Gửi analytics event
+
+**Mục tiêu:** Ghi nhận hành vi người dùng.
+
+**Thành phần liên quan:** `DeviceMonitorService`, `MonitorQueueService`, `AnalyticsService`, `MonitorController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as UI/Page
+  participant Ana as AnalyticsService
+  participant DMS as DeviceMonitorService
+  participant MQ as MonitorQueueService
+  participant API as PLTour.API/MonitorController
+  participant DB as Database
+
+  UI->>Ana: TrackEventAsync(eventType, data)
+  Ana->>DMS: TrackEventAsync(eventType, data)
+  DMS->>MQ: EnqueueAsync(_eventUrl, dto, eventType)
+  MQ->>API: POST /api/monitor/event
+  API->>DB: MonitorController.TrackEvent(dto)
+  DB-->>API: Save AnalyticsEvent
+```
+
+---
+
+### 4.9 Chương 9 — Xử lý queue khi mạng yếu
+
+**Mục tiêu:** Không mất heartbeat/event khi offline.
+
+**Thành phần liên quan:** `MonitorQueueService`, `MonitorQueueStore`, `QueuedActionService`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant MQ as MonitorQueueService
+  participant Store as MonitorQueueStore
+  participant API as PLTour.API
+
+  MQ->>Store: Save pending item
+  loop Retry
+    MQ->>API: POST queued request
+    alt Thành công
+      MQ->>Store: Remove pending item
+    else Thất bại
+      MQ->>Store: Keep item for retry
+    end
+  end
+```
+
+---
+
+## 5. Chương chức năng Admin
+
+### 5.1 Chương 1 — Đăng nhập admin
+
+**Mục tiêu:** Admin xác thực trước khi truy cập dashboard.
+
+**Thành phần liên quan:** `AccountController`, `LoginViewModel`, cookie auth.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Account/Login
+  participant C as AccountController
+  participant DB as Database
+
+  UI->>C: POST Login(username, password)
+  C->>DB: Validate admin user
+  DB-->>C: User match
+  C-->>UI: Create auth cookie / redirect
+```
+
+---
+
+### 5.2 Chương 2 — Xem dashboard tổng quan
+
+**Mục tiêu:** Xem số liệu tổng hợp.
+
+**Thành phần liên quan:** `DashboardController`, `HomeController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Dashboard page
+  participant C as DashboardController
+  participant DB as Database
+
+  UI->>C: Index()
+  C->>DB: Query counts/totals
+  DB-->>C: Summary data
+  C-->>UI: Render dashboard
+```
+
+---
+
+### 5.3 Chương 3 — Quản lý category
+
+**Mục tiêu:** CRUD category.
+
+**Thành phần liên quan:** `CategoryController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Category Views
+  participant C as CategoryController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Delete/Index
+  C->>DB: Add/Update/Remove Category
+  DB-->>C: SaveChanges
+  C-->>UI: Redirect/Return view
+```
+
+---
+
+### 5.4 Chương 4 — Quản lý location
+
+**Mục tiêu:** CRUD location.
+
+**Thành phần liên quan:** `LocationController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Location Views
+  participant C as LocationController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Details/Index
+  C->>DB: CRUD Location
+  DB-->>C: SaveChanges
+```
+
+---
+
+### 5.5 Chương 5 — Quản lý tour
+
+**Mục tiêu:** CRUD tour và quan hệ tour-location.
+
+**Thành phần liên quan:** `TourController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Tour Views
+  participant C as TourController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Details/Index
+  C->>DB: CRUD Tour + TourLocations
+  DB-->>C: SaveChanges
+```
+
+---
+
+### 5.6 Chương 6 — Quản lý narration
+
+**Mục tiêu:** CRUD narration theo location/language.
+
+**Thành phần liên quan:** `NarrationController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Narration Views
+  participant C as NarrationController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Index
+  C->>DB: CRUD Narration
+  DB-->>C: SaveChanges
+```
+
+---
+
+### 5.7 Chương 7 — Duyệt vendor
+
+**Mục tiêu:** Approve / reject vendor.
+
+**Thành phần liên quan:** `VendorController`, `HomeController`, `Details.cshtml`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Vendor/Approve
+  participant C as VendorController
+  participant DB as Database
+
+  UI->>C: Approve(vendorId)
+  C->>DB: Update vendor status
+  DB-->>C: SaveChanges
+  C-->>UI: Redirect with result
+```
+
+---
+
+### 5.8 Chương 8 — Monitor thiết bị
+
+**Mục tiêu:** Xem danh sách thiết bị online/stale/offline.
+
+**Thành phần liên quan:** `MonitorController`, `ActiveDeviceDto`, `_MonitorRow.cshtml`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Monitor/Index
+  participant C as MonitorController
+  participant DB as Database
+
+  UI->>C: Index()
+  C->>DB: Query ActiveDevices
+  DB-->>C: ActiveDeviceDto[]
+  C-->>UI: Render table
+```
+
+---
+
+### 5.9 Chương 9 — Xem chi tiết thiết bị
+
+**Mục tiêu:** Xem chi tiết một thiết bị cụ thể.
+
+**Thành phần liên quan:** `MonitorController.DeviceDetails()`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Monitor/DeviceDetails
+  participant C as MonitorController
+  participant DB as Database
+
+  UI->>C: DeviceDetails(deviceId, sessionId)
+  C->>DB: Find ActiveDevice
+  DB-->>C: Device row
+  C-->>UI: Render details
+```
+
+---
+
+### 5.10 Chương 10 — Xem analytics dashboard
+
+**Mục tiêu:** Xem dữ liệu thống kê.
+
+**Thành phần liên quan:** `AnalyticsController`, `Dashboard.cshtml`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Analytics Dashboard
+  participant C as AnalyticsController
+  participant DB as Database
+
+  UI->>C: Dashboard()
+  C->>DB: Query analytics events
+  DB-->>C: Aggregated data
+  C-->>UI: Render charts
+```
+
+---
+
+## 6. Chương chức năng Vendor
+
+### 6.1 Chương 1 — Đăng ký vendor
+
+**Mục tiêu:** Tạo tài khoản vendor mới.
+
+**Thành phần liên quan:** `VendorRegistrationController`, `VendorRegistrationViewModel`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Vendor Registration page
+  participant C as VendorRegistrationController
+  participant DB as Database
+
+  UI->>C: POST Register(viewModel)
+  C->>DB: Insert Vendor(Pending)
+  DB-->>C: SaveChanges
+  C-->>UI: Success page
+```
+
+---
+
+### 6.2 Chương 2 — Đăng nhập vendor
+
+**Mục tiêu:** Vendor đăng nhập để vào dashboard.
+
+**Thành phần liên quan:** `VendorLoginController`, `VendorLoginViewModel`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Vendor Login page
+  participant C as VendorLoginController
+  participant DB as Database
+
+  UI->>C: POST Login(email, password)
+  C->>DB: Query vendor by email
+  DB-->>C: Vendor row
+  C-->>UI: Cookie / lỗi chờ duyệt
+```
+
+---
+
+### 6.3 Chương 3 — Cập nhật profile vendor
+
+**Mục tiêu:** Vendor chỉnh sửa hồ sơ.
+
+**Thành phần liên quan:** `VendorDashboardController`, `EditProfile.cshtml`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as EditProfile
+  participant C as VendorDashboardController
+  participant DB as Database
+
+  UI->>C: GET/POST EditProfile
+  C->>DB: Update Vendor
+  DB-->>C: SaveChanges
+  C-->>UI: Render result
+```
+
+---
+
+### 6.4 Chương 4 — Quản lý store
+
+**Mục tiêu:** Tạo, sửa, xem store.
+
+**Thành phần liên quan:** `VendorStoreController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as VendorStore Views
+  participant C as VendorStoreController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Details/Index
+  C->>DB: CRUD VendorStore
+  DB-->>C: SaveChanges
+```
+
+---
+
+### 6.5 Chương 5 — Quản lý sản phẩm
+
+**Mục tiêu:** CRUD product.
+
+**Thành phần liên quan:** `VendorProductController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as VendorProduct Views
+  participant C as VendorProductController
+  participant DB as Database
+
+  UI->>C: Create/Edit/Index
+  C->>DB: CRUD Product
+  DB-->>C: SaveChanges
+```
+
+---
+
+### 6.6 Chương 6 — Quản lý ảnh vendor
+
+**Mục tiêu:** Upload và quản lý ảnh.
+
+**Thành phần liên quan:** `VendorImageController`, `CloudinaryService`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as VendorImage Views
+  participant C as VendorImageController
+  participant CS as CloudinaryService
+  participant DB as Database
+
+  UI->>C: Upload image
+  C->>CS: UploadAsync(file)
+  CS-->>C: ImageUrl
+  C->>DB: Save VendorImage
+  DB-->>C: SaveChanges
+```
+
+---
+
+## 7. Chương chức năng API
+
+### 7.1 Chương 1 — Auth
+
+**Mục tiêu:** Đăng nhập và cấp token.
+
+**Thành phần liên quan:** `AuthController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as Client
+  participant C as AuthController
+  participant DB as Database
+
+  UI->>C: POST login
+  C->>DB: Validate user/vendor/admin
+  DB-->>C: Match result
+  C-->>UI: JWT / error
+```
+
+---
+
+### 7.2 Chương 2 — Trả tour/location/narration
+
+**Mục tiêu:** Cung cấp dữ liệu cho app.
+
+**Thành phần liên quan:** `ToursController`, `LocationsController`, `NarrationsController`, `TourNarrationController`.
+
+**Sequence:**
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant App as PLTour.App
-  participant MQ as MonitorQueueService
-  participant API as PLTour.API
-  participant DB as Database
-  participant ADM as PLTour.Admin
-
-  App->>MQ: Tạo heartbeat payload
-  MQ->>API: POST /api/monitor/heartbeat
-  API->>DB: Upsert ActiveDevices
-  DB-->>API: OK
-  API-->>MQ: Heartbeat saved
-  ADM->>API: GET /api/monitor/active-devices
-  API->>DB: Đọc danh sách thiết bị
-  DB-->>API: Devices
-  API-->>ADM: JSON danh sách thiết bị
-```
-
-### 6.5 Activity — admin duyệt vendor
-
-```mermaid
-flowchart TD
-  Start([Bắt đầu]) --> A[Admin mở danh sách vendor]
-  A --> B[Chọn vendor pending]
-  B --> C[Đọc thông tin, logo, category, trạng thái]
-  C --> D{Duyệt hay từ chối?}
-  D -->|Duyệt| E[Status = Approved, IsActive = true]
-  D -->|Từ chối| F[Status = Rejected, Notes = lý do]
-  E --> G[SaveChanges]
-  F --> G
-  G --> H[Vendor nhận trạng thái mới]
-  H --> End([Kết thúc])
-```
-
-### 6.6 Sequence — vendor đăng ký và login
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant V as Vendor
-  participant WEB as PLTour.Vendor
-  participant API as PLTour.API
+  participant C1 as ToursController
+  participant C2 as LocationsController
+  participant C3 as NarrationsController
   participant DB as Database
 
-  V->>WEB: Gửi form đăng ký
-  WEB->>API: Lưu vendor mới
-  API->>DB: Insert Vendor (Pending)
-  DB-->>API: OK
-  API-->>WEB: Đăng ký thành công
-  V->>WEB: Đăng nhập
-  WEB->>API: Verify email/password
-  API->>DB: Query Vendor
-  DB-->>API: Vendor + trạng thái
-  API-->>WEB: Cookie / lỗi chờ duyệt
-```
+  App->>C1: GET /api/tours
+  C1->>DB: Query Tours
+  DB-->>C1: TourDto[]
 
-### 6.7 Activity — phát narration trong app
+  App->>C2: GET /api/locations
+  C2->>DB: Query Locations
+  DB-->>C2: LocationDto[]
 
-```mermaid
-flowchart TD
-  Start([Bắt đầu]) --> A[Người dùng bấm Phát]
-  A --> B{Có AudioUrl?}
-  B -->|Có| C[HttpClient tải stream]
-  C --> D[AudioManager phát file]
-  B -->|Không| E[TextToSpeech đọc nội dung]
-  D --> F[Reset trạng thái IsPlaying]
-  E --> F
-  F --> End([Kết thúc])
-```
-
-### 6.8 Sequence — monitor thiết bị nhiều phiên
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant App1 as PLTour.App #1
-  participant App2 as PLTour.App #2
-  participant API as PLTour.API
-  participant DB as Database
-  participant ADM as PLTour.Admin
-
-  App1->>API: POST heartbeat (DeviceId + SessionId A)
-  API->>DB: Lưu ActiveDevice A
-  App2->>API: POST heartbeat (DeviceId + SessionId B)
-  API->>DB: Lưu ActiveDevice B
-  ADM->>API: GET active-devices
-  API->>DB: Trả danh sách A + B
-  DB-->>API: 2 records
-  API-->>ADM: Hiển thị 2 thiết bị/phiên riêng
+  App->>C3: GET /api/narrations
+  C3->>DB: Query Narrations
+  DB-->>C3: NarrationDto[]
 ```
 
 ---
 
-## 7. Luồng nghiệp vụ chính
+### 7.3 Chương 3 — Lưu heartbeat
 
-### 7.1 Khách mở app
-1. App tải tour/location từ API.
-2. Map render POI.
-3. App chọn narration theo ngôn ngữ hiện tại.
-4. Nếu có `AudioUrl` thì phát audio, nếu không thì dùng TTS.
-5. App gửi heartbeat và analytics về API.
+**Mục tiêu:** Nhận dữ liệu thiết bị từ app.
 
-### 7.2 Admin theo dõi thiết bị
-1. App gửi heartbeat về `POST /api/monitor/heartbeat`.
-2. API cập nhật hoặc tạo record trong bảng `ActiveDevices`.
-3. Admin mở trang Monitor để xem danh sách thiết bị.
-4. Trang Monitor đọc dữ liệu từ `GET /api/monitor/active-devices`.
-5. Monitor cần phân biệt rõ `DeviceId` và `SessionId` khi nhiều phiên cùng thiết bị.
+**Thành phần liên quan:** `MonitorController.Heartbeat()`, `ActiveDevice`.
 
-### 7.3 Vendor đăng ký và được duyệt
-1. Vendor đăng ký gian hàng.
-2. Tài khoản ở trạng thái pending.
-3. Admin duyệt vendor.
-4. Vendor login và quản lý cửa hàng/sản phẩm.
+**Sequence:**
 
-### 7.4 Analytics và monitor
-1. App gửi event theo thao tác người dùng.
-2. API lưu `AnalyticsEvent`.
-3. Admin xem dashboard để theo dõi xu hướng.
-4. Dữ liệu heartbeat giúp admin biết thiết bị đang online/stale/offline.
+```mermaid
+sequenceDiagram
+  autonumber
+  participant App as DeviceMonitorService
+  participant C as MonitorController
+  participant DB as Database
+
+  App->>C: POST /api/monitor/heartbeat
+  C->>DB: Find or add ActiveDevice
+  DB-->>C: SaveChanges
+  C-->>App: Heartbeat saved
+```
 
 ---
 
-## 8. Dữ liệu chính
+### 7.4 Chương 4 — Lưu analytics event
 
-### 8.1 Shared entities
+**Mục tiêu:** Ghi nhận hành vi người dùng.
+
+**Thành phần liên quan:** `MonitorController.TrackEvent()`, `AnalyticsEvent`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant App as DeviceMonitorService
+  participant C as MonitorController
+  participant DB as Database
+
+  App->>C: POST /api/monitor/event
+  C->>DB: Insert AnalyticsEvent
+  DB-->>C: SaveChanges
+  C-->>App: Event saved
+```
+
+---
+
+### 7.5 Chương 5 — Trả active devices
+
+**Mục tiêu:** Cung cấp danh sách thiết bị đang hoạt động cho admin.
+
+**Thành phần liên quan:** `MonitorController.GetActiveDevices()`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Admin as PLTour.Admin
+  participant C as MonitorController
+  participant DB as Database
+
+  Admin->>C: GET /api/monitor/active-devices
+  C->>DB: Query ActiveDevices
+  DB-->>C: ActiveDeviceDto[]
+  C-->>Admin: JSON list
+```
+
+---
+
+### 7.6 Chương 6 — Trả chi tiết device
+
+**Mục tiêu:** Xem chi tiết 1 device theo `DeviceId` và `SessionId`.
+
+**Thành phần liên quan:** `MonitorController.GetDeviceById()`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Admin as PLTour.Admin
+  participant C as MonitorController
+  participant DB as Database
+
+  Admin->>C: GET /api/monitor/active-devices/{deviceId}?sessionId=...
+  C->>DB: Query device
+  DB-->>C: Device row
+  C-->>Admin: ActiveDeviceDto
+```
+
+---
+
+### 7.7 Chương 7 — Báo cáo analytics
+
+**Mục tiêu:** Trả dữ liệu tổng hợp cho dashboard.
+
+**Thành phần liên quan:** `AnalyticsController`.
+
+**Sequence:**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Admin as PLTour.Admin
+  participant C as AnalyticsController
+  participant DB as Database
+
+  Admin->>C: GET dashboard stats
+  C->>DB: Aggregate AnalyticsEvents
+  DB-->>C: Summary data
+  C-->>Admin: Chart payload
+```
+
+---
+
+## 8. Sơ đồ nghiệp vụ chi tiết theo chức năng
+
+### 8.1 Sơ đồ tổng thể các chương
+
+```mermaid
+flowchart TB
+  A[Mobile App]
+  B[Admin]
+  C[Vendor]
+  D[API]
+
+  A --> D
+  B --> D
+  C --> D
+
+  subgraph Mobile[Mobile App]
+    A1[Khởi tạo]
+    A2[Tải tour/location]
+    A3[Xem map/POI]
+    A4[QR]
+    A5[Narration]
+    A6[Heartbeat]
+    A7[Analytics]
+  end
+
+  subgraph AdminMod[Admin]
+    B1[Dashboard]
+    B2[Category]
+    B3[Location]
+    B4[Tour]
+    B5[Narration]
+    B6[Vendor Approval]
+    B7[Monitor]
+    B8[Analytics]
+  end
+
+  subgraph VendorMod[Vendor]
+    C1[Register]
+    C2[Login]
+    C3[Profile]
+    C4[Store]
+    C5[Product]
+    C6[Images]
+  end
+```
+
+### 8.2 Sơ đồ monitor thiết bị
+
+```mermaid
+flowchart TD
+  App[PLTour.App] --> MQ[MonitorQueueService]
+  MQ --> API[MonitorController]
+  API --> DB[(ActiveDevices)]
+  DB --> Admin[Monitor Page]
+```
+
+### 8.3 Sơ đồ analytics
+
+```mermaid
+flowchart TD
+  App[PLTour.App] --> MQ[MonitorQueueService]
+  MQ --> API[MonitorController.TrackEvent]
+  API --> DB[(AnalyticsEvents)]
+  DB --> Admin[Analytics Dashboard]
+```
+
+---
+
+## 9. Trạng thái hoàn thiện
+
+### 9.1 Đã hoàn chỉnh cơ bản
+
+- Khởi tạo app.
+- Load tour/location.
+- Xem map/POI.
+- Quét QR.
+- Phát narration audio/TTS.
+- Gửi heartbeat.
+- Gửi analytics event.
+- Đăng ký / đăng nhập vendor.
+- CRUD nội dung admin cơ bản.
+- Monitor thiết bị cơ bản.
+
+### 9.2 Chưa hoàn chỉnh hoàn toàn
+
+- Monitor multi-session/multi-device cần chuẩn hóa rõ hơn.
+- Dashboard analytics nâng cao.
+- UX cho các màn hình trống/lỗi.
+- Test tự động cho heartbeat/queue/analytics.
+- Chuẩn hóa retry/backoff cho queue khi mạng yếu.
+
+---
+
+## 10. Dữ liệu chính
+
+### 10.1 Shared entities
+
 - `Vendor`
 - `VendorStore`
 - `VendorImage`
@@ -413,13 +1009,8 @@ sequenceDiagram
 - `AnalyticsEvent`
 - `User`
 
-### 8.2 Các điểm cần lưu ý
-- Một số cột trong DB có thể là null.
-- Model cần khớp schema hiện tại để tránh lỗi cast.
-- Base URL API của app và heartbeat phải đồng nhất hoặc được cấu hình rõ ràng.
-- Dữ liệu monitor cần tránh ghi đè khi nhiều session cùng `DeviceId`.
+### 10.2 Quan hệ dữ liệu quan trọng
 
-### 8.3 Quan hệ dữ liệu quan trọng
 - `Location` thuộc `Category`.
 - `Narration` thuộc `Location` và `Language`.
 - `Tour` liên kết nhiều `Location` thông qua `TourLocation`.
@@ -429,21 +1020,24 @@ sequenceDiagram
 
 ---
 
-## 9. Rủi ro, giả định và điểm còn thiếu
+## 11. Rủi ro, giả định và điểm còn thiếu
 
-### 9.1 Rủi ro
+### 11.1 Rủi ro
+
 1. Sai base URL giữa app data và heartbeat.
 2. Schema DB và entity dễ bị lệch khi merge nhiều nhánh.
 3. Một số cột nullable trong DB có thể gây runtime exception nếu model không cho phép null.
 4. Vendor/Admin/App dùng chung entity nên cần đồng bộ rất cẩn thận.
 5. Nếu monitor không phân biệt session, dữ liệu thiết bị có thể bị gộp sai.
 
-### 9.2 Giả định
+### 11.2 Giả định
+
 - Hệ thống chạy với mạng đủ ổn định để gửi heartbeat định kỳ.
 - Admin và vendor chỉ dùng các luồng đã được phân quyền.
 - Dữ liệu tour/location/narration đã được seed hoặc nhập đầy đủ.
 
-### 9.3 Điểm còn thiếu hoặc cần hoàn thiện
+### 11.3 Điểm còn thiếu hoặc cần hoàn thiện
+
 - Chuẩn hóa hoàn toàn monitor multi-session/multi-device.
 - Tăng độ chi tiết của dashboard analytics.
 - Bổ sung test tự động cho heartbeat/monitor/analytics.
@@ -452,19 +1046,19 @@ sequenceDiagram
 
 ---
 
-## 10. Tiêu chí hoàn thành
+## 12. Tiêu chí hoàn thành
 
 - App tải dữ liệu tour/location thành công.
 - Admin Monitor nhận heartbeat và hiển thị thiết bị.
 - Vendor đăng ký/login/approve chạy ổn.
 - Không còn lỗi schema null/cột không tồn tại ở flow chính.
 - Heartbeat, analytics, và monitor hoạt động được trên nhiều thiết bị.
-- Các chức năng đã và chưa hoàn chỉnh được liệt kê rõ ràng trong PRD.
-- Sơ đồ nghiệp vụ thể hiện đủ luồng chính của app, admin, vendor, monitor.
+- Mỗi chức năng có sequence riêng, rõ service nào gọi method nào.
+- PRD được chia chapter rõ ràng để dễ đọc và đếm chức năng.
 
 ---
 
-## 11. Ghi chú triển khai
+## 13. Ghi chú triển khai
 
 - Nên dùng một cấu hình base URL tập trung cho app.
 - Nên có migration/backfill nếu DB có dữ liệu cũ thiếu cột mới.
