@@ -120,6 +120,9 @@ public partial class MapPage : ContentPage
     int _currentCategoryId = 0;
     private string _searchKeyword = string.Empty;
     private CancellationTokenSource? _searchDebounceCts;
+    private readonly SemaphoreSlim _poiRefreshGate = new(1, 1);
+    private bool _pendingPoiUiRefresh;
+    private bool _pendingPoiMapRefresh;
 
     private PoiModel _currentPlayingPoi;
 
@@ -195,7 +198,7 @@ public partial class MapPage : ContentPage
         base.OnAppearing();
         StartTracking();
         _ = _deviceMonitorService.TrackEventAsync("screen_view", new AnalyticsEventDto { Keyword = "map" });
-        await LoadDataFromApiAsync();
+        await LoadDataFromApiAsync(forceReload: false);
     }
 
     protected override void OnNavigatedTo(NavigatedToEventArgs args)
@@ -262,7 +265,7 @@ public partial class MapPage : ContentPage
                     UpdateUserLocationOnMap(location);
                     if (ShouldUpdateDistanceUI(location))
                     {
-                        UpdateDistancesAndSort();
+                        RequestPoiUiRefresh();
                         _lastDistanceUpdateLocation = location;
                     }
 
@@ -298,9 +301,16 @@ public partial class MapPage : ContentPage
         }
     }
 
-    async Task LoadDataFromApiAsync()
+    async Task LoadDataFromApiAsync(bool forceReload = false)
     {
         if (_isLoadingData) return;
+        if (!forceReload && _allPois.Count > 0 && !string.IsNullOrWhiteSpace(TourId))
+        {
+            _pendingInitialCamera = true;
+            ApplyInitialCamera();
+            return;
+        }
+
         _isLoadingData = true;
 
         try
@@ -343,8 +353,8 @@ public partial class MapPage : ContentPage
             _poiProjectionCache.Clear();
             _lastPoiDrawKey = null;
             GenerateCategoryTabs();
-            UpdateDistancesAndSort();
-            DrawPoisOnMap();
+            RequestPoiUiRefresh();
+            RequestPoiMapRefresh(true);
             ApplyInitialCamera();
             ApplyScannedPoiSearchIfNeeded();
         }
@@ -365,17 +375,15 @@ public partial class MapPage : ContentPage
         MainThread.BeginInvokeOnMainThread(() =>
         {
             var filteredPois = GetFilteredPois().ToList();
-
-            var poiFeatures = new List<IFeature>();
-            var validMapPoints = new List<MPoint>();
             var drawKey = BuildPoiDrawKey(filteredPois);
 
             if (string.Equals(_lastPoiDrawKey, drawKey, StringComparison.Ordinal))
-            {
                 return;
-            }
+
             _lastPoiDrawKey = drawKey;
 
+            var poiFeatures = new List<IFeature>(filteredPois.Count);
+            var validMapPoints = new List<MPoint>();
             var showLabels = filteredPois.Count <= 40;
 
             foreach (var poi in filteredPois)
@@ -539,8 +547,7 @@ public partial class MapPage : ContentPage
         {
             foreach (var poi in _allPois)
             {
-                double dist = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
-                poi.DistanceMeters = dist;
+                poi.DistanceMeters = CalculateDistance(userLoc.Latitude, userLoc.Longitude, poi.Lat, poi.Lng);
             }
         }
 
@@ -553,9 +560,7 @@ public partial class MapPage : ContentPage
         {
             _visiblePois.Clear();
             foreach (var poi in filtered)
-            {
                 _visiblePois.Add(poi);
-            }
         });
     }
 
@@ -642,6 +647,46 @@ public partial class MapPage : ContentPage
         }
     }
 
+    private void RequestPoiUiRefresh()
+    {
+        _pendingPoiUiRefresh = true;
+        MainThread.BeginInvokeOnMainThread(FlushPoiRefreshIfNeeded);
+    }
+
+    private void RequestPoiMapRefresh(bool force = false)
+    {
+        if (force)
+            _lastPoiDrawKey = null;
+
+        _pendingPoiMapRefresh = true;
+        MainThread.BeginInvokeOnMainThread(FlushPoiRefreshIfNeeded);
+    }
+
+    private void FlushPoiRefreshIfNeeded()
+    {
+        if (!_poiRefreshGate.Wait(0))
+            return;
+
+        try
+        {
+            if (_pendingPoiUiRefresh)
+            {
+                _pendingPoiUiRefresh = false;
+                UpdateDistancesAndSort();
+            }
+
+            if (_pendingPoiMapRefresh)
+            {
+                _pendingPoiMapRefresh = false;
+                DrawPoisOnMap();
+            }
+        }
+        finally
+        {
+            _poiRefreshGate.Release();
+        }
+    }
+
     private bool ShouldUpdateDistanceUI(Location currentLocation)
     {
         if (_lastDistanceUpdateLocation == null) return true;
@@ -708,7 +753,6 @@ public partial class MapPage : ContentPage
         MainThread.BeginInvokeOnMainThread(() =>
         {
             CategoryTabsContainer.Children.Clear();
-
             CategoryTabsContainer.Children.Add(CreateTabButton(0, LocalizationService.Instance["CategoryAll"]));
             CategoryTabsContainer.Children.Add(CreateTabButton(1, LocalizationService.Instance["CategoryTourism"]));
             CategoryTabsContainer.Children.Add(CreateTabButton(2, LocalizationService.Instance["CategoryFood"]));
@@ -763,8 +807,8 @@ public partial class MapPage : ContentPage
             }
         }
 
-        UpdateDistancesAndSort();
-        DrawPoisOnMap();
+        RequestPoiUiRefresh();
+        RequestPoiMapRefresh();
     }
 
     // ==========================================
@@ -808,8 +852,8 @@ public partial class MapPage : ContentPage
     {
         _searchKeyword = txtSearch.Text?.Trim() ?? string.Empty;
         UpdateQrHeaderStateBySearchKeyword();
-        UpdateDistancesAndSort();
-        DrawPoisOnMap();
+        RequestPoiUiRefresh();
+        RequestPoiMapRefresh();
 
         var firstPoi = _visiblePois.FirstOrDefault();
         FocusOnPoi(firstPoi);
@@ -827,8 +871,8 @@ public partial class MapPage : ContentPage
             await Task.Delay(250, token);
             _searchKeyword = e.NewTextValue?.Trim() ?? string.Empty;
             UpdateQrHeaderStateBySearchKeyword();
-            UpdateDistancesAndSort();
-            DrawPoisOnMap();
+            RequestPoiUiRefresh();
+            RequestPoiMapRefresh();
         }
         catch (OperationCanceledException)
         {
@@ -885,8 +929,8 @@ public partial class MapPage : ContentPage
             item.IsSelected = false;
 
         poi.IsSelected = true;
-        UpdateDistancesAndSort();
-        DrawPoisOnMap();
+        RequestPoiUiRefresh();
+        RequestPoiMapRefresh();
     }
 
     private void ClearSelectedPoi()
@@ -894,8 +938,8 @@ public partial class MapPage : ContentPage
         foreach (var item in _allPois)
             item.IsSelected = false;
 
-        UpdateDistancesAndSort();
-        DrawPoisOnMap();
+        RequestPoiUiRefresh();
+        RequestPoiMapRefresh();
     }
 
     private void ApplyScannedPoiSearchIfNeeded()

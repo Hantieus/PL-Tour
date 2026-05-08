@@ -14,24 +14,26 @@ public class ApiService
 
     // Base URL của Backend (Server)
     private readonly string _baseUrl;
-
+    //Dùng DevTunnelUrl không cần phải dùng chung 1 mạng wifi của máy tính và điện thoạii nhưng vẫn chạy được
     private const string DevTunnelUrl = "https://q0x087zj-5229.asse.devtunnels.ms/";
     private const string LanUrl = "http://192.168.100.123:5229/";
     //P: 192.168.100.123:5229
     //L: 192.168.2.6:5229
     //L lop: 192.168.31.247:5229
+
+    //Không cân bật api nhưng vẫn chạy được app
     private const string RenderUrl = "https://pl-tour.onrender.com/";
 
     public ApiService()
     {
 #if DEBUG
-        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        // Mặc định dùng Dev Tunnel
-        _baseUrl = DevTunnelUrl;
-#else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         // Mặc định dùng Render
         _baseUrl = RenderUrl;
+#else
+        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
+        // Mặc định dùng Dev Tunnel
+        _baseUrl = DevTunnelUrl;
 #endif
 
         // Cho phép đổi sang LAN hoặc Render bằng biến môi trường

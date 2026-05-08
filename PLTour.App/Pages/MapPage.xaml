@@ -176,6 +176,21 @@
                                                            Aspect="AspectFill" />
                                                 </Border>
 
+                                                <Border BackgroundColor="#000000"
+                                                        Opacity="0.55"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 14"
+                                                        HorizontalOptions="End"
+                                                        VerticalOptions="Start"
+                                                        Margin="10"
+                                                        ZIndex="5">
+                                                    <Label Text="{Binding DistanceText}"
+                                                           FontSize="10"
+                                                           TextColor="White"
+                                                           FontAttributes="Bold"
+                                                           Padding="8,4" />
+                                                </Border>
+
                                                 <Border IsVisible="{Binding IsSelected}"
                                                         BackgroundColor="#2A9D8F"
                                                         Opacity="0.16"
@@ -189,7 +204,7 @@
                                                         StrokeShape="RoundRectangle 999"
                                                         HorizontalOptions="End"
                                                         VerticalOptions="Start"
-                                                        Margin="10">
+                                                        Margin="10,46,10,0">
                                                     <Label Text="{loc:Localization Selected}"
                                                            FontSize="10"
                                                            TextColor="White"

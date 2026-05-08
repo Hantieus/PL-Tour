@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:usesCleartextTraffic="true" android:allowBackup="true" android:icon="@mipmap/appicon" android:supportsRtl="true">
+	<application android:usesCleartextTraffic="true" android:allowBackup="true" android:supportsRtl="true">
 		<!-- Các activity, service... có thể thêm vào đây nếu cần -->
 	</application>
 	
