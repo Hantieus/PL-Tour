@@ -10,11 +10,11 @@ public sealed class MonitorQueueService
     private readonly MonitorQueueStore _store = new();
     private readonly ConcurrentQueue<MonitorQueueItem> _queue = new();
     private readonly SemaphoreSlim _signal = new(0);
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _cts;
     private readonly object _gate = new();
 
     private bool _isRunning;
-    private bool _isRestored;
+    private bool _isWorkerStarted;
 
     public event EventHandler? QueueChanged;
 
@@ -40,6 +40,7 @@ public sealed class MonitorQueueService
                 return;
 
             _isRunning = true;
+            _cts ??= new CancellationTokenSource();
             StartWorkerIfNeeded();
             _ = RestoreAsync();
         }
@@ -49,8 +50,13 @@ public sealed class MonitorQueueService
     {
         lock (_gate)
         {
+            if (!_isRunning)
+                return;
+
             _isRunning = false;
-            _cts.Cancel();
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
         }
     }
 
@@ -58,6 +64,7 @@ public sealed class MonitorQueueService
     {
         var item = new MonitorQueueItem(url, JsonSerializer.Serialize(payload), label);
         _queue.Enqueue(item);
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Enqueued {label}. Pending={_queue.Count}, Url={url}");
         QueueChanged?.Invoke(this, EventArgs.Empty);
         _signal.Release();
         return PersistAsync();
@@ -65,10 +72,10 @@ public sealed class MonitorQueueService
 
     private void StartWorkerIfNeeded()
     {
-        if (_isRestored)
+        if (_isWorkerStarted)
             return;
 
-        _isRestored = true;
+        _isWorkerStarted = true;
         _ = Task.Run(ProcessAsync);
     }
 
@@ -77,6 +84,8 @@ public sealed class MonitorQueueService
         var items = await _store.LoadAsync();
         foreach (var item in items)
             _queue.Enqueue(item);
+
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Restored {items.Count} items. Pending={_queue.Count}");
 
         if (items.Count > 0)
         {
@@ -87,15 +96,24 @@ public sealed class MonitorQueueService
 
     private async Task ProcessAsync()
     {
-        while (!_cts.IsCancellationRequested)
+        while (true)
         {
+            CancellationToken token;
+            lock (_gate)
+            {
+                if (!_isRunning || _cts == null)
+                    return;
+
+                token = _cts.Token;
+            }
+
             try
             {
-                await _signal.WaitAsync(_cts.Token);
+                await _signal.WaitAsync(token);
             }
             catch (OperationCanceledException)
             {
-                break;
+                return;
             }
 
             while (_queue.TryDequeue(out var item))
@@ -104,6 +122,11 @@ public sealed class MonitorQueueService
                 if (!sent)
                 {
                     _queue.Enqueue(item with { Attempt = item.Attempt + 1 });
+                    System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Re-queued {item.Label}. Attempt={item.Attempt + 1}, Pending={_queue.Count}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Sent {item.Label} successfully. Pending={_queue.Count}");
                 }
 
                 QueueChanged?.Invoke(this, EventArgs.Empty);
@@ -123,6 +146,8 @@ public sealed class MonitorQueueService
                 var response = await _httpClient.PostAsync(item.Url, content);
                 if (response.IsSuccessStatusCode)
                     return true;
+
+                System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] {item.Label} attempt {attempt + 1} failed with HTTP {(int)response.StatusCode} {response.ReasonPhrase}");
             }
             catch (Exception ex)
             {

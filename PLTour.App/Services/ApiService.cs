@@ -29,11 +29,11 @@ public class ApiService
 #if DEBUG
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         // Mặc định dùng Render
-        _baseUrl = DevTunnelUrl;
+        _baseUrl = RenderUrl;
 #else
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
         // Mặc định dùng Dev Tunnel
-        //_baseUrl = RenderUrl;
+        _baseUrl = DevTunnelUrl;
 #endif
 
         // Cho phép đổi sang LAN hoặc Render bằng biến môi trường

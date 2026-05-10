@@ -11,11 +11,17 @@ namespace PLTour.API.Controllers;
 public class MonitorController : ControllerBase
 {
     private readonly PLTourDbContext _context;
+    private readonly ILogger<MonitorController> _logger;
 
-    public MonitorController(PLTourDbContext context)
+    public MonitorController(PLTourDbContext context, ILogger<MonitorController> logger)
     {
         _context = context;
+        _logger = logger;
     }
+
+    [HttpPost("track")]
+    public Task<IActionResult> Track([FromBody] AnalyticsEventDto dto)
+        => SaveAnalyticsEventAsync(dto, "track");
 
     [HttpPost("heartbeat")]
     public async Task<IActionResult> Heartbeat([FromBody] MonitorHeartbeatDto dto)
@@ -63,10 +69,19 @@ public class MonitorController : ControllerBase
     }
 
     [HttpPost("event")]
-    public async Task<IActionResult> TrackEvent([FromBody] AnalyticsEventDto dto)
+    public Task<IActionResult> TrackEvent([FromBody] AnalyticsEventDto dto)
+        => SaveAnalyticsEventAsync(dto, "event");
+
+    private async Task<IActionResult> SaveAnalyticsEventAsync(AnalyticsEventDto dto, string routeName)
     {
         if (dto == null)
             return BadRequest("Invalid payload.");
+
+        _logger.LogInformation("[MONITOR] Received analytics payload from {RouteName}. EventType={EventType}, DeviceId={DeviceId}, SessionId={SessionId}",
+            routeName,
+            dto.EventType,
+            dto.DeviceId,
+            dto.SessionId);
 
         var newEvent = new AnalyticsEvent
         {
@@ -82,13 +97,14 @@ public class MonitorController : ControllerBase
             has_audio = dto.HasAudio,
             latitude = dto.Latitude,
             longitude = dto.Longitude,
-            timestamp = DateTime.UtcNow
+            timestamp = dto.Timestamp == default ? DateTime.UtcNow : dto.Timestamp
         };
 
         _context.AnalyticsEvents.Add(newEvent);
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Event saved." });
+        _logger.LogInformation("[MONITOR] Saved analytics event. Id={Id}, EventType={EventType}", newEvent.id, newEvent.event_type);
+        return Ok(new { message = "Event saved.", id = newEvent.id });
     }
 
     [HttpGet("active-devices")]

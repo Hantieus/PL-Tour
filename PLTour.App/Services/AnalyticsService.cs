@@ -1,8 +1,4 @@
-﻿using Microsoft.Maui.Devices;
-using Microsoft.Maui.Storage;
-using PLTour.Shared.Models.DTO;
-using System.Text;
-using System.Text.Json;
+﻿using PLTour.Shared.Models.DTO;
 
 namespace PLTour.App.Services;
 
@@ -30,7 +26,21 @@ public class AnalyticsService
     /// </summary>
     private void TrackEvent(string eventType, AnalyticsEventDto? data = null)
     {
-        _ = _monitorService.TrackEventAsync(eventType, data);
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ANALYTICS] Queueing event '{eventType}'");
+            _ = _monitorService.TrackEventAsync(eventType, data).ContinueWith(task =>
+            {
+                if (task.Exception != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ANALYTICS] Failed to send '{eventType}': {task.Exception.GetBaseException().Message}");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ANALYTICS] TrackEvent threw for '{eventType}': {ex.Message}");
+        }
     }
 
     // ==================== CÁC PHƯƠNG THỨC GỌI TỪ APP ====================
@@ -42,7 +52,7 @@ public class AnalyticsService
         if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
             return;
 
-        await Task.Run(() => TrackEvent("location_ping", new AnalyticsEventDto { Latitude = lat, Longitude = lng }));
+        TrackEvent("location_ping", new AnalyticsEventDto { Latitude = lat, Longitude = lng });
     }
 
     public async Task TrackPoiViewAsync(int locationId)
@@ -51,7 +61,7 @@ public class AnalyticsService
         if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
             return;
 
-        await Task.Run(() => TrackEvent("view_location", new AnalyticsEventDto { LocationId = locationId }));
+        TrackEvent("view_location", new AnalyticsEventDto { LocationId = locationId });
     }
 
     public async Task TrackAudioStartAsync(int locationId, string languageCode, bool isOnSite)
@@ -63,7 +73,7 @@ public class AnalyticsService
         _playbackStartTime = DateTime.UtcNow;
         _currentTrackedLocationId = locationId;
         string eventType = isOnSite ? "listen_onsite" : "listen_remote";
-        await Task.Run(() => TrackEvent(eventType, new AnalyticsEventDto { LocationId = locationId, LanguageCode = languageCode, HasAudio = true }));
+        TrackEvent(eventType, new AnalyticsEventDto { LocationId = locationId, LanguageCode = languageCode, HasAudio = true });
     }
 
     public async Task TrackAudioStopAsync()
@@ -73,7 +83,7 @@ public class AnalyticsService
             int seconds = (int)(DateTime.UtcNow - _playbackStartTime.Value).TotalSeconds;
             if (seconds > 0)
             {
-                await Task.Run(() => TrackEvent("listen_duration", new AnalyticsEventDto { LocationId = _currentTrackedLocationId, Duration = seconds }));
+                TrackEvent("listen_duration", new AnalyticsEventDto { LocationId = _currentTrackedLocationId, Duration = seconds });
             }
             _playbackStartTime = null;
             _currentTrackedLocationId = 0;

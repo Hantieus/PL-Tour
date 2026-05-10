@@ -30,16 +30,16 @@ public class DeviceMonitorService
 
         const string DevTunnelUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
         const string LanUrl = "http://192.168.100.123:5229/";
-        const string RenderUrl = "https://pl-tour-production.up.railway.app/";
+        const string RenderUrl = "https://pl-tour.onrender.com/";
 
 #if DEBUG
         // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
         // Mặc định dùng Dev Tunnel
-        _baseUrl = DevTunnelUrl;
+        _baseUrl = RenderUrl;
 #else
         // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
         // Mặc định dùng Render
-        _baseUrl = RenderUrl;
+        _baseUrl = DevTunnelUrl;
 #endif
 
         // Cho phép đổi sang LAN hoặc Render bằng biến môi trường
@@ -57,14 +57,10 @@ public class DeviceMonitorService
 
         System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] App đang kết nối tới: {_baseUrl}");
 
-        var handler = new HttpClientHandler
-        {
-            // Bỏ qua lỗi chứng chỉ SSL khi chạy HTTP ở local
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-        };
-
         _heartbeatUrl = $"{_baseUrl.TrimEnd('/')}/api/monitor/heartbeat";
         _eventUrl = $"{_baseUrl.TrimEnd('/')}/api/monitor/event";
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] Heartbeat URL: {_heartbeatUrl}");
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] Event URL: {_eventUrl}");
         _queueService = new MonitorQueueService();
         _queueService.QueueChanged += (_, __) => QueueChanged?.Invoke(this, EventArgs.Empty);
 
@@ -84,6 +80,8 @@ public class DeviceMonitorService
             return;
 
         _isStarted = true;
+        _heartbeatCts?.Cancel();
+        _heartbeatCts?.Dispose();
         _heartbeatCts = new CancellationTokenSource();
         _queueService.Start();
         _ = SendHeartbeatAsync("app_start");
@@ -148,6 +146,7 @@ public class DeviceMonitorService
             longitude = LocationService.Shared?.CurrentLocation?.Longitude
         };
 
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] Queue heartbeat. DeviceId={DeviceId}, SessionId={SessionId}, Reason={reason}");
         return _queueService.EnqueueAsync(_heartbeatUrl, payload, "heartbeat");
     }
 
@@ -161,6 +160,7 @@ public class DeviceMonitorService
         if (data.Timestamp == default)
             data.Timestamp = DateTime.UtcNow;
 
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] Queue event '{eventType}'. DeviceId={data.DeviceId}, SessionId={data.SessionId}, LocationId={data.LocationId}, Duration={data.Duration}");
         return _queueService.EnqueueAsync(_eventUrl, data, eventType);
     }
 

@@ -219,6 +219,7 @@ public partial class TourDetailPage : ContentPage
     {
         if (sender is not Border border || border.BindingContext is not PoiModel poi) return;
         this.PoiDetailPopupView.ShowPopup(poi);
+        _ = AnalyticsService.Instance.TrackPoiViewAsync(poi.Id);
     }
 
     private async void SpeakIntro_Clicked(object? sender, EventArgs e)
@@ -243,6 +244,9 @@ public partial class TourDetailPage : ContentPage
 
         try
         {
+            string langCode = Preferences.Default.Get("UserLanguage", "vi");
+            await AnalyticsService.Instance.TrackAudioStartAsync(_tour.Id.GetHashCode(), langCode, _locationService.CurrentLocation != null);
+
             string url = FixAudioUrl(_tour.IntroAudioUrl);
             if (!string.IsNullOrEmpty(url))
             {
@@ -250,7 +254,6 @@ public partial class TourDetailPage : ContentPage
             }
             else
             {
-                string langCode = Preferences.Default.Get("UserLanguage", "vi");
                 await _audioService.PlayTextToSpeechAsync(intro, langCode);
             }
         }
