@@ -11,10 +11,12 @@ namespace PLTour.Admin.Controllers;
 public class MonitorController : Controller
 {
     private readonly PLTourDbContext _context;
+    private readonly IConfiguration _configuration;
 
-    public MonitorController(PLTourDbContext context)
+    public MonitorController(PLTourDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     public async Task<IActionResult> Index()
@@ -41,6 +43,10 @@ public class MonitorController : Controller
                 Status = x.LastHeartbeat >= cutoffOnline ? "online" : x.LastHeartbeat >= cutoffStale ? "stale" : "offline"
             })
             .ToListAsync();
+
+        var githubReleasesUrl = _configuration.GetSection("AppUpdate")["GitHubReleasesUrl"] ?? string.Empty;
+
+        ViewBag.GitHubReleasesUrl = githubReleasesUrl;
 
         var vm = new MonitorDashboardViewModel
         {

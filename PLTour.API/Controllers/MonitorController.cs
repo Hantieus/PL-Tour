@@ -12,11 +12,13 @@ public class MonitorController : ControllerBase
 {
     private readonly PLTourDbContext _context;
     private readonly ILogger<MonitorController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public MonitorController(PLTourDbContext context, ILogger<MonitorController> logger)
+    public MonitorController(PLTourDbContext context, ILogger<MonitorController> logger, IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _configuration = configuration;
     }
 
     [HttpPost("track")]

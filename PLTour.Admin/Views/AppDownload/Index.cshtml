@@ -1,0 +1,65 @@
+@{
+    ViewData["Title"] = "Tải hoặc cập nhật ứng dụng";
+    var currentVersion = ViewBag.CurrentVersion as string ?? "1.0.0";
+    var githubReleasesUrl = ViewBag.GitHubReleasesUrl as string ?? "";
+    var releaseNotes = ViewBag.ReleaseNotes as string ?? "Đang cập nhật thông tin phát hành.";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold mb-2">Tải hoặc cập nhật ứng dụng</h2>
+                        <p class="text-muted mb-0">Quét mã để tải app phiên bản mới nhất</p>
+                    </div>
+
+                    <div class="row g-4 align-items-center">
+                        <div class="col-md-5 text-center">
+                            <img alt="QR code tải ứng dụng"
+                                 class="img-fluid border rounded p-2 bg-white"
+                                 src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=@Uri.EscapeDataString(githubReleasesUrl)" />
+                        </div>
+                        <div class="col-md-7">
+                            <div class="mb-3">
+                                <div class="text-muted small">Phiên bản hiện tại</div>
+                                <div class="fs-4 fw-semibold">@currentVersion</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="text-muted small mb-1">Link GitHub Releases</div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" readonly value="@githubReleasesUrl" id="githubReleasesInput" />
+                                    <button class="btn btn-outline-secondary" type="button" id="copyGithubReleasesBtn">Sao chép link</button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="text-muted small mb-1">Ghi chú cập nhật</div>
+                                <div class="border rounded p-3 bg-light">@releaseNotes</div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-sm-flex">
+                                <a class="btn btn-primary" href="@githubReleasesUrl" target="_blank" rel="noopener">Mở GitHub Releases</a>
+                                <button class="btn btn-outline-secondary" type="button" onclick="window.location.reload()">Kiểm tra bản mới</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('copyGithubReleasesBtn').addEventListener('click', async () => {
+            await navigator.clipboard.writeText('@githubReleasesUrl');
+            const btn = document.getElementById('copyGithubReleasesBtn');
+            const oldText = btn.textContent;
+            btn.textContent = 'Đã sao chép';
+            setTimeout(() => btn.textContent = oldText, 1500);
+        });
+    </script>
+}

@@ -29,31 +29,17 @@ public class DeviceMonitorService
         Instance = this;
 
         const string DevTunnelUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
-        const string LanUrl = "http://192.168.100.123:5229/";
         const string RenderUrl = "https://pl-tour.onrender.com/";
 
-#if DEBUG
-        // --- CẤU HÌNH KHI CHẠY DEBUG TẠI LOCAL ---
-        // Mặc định dùng Dev Tunnel
-        _baseUrl = RenderUrl;
-#else
-        // --- CẤU HÌNH KHI PUBLISH / CHẤM ĐỒ ÁN (SERVER THẬT) ---
-        // Mặc định dùng Render
-        _baseUrl = DevTunnelUrl;
-#endif
+        // Dùng chung logic với ApiService:
+        // PLTOUR_USE_DEVTUNNEL=true hoặc 1 => DevTunnelUrl
+        // Ngược lại => RenderUrl
+        var useDevTunnel = Environment.GetEnvironmentVariable("PLTOUR_USE_DEVTUNNEL")
+            ?.Trim()
+            .Equals("true", StringComparison.OrdinalIgnoreCase) == true
+            || Environment.GetEnvironmentVariable("PLTOUR_USE_DEVTUNNEL")?.Trim() == "1";
 
-        // Cho phép đổi sang LAN hoặc Render bằng biến môi trường
-        // PLTOUR_MONITOR_MODE = devtunnel | lan | render
-        var monitorMode = Environment.GetEnvironmentVariable("PLTOUR_MONITOR_MODE")?.Trim().ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(monitorMode))
-        {
-            _baseUrl = monitorMode switch
-            {
-                "lan" => LanUrl,
-                "render" => RenderUrl,
-                _ => DevTunnelUrl
-            };
-        }
+        _baseUrl = useDevTunnel ? DevTunnelUrl : RenderUrl;
 
         System.Diagnostics.Debug.WriteLine($"[MONITOR_LOG] App đang kết nối tới: {_baseUrl}");
 

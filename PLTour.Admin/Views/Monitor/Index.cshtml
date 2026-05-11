@@ -3,7 +3,6 @@
     ViewData["Title"] = "Monitor Dashboard";
 }
 
-
 <div class="row mb-3 align-items-end">
     <div class="col-md-3 mb-2">
         <label class="form-label">Lọc trạng thái</label>
@@ -23,35 +22,53 @@
 </div>
 
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <h6 class="card-title">Tổng thiết bị</h6>
-                <h2 class="mb-0" id="totalCount">@Model.ActiveCount</h2>
+    <div class="col-lg-9 mb-3 mb-lg-0">
+        <div class="row h-100 g-3">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100 text-white bg-primary rounded-4 text-center">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                        <div class="fw-semibold fs-5 mb-4">Tổng thiết bị</div>
+                        <div class="display-5 fw-bold lh-1" id="totalCount">@Model.ActiveCount</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100 text-white bg-success rounded-4 text-center">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                        <div class="fw-semibold fs-5 mb-4">Online</div>
+                        <div class="display-5 fw-bold lh-1" id="onlineCount">@Model.OnlineCount</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100 text-dark bg-warning rounded-4 text-center">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                        <div class="fw-semibold fs-5 mb-4">Stale</div>
+                        <div class="display-5 fw-bold lh-1" id="staleCount">@Model.StaleCount</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm h-100 text-white bg-danger rounded-4 text-center">
+                    <div class="card-body p-4 d-flex flex-column justify-content-center align-items-center">
+                        <div class="fw-semibold fs-5 mb-4">Offline</div>
+                        <div class="display-5 fw-bold lh-1" id="offlineCount">@Model.OfflineCount</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <h6 class="card-title">Online</h6>
-                <h2 class="mb-0" id="onlineCount">@Model.OnlineCount</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark">
-            <div class="card-body">
-                <h6 class="card-title">Stale</h6>
-                <h2 class="mb-0" id="staleCount">@Model.StaleCount</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-danger text-white">
-            <div class="card-body">
-                <h6 class="card-title">Offline</h6>
-                <h2 class="mb-0" id="offlineCount">@Model.OfflineCount</h2>
+    <div class="col-lg-3">
+        <div class="card border-primary h-100 shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <h5 class="card-title mb-2">Ứng dụng</h5>
+                    <p class="text-muted mb-3">Quét mã để tải/cập nhật app</p>
+                    <div class="small text-muted mb-3">Link GitHub Releases: <strong>@(ViewBag.GitHubReleasesUrl ?? "Chưa cấu hình")</strong></div>
+                </div>
+                <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="modal" data-bs-target="#appUpdateModal">
+                    Tải hoặc cập nhật ứng dụng
+                </button>
             </div>
         </div>
     </div>
@@ -87,10 +104,47 @@
     </div>
 </div>
 
+<div class="modal fade" id="appUpdateModal" tabindex="-1" aria-labelledby="appUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="appUpdateModalLabel">Tải hoặc cập nhật ứng dụng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4 align-items-center">
+                    <div class="col-md-5 text-center">
+                        <img id="appQrCode" alt="QR code tải ứng dụng" class="img-fluid border rounded p-2 bg-white" />
+                    </div>
+                    <div class="col-md-7">
+                        <p class="mb-3">Quét mã để mở GitHub Releases phiên bản mới nhất.</p>
+                        <div class="mb-3">
+                            <label class="form-label">Link GitHub Releases</label>
+                            <div class="input-group">
+                                <input type="text" id="appDownloadLink" class="form-control" readonly value="@(ViewBag.GitHubReleasesUrl ?? string.Empty)" />
+                                <button class="btn btn-outline-secondary" type="button" id="copyDownloadLinkBtn">Sao chép link</button>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 d-sm-flex">
+                            <a class="btn btn-primary" id="openGithubBtn" href="@(ViewBag.GitHubReleasesUrl ?? string.Empty)" target="_blank" rel="noopener">Mở GitHub Releases</a>
+                        </div>
+                        <hr />
+                        <div class="small text-muted">
+                            Mỗi lần ra bản mới, chỉ cần upload APK lên GitHub Releases và cập nhật link tại một chỗ trong cấu hình.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         const refreshUrl = '@Url.Action("Index", "Monitor")';
         const refreshIntervalMs = 15000;
+        const appDownloadLink = document.getElementById('appDownloadLink');
+        const appQrCode = document.getElementById('appQrCode');
 
         function applyFilter() {
             const selected = document.getElementById('statusFilter').value;
@@ -98,6 +152,17 @@
                 const status = row.getAttribute('data-status');
                 row.style.display = (selected === 'all' || status === selected) ? '' : 'none';
             });
+        }
+
+        function updateQrImage() {
+            if (!appQrCode || !appDownloadLink) return;
+            const value = appDownloadLink.value;
+            appQrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(value)}`;
+        }
+
+        async function copyDownloadLink() {
+            if (!appDownloadLink) return;
+            await navigator.clipboard.writeText(appDownloadLink.value);
         }
 
         async function refreshMonitor() {
@@ -124,7 +189,10 @@
         document.getElementById('refreshNow').addEventListener('click', async () => {
             await refreshMonitor();
         });
+        document.getElementById('copyDownloadLinkBtn').addEventListener('click', copyDownloadLink);
+        document.getElementById('appUpdateModal').addEventListener('shown.bs.modal', updateQrImage);
 
+        updateQrImage();
         setInterval(refreshMonitor, refreshIntervalMs);
         applyFilter();
     </script>
