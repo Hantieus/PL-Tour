@@ -102,27 +102,56 @@ namespace PLTour.API.Controllers
                 .Include(p => p.Vendor)
                 .Include(p => p.Store)
                 .Include(p => p.Category)
-                .Where(p => p.VendorId == vendorId && p.IsAvailable)
+                .Where(p => p.IsAvailable && (p.VendorId == vendorId || p.Store!.VendorId == vendorId))
                 .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
 
-            var productDtos = products.Select(p => new ProductDto
-            {
-                ProductId = p.ProductId,
-                Name = p.Name,
-                Description = p.Description,
-                Price = p.Price,
-                ImageUrl = p.ImageUrl,
-                VendorId = p.VendorId ?? 0,
-                VendorName = p.Store?.StoreName ?? p.Vendor?.BusinessName ?? "",
-                CategoryId = p.CategoryId,
-                CategoryName = p.Category?.Name ?? "",
-                IsAvailable = p.IsAvailable,
-                StockQuantity = p.StockQuantity,
-                CreatedDate = p.CreatedDate
-            }).ToList();
-
-            return Ok(productDtos);
+            return Ok(products.Select(MapToDto).ToList());
         }
+
+        // GET: api/products/by-location/5
+        [HttpGet("by-location/{locationId}")]
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProductsByLocation(int locationId)
+        {
+            var stores = _context.Set<VendorStore>().Where(s => s.LocationId == locationId && s.IsActive);
+
+            var storeIds = await stores
+                .Select(s => s.StoreId)
+                .ToListAsync();
+
+            var vendorIds = await stores
+                .Select(s => s.VendorId)
+                .Distinct()
+                .ToListAsync();
+
+            var products = await _context.Products
+                .Include(p => p.Vendor)
+                .Include(p => p.Store)
+                .Include(p => p.Category)
+                .Where(p => p.IsAvailable && (
+                    (p.StoreId.HasValue && storeIds.Contains(p.StoreId.Value)) ||
+                    (p.VendorId.HasValue && vendorIds.Contains(p.VendorId.Value))
+                ))
+                .OrderByDescending(p => p.CreatedDate)
+                .ToListAsync();
+
+            return Ok(products.Select(MapToDto).ToList());
+        }
+
+        private static ProductDto MapToDto(Product p) => new()
+        {
+            ProductId = p.ProductId,
+            Name = p.Name,
+            Description = p.Description,
+            Price = p.Price,
+            ImageUrl = p.ImageUrl,
+            VendorId = p.VendorId ?? 0,
+            VendorName = p.Store?.StoreName ?? p.Vendor?.BusinessName ?? "",
+            CategoryId = p.CategoryId,
+            CategoryName = p.Category?.Name ?? "",
+            IsAvailable = p.IsAvailable,
+            StockQuantity = p.StockQuantity,
+            CreatedDate = p.CreatedDate
+        };
     }
 }

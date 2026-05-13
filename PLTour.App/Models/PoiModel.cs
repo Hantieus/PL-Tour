@@ -1,6 +1,8 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using PLTour.App.Services;
+using PLTour.Shared.Models.DTO;
 using Mapsui.Styles;
 using MapsuiColor = Mapsui.Styles.Color;
 
@@ -45,6 +47,7 @@ public class PoiModel : INotifyPropertyChanged
 
     public string ImageUrl { get; set; } = string.Empty;
     public int CategoryId { get; set; }
+    public int VendorId { get; set; }
     public string Category { get; set; } = string.Empty;
     public string? CategoryEn { get; set; }
     public string? CategoryZh { get; set; }
@@ -76,6 +79,25 @@ public class PoiModel : INotifyPropertyChanged
     public string LocalizedCategory => PickLocalized(Category, CategoryEn, CategoryZh, CategoryKo, CategoryJa);
     public string LocalizedFullContent => PickLocalized(FullContent, FullContentEn, FullContentZh, FullContentKo, FullContentJa);
     public string LocalizedAudioUrl => PickLocalized(AudioUrl, AudioUrlEn, AudioUrlZh, AudioUrlKo, AudioUrlJa);
+
+    private ObservableCollection<ProductDto> _storeProducts = new();
+    public ObservableCollection<ProductDto> StoreProducts
+    {
+        get => _storeProducts;
+        set
+        {
+            if (_storeProducts != value)
+            {
+                _storeProducts = value;
+                OnPropertyChanged(nameof(StoreProducts));
+            }
+        }
+    }
+
+    public void SetStoreProducts(IEnumerable<ProductDto> products)
+    {
+        StoreProducts = new ObservableCollection<ProductDto>(products);
+    }
 
     private static string PickLocalized(string vi, string? en = null, string? zh = null, string? ko = null, string? ja = null)
     {

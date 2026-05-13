@@ -1,5 +1,6 @@
 ﻿using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PLTour.API.Models.DbContext;
 using PLTour.Shared.Models.Entities;
@@ -20,18 +21,30 @@ namespace PLTour.Vendor.Controllers
             _cloudinaryService = cloudinaryService;
         }
 
+        private async Task PopulateRegistrationViewBagsAsync()
+        {
+            var categories = await _context.Categories
+                .Where(c => c.IsActive)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.CategoryId.ToString(),
+                    Text = c.Name
+                })
+                .ToListAsync();
+
+            ViewBag.Categories = categories ?? new List<SelectListItem>();
+            ViewBag.Plans = new List<SelectListItem>
+            {
+                new() { Value = "Free", Text = "Free - Miễn phí" },
+                new() { Value = "Premium", Text = "Premium - Nâng cấp" }
+            };
+        }
+
         // GET: /vendor-registration
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            ViewBag.Categories = await _context.Categories
-                .Where(c => c.IsActive)
-                .ToListAsync();
-            ViewBag.Plans = new[]
-            {
-                new { Value = "Free", Text = "Free - Miễn phí" },
-                new { Value = "Premium", Text = "Premium - Nâng cấp" }
-            };
+            await PopulateRegistrationViewBagsAsync();
             return View();
         }
 
@@ -51,14 +64,14 @@ namespace PLTour.Vendor.Controllers
                     if (await _context.Vendors.AnyAsync(v => v.Phone == model.Phone))
                     {
                         ModelState.AddModelError("Phone", "Số điện thoại này đã được đăng ký.");
-                        ViewBag.Categories = await _context.Categories.ToListAsync();
+                        await PopulateRegistrationViewBagsAsync();
                         return View(model);
                     }
 
                     if (existingVendor != null)
                     {
                         ModelState.AddModelError("Email", "Email này đã được đăng ký. Vui lòng sử dụng email khác.");
-                        ViewBag.Categories = await _context.Categories.ToListAsync();
+                        await PopulateRegistrationViewBagsAsync();
                         return View(model);
                     }
 
@@ -103,12 +116,7 @@ namespace PLTour.Vendor.Controllers
                 }
             }
 
-            ViewBag.Categories = await _context.Categories.ToListAsync();
-            ViewBag.Plans = new[]
-            {
-                new { Value = "Free", Text = "Free - Miễn phí" },
-                new { Value = "Premium", Text = "Premium - Nâng cấp" }
-            };
+            await PopulateRegistrationViewBagsAsync();
             return View(model);
         }
 

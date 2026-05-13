@@ -15,7 +15,7 @@ public class ApiService
     // Base URL của Backend (Server)
     private readonly string _baseUrl;
     //Dùng DevTunnelUrl không cần phải dùng chung 1 mạng wifi của máy tính và điện thoạii nhưng vẫn chạy được
-    private const string DevTunnelUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
+    private const string DevTunnelUrl = "https://cr7jqdb9-7291.asse.devtunnels.ms/";
 
     //Không cân bật api nhưng vẫn chạy được app
     private const string RenderUrl = "https://pl-tour.onrender.com/";
@@ -30,7 +30,7 @@ public class ApiService
             .Equals("true", StringComparison.OrdinalIgnoreCase) == true
             || Environment.GetEnvironmentVariable("PLTOUR_USE_DEVTUNNEL")?.Trim() == "1";
 
-        _baseUrl = useDevTunnel ? DevTunnelUrl : RenderUrl;
+        _baseUrl = useDevTunnel ? DevTunnelUrl : DevTunnelUrl;
 
         // Cho phép đổi sang DevTunnel / Render bằng biến môi trường.
         // PLTOUR_API_MODE = devtunnel | render
@@ -173,6 +173,24 @@ public class ApiService
         return model;
     }
 
+    public string BaseUrlForDebug => _baseUrl;
+
+    public async Task<List<ProductDto>> GetProductsForPoiAsync(PoiModel poi)
+    {
+        try
+        {
+            var byLocation = await _httpClient.GetFromJsonAsync<List<ProductDto>>($"api/products/by-location/{poi.Id}");
+            var results = byLocation?.Where(p => p.IsAvailable).ToList() ?? new List<ProductDto>();
+            System.Diagnostics.Debug.WriteLine($"[API_MENU] GET api/products/by-location/{poi.Id} => {results.Count}");
+            return results;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetProductsForPoi: {ex}");
+            return new List<ProductDto>();
+        }
+    }
+
     private PoiModel MapToPoiModel(PLTour.Shared.Models.DTO.LocationDto loc)
     {
         string selectedLangCode = LocalizationService.Instance.CurrentLanguageCode;
@@ -226,6 +244,7 @@ public class ApiService
             Address = loc.Address ?? string.Empty,
             CategoryId = loc.CategoryId,
             Category = MapCategoryName(loc.CategoryId),
+            VendorId = loc.CategoryId == 2 ? loc.LocationId : 0,
             PinColor = GetPinColor(loc.CategoryId)
         };
     }

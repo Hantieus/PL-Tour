@@ -28,7 +28,8 @@ public class DeviceMonitorService
     {
         Instance = this;
 
-        const string DevTunnelUrl = "https://q0x087zj-7291.asse.devtunnels.ms/";
+        const string DevTunnelUrl = "https://cr7jqdb9-7291.asse.devtunnels.ms/";
+        //l-https://q0x087zj-7291.asse.devtunnels.ms/
         const string RenderUrl = "https://pl-tour.onrender.com/";
 
         // Dùng chung logic với ApiService:
