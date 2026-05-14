@@ -33,7 +33,7 @@ public class ApiService
             .Equals("true", StringComparison.OrdinalIgnoreCase) == true
             || Environment.GetEnvironmentVariable("PLTOUR_USE_DEVTUNNEL")?.Trim() == "1";
 
-        _baseUrl = useDevTunnel ? DevTunnelUrl : DevTunnelUrl;
+        _baseUrl = useDevTunnel ? DevTunnelUrl : RenderUrl;
 
         // Cho phép đổi sang DevTunnel / Render bằng biến môi trường.
         // PLTOUR_API_MODE = devtunnel | render
@@ -43,7 +43,8 @@ public class ApiService
             _baseUrl = apiMode switch
             {
                 "render" => RenderUrl,
-                _ => DevTunnelUrl
+                "devtunnel" => DevTunnelUrl,
+                _ => _baseUrl
             };
         }
 

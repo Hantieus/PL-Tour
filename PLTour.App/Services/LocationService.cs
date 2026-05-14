@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Storage;
 using System;
 using System.Threading.Tasks;
@@ -9,19 +9,22 @@ public class LocationService
 {
     public static LocationService? Shared { get; private set; }
 
+    private Location? _currentLocation;
+
     public LocationService()
     {
         Shared = this;
     }
 
-    // THÊM BIẾN NÀY ĐỂ FIX LỖI: Thuộc tính này sẽ tự động đọc/ghi vào bộ nhớ máy (Preferences)
+    // Giữ vị trí gần nhất trong bộ nhớ để tránh đọc Preferences liên tục
     public Location CurrentLocation
     {
-        get => GetSavedLocation(); // Khi gọi lấy vị trí, tự động đọc từ Preferences
+        get => _currentLocation ?? GetSavedLocation();
         set
         {
             if (value != null)
             {
+                _currentLocation = value;
                 Preferences.Default.Set("UserLat", value.Latitude);
                 Preferences.Default.Set("UserLng", value.Longitude);
             }

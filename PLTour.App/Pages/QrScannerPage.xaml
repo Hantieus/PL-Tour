@@ -23,7 +23,8 @@
         <Grid Grid.Row="1">
             <zxing:CameraBarcodeReaderView x:Name="QrCameraView"
                                            BarcodesDetected="QrCameraView_BarcodesDetected"
-                                           IsDetecting="True" />
+                                           IsDetecting="False"
+                                           IsVisible="True" />
 
             <Border BackgroundColor="#22000000"
                     Stroke="#66FFFFFF"

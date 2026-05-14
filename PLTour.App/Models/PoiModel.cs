@@ -16,19 +16,23 @@ public static class PoiCategories
     public const string SuKien = "Sự kiện";
 }
 
-public class PoiModel : INotifyPropertyChanged
+public class PoiModel : INotifyPropertyChanged, IDisposable
 {
+    private bool _disposed;
+
     public PoiModel()
     {
-        LocalizationService.Instance.LanguageChanged += (_, __) =>
-        {
-            OnPropertyChanged(nameof(LocalizedName));
-            OnPropertyChanged(nameof(LocalizedDescription));
-            OnPropertyChanged(nameof(LocalizedCategory));
-            OnPropertyChanged(nameof(LocalizedFullContent));
-            OnPropertyChanged(nameof(DistanceText));
-            OnPropertyChanged(nameof(PlayButtonText));
-        };
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(LocalizedName));
+        OnPropertyChanged(nameof(LocalizedDescription));
+        OnPropertyChanged(nameof(LocalizedCategory));
+        OnPropertyChanged(nameof(LocalizedFullContent));
+        OnPropertyChanged(nameof(DistanceText));
+        OnPropertyChanged(nameof(PlayButtonText));
     }
 
     // 1. --- THÔNG TIN TỪ API ---
@@ -188,5 +192,13 @@ public class PoiModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(LocalizedFullContent));
         OnPropertyChanged(nameof(LocalizedAudioUrl));
     }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+    }
+
     protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

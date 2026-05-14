@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Hosting;
 using CommunityToolkit.Maui.Views;
@@ -39,6 +39,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AutoPlayPreferenceService>();
         builder.Services.AddSingleton<AutoPlayHistoryService>();
         builder.Services.AddSingleton<IAudioService, AudioService>();
+        builder.Services.AddSingleton<AudioPlaybackQueueService>();
 
         builder.Services.AddTransient<LoadingPage>();
         builder.Services.AddTransient<HomePage>();

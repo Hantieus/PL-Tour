@@ -31,6 +31,13 @@ public partial class QrScannerPage : ContentPage
     {
         base.OnAppearing();
 
+        QrCameraView.Options = new BarcodeReaderOptions
+        {
+            AutoRotate = true,
+            Multiple = false,
+            Formats = BarcodeFormats.TwoDimensional
+        };
+
         var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
         if (status != PermissionStatus.Granted)
         {
@@ -44,13 +51,6 @@ public partial class QrScannerPage : ContentPage
             QrCameraView.IsDetecting = false;
             return;
         }
-
-        QrCameraView.Options = new BarcodeReaderOptions
-        {
-            AutoRotate = true,
-            Multiple = false,
-            Formats = BarcodeFormats.TwoDimensional
-        };
 
         QrCameraView.IsDetecting = true;
         StatusLabel.Text = "Sẵn sàng quét...";
