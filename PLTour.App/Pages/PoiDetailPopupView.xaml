@@ -125,70 +125,102 @@
 
                     <Border BackgroundColor="#F8FAFC"
                             Stroke="#E5E7EB"
-                            StrokeShape="RoundRectangle 16"
-                            Padding="14">
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="Menu cửa hàng"
-                                   FontAttributes="Bold"
-                                   FontSize="15"
-                                   TextColor="#2A9D8F" />
+                            StrokeShape="RoundRectangle 18"
+                            Padding="16">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Menu nhà hàng"
+                                           FontAttributes="Bold"
+                                           FontSize="16"
+                                           TextColor="#0F172A" />
+                                    <Label Text="Danh sách món đang phục vụ"
+                                           FontSize="12"
+                                           TextColor="#64748B" />
+                                </VerticalStackLayout>
+
+                                <Border Grid.Column="1"
+                                        BackgroundColor="#E6F7F4"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 999"
+                                        Padding="10,6">
+                                    <Label Text="{Binding StoreProducts.Count, StringFormat='{}{0} món'}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="#0F766E" />
+                                </Border>
+                            </Grid>
 
                             <VerticalStackLayout BindableLayout.ItemsSource="{Binding StoreProducts}"
-                                                 Spacing="10">
+                                                 Spacing="12">
                                 <BindableLayout.EmptyView>
-                                    <Label Text="Chưa có menu cho store này"
-                                           FontSize="12"
-                                           TextColor="#6B7280"
-                                           HorizontalTextAlignment="Center"
-                                           Margin="0,8,0,0" />
+                                    <Border Padding="14"
+                                            BackgroundColor="#FFFFFF"
+                                            Stroke="#E2E8F0"
+                                            StrokeShape="RoundRectangle 14">
+                                        <Label Text="Chưa có menu cho nhà hàng này"
+                                               FontSize="12"
+                                               TextColor="#64748B"
+                                               HorizontalTextAlignment="Center" />
+                                    </Border>
                                 </BindableLayout.EmptyView>
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="12"
-                                                Stroke="#E5E7EB"
-                                                StrokeShape="RoundRectangle 14"
-                                                BackgroundColor="White">
-                                            <Grid ColumnDefinitions="72,*,Auto" ColumnSpacing="12">
-                                                <Border WidthRequest="72"
-                                                        HeightRequest="72"
-                                                        StrokeShape="RoundRectangle 12"
+                                        <Border Padding="10"
+                                                BackgroundColor="White"
+                                                Stroke="#E2E8F0"
+                                                StrokeShape="RoundRectangle 16">
+                                            <Grid ColumnDefinitions="84,*,Auto" ColumnSpacing="12">
+                                                <Border WidthRequest="84"
+                                                        HeightRequest="84"
                                                         StrokeThickness="0"
-                                                        BackgroundColor="#EEF2F7">
+                                                        StrokeShape="RoundRectangle 14"
+                                                        BackgroundColor="#F1F5F9">
                                                     <Image Source="{Binding ImageUrl}"
                                                            Aspect="AspectFill" />
                                                 </Border>
 
-                                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                                <VerticalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
                                                     <Label Text="{Binding Name}"
                                                            FontAttributes="Bold"
-                                                           FontSize="14"
-                                                           TextColor="#111827"
+                                                           FontSize="15"
+                                                           TextColor="#0F172A"
                                                            LineBreakMode="TailTruncation"
                                                            MaxLines="2" />
                                                     <Label Text="{Binding CategoryName}"
                                                            FontSize="12"
-                                                           TextColor="#6B7280"
+                                                           TextColor="#64748B"
                                                            LineBreakMode="TailTruncation" />
                                                     <Label Text="{Binding Description}"
                                                            FontSize="12"
-                                                           TextColor="#6B7280"
+                                                           TextColor="#64748B"
                                                            LineBreakMode="TailTruncation"
                                                            MaxLines="2" />
                                                 </VerticalStackLayout>
 
                                                 <VerticalStackLayout Grid.Column="2"
-                                                                     Spacing="6"
+                                                                     Spacing="8"
                                                                      HorizontalOptions="End"
                                                                      VerticalOptions="Center">
-                                                    <Label Text="{Binding Price, StringFormat='{}{0:N0} đ'}"
-                                                           FontAttributes="Bold"
-                                                           FontSize="13"
-                                                           TextColor="#2A9D8F"
-                                                           HorizontalTextAlignment="End" />
-                                                    <Label Text="{Binding IsAvailable, StringFormat='Còn hàng: {0}'}"
-                                                           FontSize="11"
-                                                           TextColor="#6B7280"
-                                                           HorizontalTextAlignment="End" />
+                                                    <Border BackgroundColor="#F0FDF4"
+                                                            StrokeThickness="0"
+                                                            StrokeShape="RoundRectangle 999"
+                                                            Padding="10,6">
+                                                        <Label Text="{Binding Price, StringFormat='{}{0:N0} đ'}"
+                                                               FontAttributes="Bold"
+                                                               FontSize="13"
+                                                               TextColor="#166534"
+                                                               HorizontalTextAlignment="End" />
+                                                    </Border>
+                                                    <Border BackgroundColor="#F8FAFC"
+                                                            StrokeThickness="0"
+                                                            StrokeShape="RoundRectangle 999"
+                                                            Padding="10,5">
+                                                        <Label Text="{Binding IsAvailable, StringFormat='Còn hàng: {0}'}"
+                                                               FontSize="11"
+                                                               TextColor="#475569"
+                                                               HorizontalTextAlignment="End" />
+                                                    </Border>
                                                 </VerticalStackLayout>
                                             </Grid>
                                         </Border>
