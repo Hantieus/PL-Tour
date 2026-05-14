@@ -64,7 +64,7 @@ public class TourModel : INotifyPropertyChanged
     public string? IntroAudioUrlJa { get; init; }
     public string? LocalizedIntroAudioUrl => PickLocalized(IntroAudioUrl, IntroAudioUrlEn, IntroAudioUrlZh, IntroAudioUrlKo, IntroAudioUrlJa);
 
-    public List<PoiModel> Pois { get; init; } = new List<PoiModel>();
+    public List<PoiModel> Pois { get; set; } = new List<PoiModel>();
 
     public double Latitude { get; init; }
     public double Longitude { get; init; }

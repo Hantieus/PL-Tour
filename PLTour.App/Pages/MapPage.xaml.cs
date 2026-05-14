@@ -140,6 +140,7 @@ public partial class MapPage : ContentPage
     private CancellationTokenSource? _trackingCts;
     private Task? _trackingTask;
     private bool _isLoadingData;
+    private string? _loadedTourId;
     private string? _lastPoiDrawKey;
     private readonly Dictionary<string, MPoint> _poiProjectionCache = new();
     private Location? _lastUserMapRefreshLocation;
@@ -152,6 +153,8 @@ public partial class MapPage : ContentPage
     private DateTime _lastAutoPlayedAt = DateTime.MinValue;
     private bool _isAutoPlayingPoi;
     private readonly HashSet<int> _poisCurrentlyInside = new();
+    private readonly Queue<PoiModel> _pendingAutoPlayPois = new();
+    private readonly HashSet<int> _queuedAutoPlayPoiIds = new();
 
     public MapPage(LocationService locationService, DeviceMonitorService deviceMonitorService, IAudioService audioService)
     {
@@ -304,7 +307,7 @@ public partial class MapPage : ContentPage
     async Task LoadDataFromApiAsync(bool forceReload = false)
     {
         if (_isLoadingData) return;
-        if (!forceReload && _allPois.Count > 0 && !string.IsNullOrWhiteSpace(TourId))
+        if (!forceReload && _allPois.Count > 0 && !string.IsNullOrWhiteSpace(TourId) && string.Equals(_loadedTourId, TourId, StringComparison.OrdinalIgnoreCase))
         {
             _pendingInitialCamera = true;
             ApplyInitialCamera();
@@ -317,9 +320,16 @@ public partial class MapPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine($"[MAP] Load start. TourId='{TourId}', TourName='{TourName}'");
 
+            if (!Connectivity.Current.NetworkAccess.Equals(NetworkAccess.Internet))
+            {
+                System.Diagnostics.Debug.WriteLine("[MAP] Không có mạng, dùng dữ liệu offline cache.");
+            }
+
             if (!string.IsNullOrWhiteSpace(TourId))
             {
                 var tours = await _apiService.GetToursAsync() ?? new List<TourModel>();
+                if (tours.Count == 0)
+                    System.Diagnostics.Debug.WriteLine("[MAP] Không tải được tour từ mạng, thử cache cục bộ.");
                 System.Diagnostics.Debug.WriteLine($"[MAP] Tours loaded: {tours.Count}");
 
                 var selectedTour = tours.FirstOrDefault(t => string.Equals(t.Id, TourId, StringComparison.OrdinalIgnoreCase));
@@ -328,6 +338,7 @@ public partial class MapPage : ContentPage
                 if (selectedTour?.Pois != null && selectedTour.Pois.Count > 0)
                 {
                     _allPois = selectedTour.Pois.Where(p => p != null).ToList();
+                    _loadedTourId = selectedTour.Id;
                     TourName = selectedTour.Name;
                     MapModeText = LocalizationService.Instance["MapTourMode"];
                     System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode from API tour. TourId={TourId}, TourName={selectedTour.Name}, POIs={_allPois.Count}");
@@ -337,6 +348,7 @@ public partial class MapPage : ContentPage
                 else
                 {
                     _allPois = new List<PoiModel>();
+                    _loadedTourId = null;
                     TourName = LocalizationService.Instance["MapTourNotFound"];
                     MapModeText = LocalizationService.Instance["MapTourMode"];
                     System.Diagnostics.Debug.WriteLine($"[MAP] Tour mode but tour not found or no POIs. TourId={TourId}");
@@ -345,6 +357,7 @@ public partial class MapPage : ContentPage
             else
             {
                 _allPois = await _apiService.GetAllLocationsAsync() ?? new List<PoiModel>();
+                _loadedTourId = null;
                 MapModeText = LocalizationService.Instance["MapFreeMode"];
                 TourName = string.Empty;
                 System.Diagnostics.Debug.WriteLine($"[MAP] Free mode. POIs={_allPois.Count}");
@@ -574,34 +587,57 @@ public partial class MapPage : ContentPage
             .Where(p => CalculateDistance(currentLocation.Latitude, currentLocation.Longitude, p.Lat, p.Lng) <= p.Radius)
             .ToList();
 
-        foreach (var poi in _allPois)
+        if (insidePois.Count == 0)
         {
-            var isInside = insidePois.Any(x => x.Id == poi.Id);
-            if (isInside)
-            {
-                if (_poisCurrentlyInside.Add(poi.Id))
-                {
-                    var now = DateTime.UtcNow;
-                    if (_lastAutoPlayedPoiId == poi.Id && now - _lastAutoPlayedAt < TimeSpan.FromSeconds(45))
-                        continue;
-
-                    var dedupeKey = _deduplicationService.BuildKey("autoplay_enter_poi", poi.Id);
-                    if (!_deduplicationService.ShouldProcess(dedupeKey, TimeSpan.FromSeconds(45)))
-                        continue;
-
-                    _lastAutoPlayedPoiId = poi.Id;
-                    _lastAutoPlayedAt = now;
-                    _ = QueueAutoPlayNearbyPoiAsync(poi, currentLocation);
-                }
-            }
-            else
-            {
+            foreach (var poi in _allPois)
                 _poisCurrentlyInside.Remove(poi.Id);
-            }
+
+            return;
         }
+
+        var selectedPoi = SelectAutoPlayPoi(insidePois, currentLocation);
+        if (selectedPoi == null)
+            return;
+
+        foreach (var poi in insidePois)
+            _poisCurrentlyInside.Add(poi.Id);
+
+        var now = DateTime.UtcNow;
+        if (_lastAutoPlayedPoiId == selectedPoi.Id && now - _lastAutoPlayedAt < TimeSpan.FromMinutes(5))
+            return;
+
+        var dedupeKey = _deduplicationService.BuildKey("autoplay_enter_poi", selectedPoi.Id);
+        if (!_deduplicationService.ShouldProcess(dedupeKey, TimeSpan.FromMinutes(5)))
+            return;
+
+        _lastAutoPlayedPoiId = selectedPoi.Id;
+        _lastAutoPlayedAt = now;
+        _ = QueueAutoPlayNearbyPoiAsync(selectedPoi);
     }
 
-    private async Task QueueAutoPlayNearbyPoiAsync(PoiModel poi, Location currentLocation)
+    private PoiModel? SelectAutoPlayPoi(IEnumerable<PoiModel> insidePois, Location currentLocation)
+    {
+        return insidePois
+            .Select((poi, index) => new
+            {
+                Poi = poi,
+                Index = index,
+                Score = GetAutoPlayPriorityScore(poi, currentLocation, index),
+                Distance = CalculateDistance(currentLocation.Latitude, currentLocation.Longitude, poi.Lat, poi.Lng)
+            })
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Distance)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Poi)
+            .FirstOrDefault();
+    }
+
+    private readonly AutoPlayPriorityPolicy _autoPlayPriorityPolicy = AutoPlayPriorityPolicy.Default;
+
+    private int GetAutoPlayPriorityScore(PoiModel poi, Location currentLocation, int indexInTour)
+        => _autoPlayPriorityPolicy.GetScore(poi, currentLocation.Latitude, currentLocation.Longitude, indexInTour);
+
+    private async Task QueueAutoPlayNearbyPoiAsync(PoiModel poi)
     {
         if (poi == null) return;
 
@@ -833,6 +869,12 @@ public partial class MapPage : ContentPage
             UpdatePoiLocalizedTexts();
             UpdateDistancesAndSort();
         });
+    }
+
+    protected override void OnNavigatingFrom(NavigatingFromEventArgs args)
+    {
+        base.OnNavigatingFrom(args);
+        _loadedTourId = null;
     }
 
     private void CurrentLocation_Clicked(object sender, EventArgs e)

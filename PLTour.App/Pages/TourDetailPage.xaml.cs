@@ -18,9 +18,35 @@ public partial class TourDetailPage : ContentPage
     private readonly LocationService _locationService;
     private readonly IAudioService _audioService;
     private TourModel? _tour;
+
+    private string _offlineBadgeText = string.Empty;
+    public string OfflineBadgeText
+    {
+        get => _offlineBadgeText;
+        set { _offlineBadgeText = value; OnPropertyChanged(nameof(OfflineBadgeText)); }
+    }
     private CancellationTokenSource? _trackingCts;
     private Task? _trackingTask;
     private Microsoft.Maui.Devices.Sensors.Location? _lastDistanceUpdateLocation;
+    private bool _isOfflineMode;
+
+    public bool IsOfflineMode
+    {
+        get => _isOfflineMode;
+        set
+        {
+            if (_isOfflineMode != value)
+            {
+                _isOfflineMode = value;
+                OnPropertyChanged(nameof(IsOfflineMode));
+                OnPropertyChanged(nameof(OfflineBannerText));
+            }
+        }
+    }
+
+    public string OfflineBannerText => IsOfflineMode
+        ? "Đang xem dữ liệu đã lưu tạm. Một số nội dung có thể chưa cập nhật."
+        : "Đã kết nối máy chủ, dữ liệu sẽ tự đồng bộ khi có thay đổi.";
 
     public TourModel? Tour
     {
@@ -80,9 +106,21 @@ public partial class TourDetailPage : ContentPage
         StopTracking();
     }
 
-    private void LoadTourData()
+    private async void LoadTourData()
     {
         if (_tour == null) return;
+
+        IsOfflineMode = Connectivity.Current.NetworkAccess != NetworkAccess.Internet;
+
+        if ((_tour.Pois == null || _tour.Pois.Count == 0) && !string.IsNullOrWhiteSpace(_tour.Id))
+        {
+            var cachedTour = await OfflineCacheService.Instance.LoadTourAsync(_tour.Id);
+            if (cachedTour != null && cachedTour.Pois.Count > 0)
+            {
+                _tour = cachedTour;
+                OnPropertyChanged(nameof(Tour));
+            }
+        }
 
         lblTourName.Text = _tour.Name;
         imgTour.Source = _tour.ImageUrl;

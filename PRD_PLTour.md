@@ -1065,3 +1065,131 @@ flowchart TD
 - Khi cập nhật entity `Vendor`, phải kiểm tra toàn bộ Admin + Vendor + API.
 - PRD này nên được cập nhật theo mỗi lần thay đổi schema hoặc luồng nghiệp vụ.
 - Nếu có thay đổi monitor, cần cập nhật cả API, Admin UI, và Mobile heartbeat flow.
+
+---
+
+## 14. Bổ sung kiến trúc Offline-First cho Mobile App
+
+### 14.1 Mục tiêu
+
+Mobile App của PL-Tour được mở rộng theo hướng **offline-first** để người dùng vẫn có thể:
+
+- Xem danh sách tour đã tải trước đó.
+- Mở chi tiết tour/địa điểm khi không có mạng.
+- Xem bản đồ và danh sách POI từ cache cục bộ.
+- Ghi nhận analytics/event khi offline và đồng bộ lại khi có mạng.
+- Nhận thông báo rõ ràng về trạng thái mạng và trạng thái đồng bộ.
+
+### 14.2 Thành phần bổ sung
+
+- `OfflineCacheService` — lưu cache tour, location, POI theo JSON cục bộ.
+- `MonitorQueueService` — hàng đợi lưu heartbeat/event chưa gửi được.
+- `MonitorQueueStore` — lưu persistent queue vào file trong `AppDataDirectory`.
+- `Connectivity` — kiểm tra trạng thái mạng realtime.
+- `HomePage` / `TourDetailPage` / `MapPage` — hiển thị banner/badge offline.
+
+### 14.3 Luồng offline của Mobile App
+
+1. App mở lên và kiểm tra kết nối mạng.
+2. Nếu có mạng, `ApiService` tải dữ liệu từ API và đồng thời lưu vào cache.
+3. Nếu mất mạng, app đọc dữ liệu đã cache trong `OfflineCacheService`.
+4. Khi người dùng thao tác, analytics event được đẩy vào `MonitorQueueService`.
+5. Nếu không có mạng, queue vẫn giữ event trong file local.
+6. Khi có mạng lại, queue tự gửi lần lượt các event còn tồn đọng lên API.
+7. UI hiển thị banner offline và trạng thái sync để người dùng biết dữ liệu nào đang là cache.
+
+### 14.4 Sequence — tải dữ liệu tour khi online/offline
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as HomePage / TourDetailPage / MapPage
+  participant Api as ApiService
+  participant Cache as OfflineCacheService
+  participant API as PLTour.API
+
+  UI->>Api: GetToursAsync() / GetLocationsAsync()
+  alt Có mạng
+    Api->>API: GET /api/tours or /api/locations
+    API-->>Api: DTOs
+    Api->>Cache: SaveToursAsync() / SaveLocationsAsync()
+    Api-->>UI: Trả dữ liệu mới
+  else Không có mạng
+    Api->>Cache: LoadToursAsync() / LoadLocationsAsync()
+    Cache-->>Api: Dữ liệu cục bộ
+    Api-->>UI: Trả cache offline
+  end
+```
+
+### 14.5 Sequence — queue analytics offline
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as App UI
+  participant Ana as AnalyticsService
+  participant DMS as DeviceMonitorService
+  participant MQ as MonitorQueueService
+  participant Store as MonitorQueueStore
+  participant API as PLTour.API
+
+  UI->>Ana: TrackPoiViewAsync() / TrackAudioStartAsync() / TrackAudioStopAsync()
+  Ana->>DMS: TrackEventAsync(eventType, dto)
+  DMS->>MQ: EnqueueAsync(url, payload, label)
+  MQ->>Store: Persist queue to local file
+  alt Có mạng
+    MQ->>API: POST event / heartbeat
+    API-->>MQ: OK
+    MQ->>Store: Update persisted queue
+  else Không có mạng
+    MQ->>Store: Giữ event để gửi sau
+  end
+```
+
+### 14.6 Cách cache dữ liệu
+
+#### Cache danh sách
+
+- Khi `ApiService.GetToursAsync()` hoặc `GetAllLocationsAsync()` trả dữ liệu hợp lệ, app lưu vào cache.
+- Khi API lỗi, app đọc cache thay thế.
+
+#### Cache chi tiết tour
+
+- Khi mở `TourDetailPage`, nếu tour không có đầy đủ `Pois`, app tìm cache theo `TourId`.
+- `OfflineCacheService` lưu riêng:
+  - `tour-{id}.json`
+  - `tour-pois-{id}.json`
+
+#### Cache bản đồ
+
+- `MapPage` ưu tiên đọc dữ liệu đã cache.
+- Nếu mất mạng, người dùng vẫn xem được POI và điều hướng cơ bản theo dữ liệu cũ.
+
+### 14.7 UI phản hồi trạng thái offline
+
+- `HomePage` có banner thông báo app đang dùng dữ liệu lưu tạm.
+- `HomePage` hiển thị `SyncStatusText` để báo số event đang chờ gửi.
+- `TourDetailPage` hiển thị offline badge khi xem dữ liệu cache.
+- `MapPage` log và xử lý nhánh offline khi không có kết nối.
+
+### 14.8 Ưu điểm của thiết kế offline-first
+
+- Tăng khả năng sử dụng khi mạng yếu hoặc mất mạng.
+- Không làm mất dữ liệu hành vi người dùng.
+- Trải nghiệm mở app nhanh hơn nhờ cache cục bộ.
+- Dễ mở rộng thêm cache ảnh, cache audio, hoặc cache route sau này.
+
+### 14.9 Hạn chế hiện tại
+
+- Cache đang ưu tiên JSON cục bộ, chưa tối ưu cho dung lượng lớn.
+- Đồng bộ conflict giữa local và server chưa có cơ chế xử lý phức tạp.
+- Ảnh và audio mới chỉ phụ thuộc vào URL/hệ thống cache của app, chưa có cơ chế tải trước toàn bộ.
+- Queue retry đã có nhưng vẫn cần tinh chỉnh backoff / giám sát số lượng hàng đợi.
+
+### 14.10 Hướng phát triển tiếp theo
+
+- Cache ảnh tour/POI theo file local.
+- Cache audio narration để nghe hoàn toàn offline.
+- Đồng bộ 2 chiều cho đánh giá, check-in và phản hồi người dùng.
+- Hiển thị màn hình “đang đồng bộ” rõ hơn.
+- Bổ sung test tự động cho offline cache và retry queue.

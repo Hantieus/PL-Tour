@@ -28,8 +28,9 @@ public class DeviceMonitorService
     {
         Instance = this;
 
-        const string DevTunnelUrl = "https://cr7jqdb9-7291.asse.devtunnels.ms/";
+        const string DevTunnelUrl = "https://q0x087zj-5229.asse.devtunnels.ms/";
         //l-https://q0x087zj-7291.asse.devtunnels.ms/
+        //P-https://cr7jqdb9-7291.asse.devtunnels.ms/
         const string RenderUrl = "https://pl-tour.onrender.com/";
 
         // Dùng chung logic với ApiService:
@@ -92,6 +93,13 @@ public class DeviceMonitorService
 
     public Task SendHeartbeatAsync(string? reason = null)
         => EnqueueHeartbeatAsync(reason);
+
+    public Task ForceSyncAsync()
+    {
+        _queueService.Start();
+        _ = SendHeartbeatAsync("manual_sync");
+        return Task.CompletedTask;
+    }
 
     private async Task RunHeartbeatLoopAsync(CancellationToken cancellationToken)
     {

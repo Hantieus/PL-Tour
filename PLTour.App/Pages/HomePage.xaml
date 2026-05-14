@@ -8,14 +8,27 @@
     <Grid>
         <ScrollView>
             <VerticalStackLayout Padding="20" Spacing="18">
+                <Border x:Name="OfflineBanner"
+                        IsVisible="False"
+                        BackgroundColor="#FEF3C7"
+                        Stroke="#F59E0B"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16"
+                        Padding="12,10">
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label Text="⚠️" FontSize="18" />
+                        <Label Text="Ứng dụng đang dùng dữ liệu đã lưu tạm. Một số nội dung có thể chưa cập nhật." TextColor="#92400E" FontSize="13" LineBreakMode="WordWrap" />
+                    </HorizontalStackLayout>
+                </Border>
+
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14" VerticalOptions="Center">
                     <Border StrokeShape="RoundRectangle 22"
                             HeightRequest="58"
                             WidthRequest="58"
-                            Padding="8"
-                            BackgroundColor="White"
+                            Padding="10"
+                            BackgroundColor="#E6FFFB"
                             StrokeThickness="1"
-                            Stroke="#E5E7EB">
+                            Stroke="#99F6E4">
                         <Image Source="logo.png" Aspect="AspectFit"/>
                     </Border>
                     <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
@@ -85,6 +98,17 @@
                            FontSize="20"
                            TextColor="#111827"/>
                 </Grid>
+
+                <Border StrokeShape="RoundRectangle 14"
+                        Padding="10,8"
+                        BackgroundColor="#EFF6FF"
+                        Stroke="#93C5FD"
+                        StrokeThickness="1">
+                    <Label Text="{Binding SyncStatusText}"
+                           TextColor="#1E3A8A"
+                           FontSize="12"
+                           FontAttributes="Bold"/>
+                </Border>
 
                 <CollectionView x:Name="TourListView" SelectionMode="None">
                     <CollectionView.ItemsLayout>

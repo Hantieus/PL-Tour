@@ -1,5 +1,6 @@
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Networking;
 using Microsoft.Maui.Storage;
 using PLTour.App.Services;
 using System.Collections.ObjectModel;
@@ -13,6 +14,13 @@ public partial class SettingsPage : ContentPage, INotifyPropertyChanged
     private readonly DeviceMonitorService _deviceMonitorService;
     private readonly AutoPlayPreferenceService _autoPlayPreferenceService;
     private readonly AutoPlayHistoryService _autoPlayHistoryService;
+
+    private string _offlineStatusText = "Đã kết nối máy chủ";
+    public string OfflineStatusText
+    {
+        get => _offlineStatusText;
+        set { _offlineStatusText = value; OnPropertyChanged(nameof(OfflineStatusText)); }
+    }
 
     private string _queueStatusText = "Chưa có dữ liệu hàng đợi";
     private string _queueHintText = "Sự kiện tracking được xếp hàng và gửi lại khi mạng ổn định.";
@@ -54,7 +62,9 @@ public partial class SettingsPage : ContentPage, INotifyPropertyChanged
         _autoPlayPreferenceService = AutoPlayPreferenceService.Instance;
         _autoPlayHistoryService = AutoPlayHistoryService.Instance;
         _deviceMonitorService.QueueChanged += DeviceMonitorService_QueueChanged;
+        Connectivity.Current.ConnectivityChanged += Connectivity_Changed;
         BindingContext = this;
+        UpdateOfflineUi();
 
         string savedTheme = Preferences.Default.Get("AppTheme", "Light");
         Application.Current.UserAppTheme = savedTheme == "Dark" ? AppTheme.Dark : AppTheme.Light;
@@ -105,6 +115,40 @@ public partial class SettingsPage : ContentPage, INotifyPropertyChanged
         QueueHintText = pending == 0
             ? "Không còn sự kiện nào trong hàng đợi."
             : "Sự kiện sẽ được gửi theo thứ tự và tự động retry nếu lỗi mạng.";
+    }
+
+    private void UpdateOfflineUi()
+    {
+        var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+        OfflineStatusText = isOnline ? "Đã kết nối máy chủ" : "Đang offline — dùng dữ liệu lưu tạm";
+    }
+
+    private void Connectivity_Changed(object? sender, ConnectivityChangedEventArgs e)
+        => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            UpdateOfflineUi();
+            UpdateQueueUi();
+        });
+
+    private async void ClearCache_Clicked(object sender, EventArgs e)
+    {
+        var confirm = await DisplayAlert("Xóa cache", "Bạn có chắc muốn xóa toàn bộ dữ liệu đã lưu tạm không?", "Xóa", "Hủy");
+        if (!confirm) return;
+
+        await OfflineCacheService.Instance.ClearAsync();
+        await DisplayAlert("Đã xóa cache", "Dữ liệu tour/location đã lưu tạm đã được xóa.", "OK");
+        UpdateOfflineUi();
+        UpdateQueueUi();
+    }
+
+    private async void SyncNow_Clicked(object sender, EventArgs e)
+    {
+        var confirm = await DisplayAlert("Đồng bộ lại ngay", "Bạn muốn gửi lại toàn bộ dữ liệu đang chờ bây giờ không?", "Đồng bộ", "Hủy");
+        if (!confirm) return;
+
+        await _deviceMonitorService.ForceSyncAsync();
+        UpdateQueueUi();
+        await DisplayAlert("Đồng bộ đã bắt đầu", "Hệ thống đã kích hoạt gửi lại dữ liệu đang chờ.", "OK");
     }
 
     private void ThemeSwitch_Toggled(object sender, ToggledEventArgs e)
