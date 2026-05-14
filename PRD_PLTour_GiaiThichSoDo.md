@@ -182,18 +182,12 @@ Khi đọc sequence, nên đi theo 4 câu hỏi:
 - `PLTour.App/Services/DeviceMonitorService.cs` → `Start()`
 - `PLTour.App/Services/DeviceMonitorService.cs` → `StartHeartbeatLoop()`
 
-```json
-{
-  "title": "1) Khởi tạo ứng dụng",
-  "sequence": [
-    "OS mở cửa sổ app qua `App.CreateWindow()` trong `PLTour.App/App.xaml.cs`.",
-    "App gọi `LocalizationService.ApplyLanguage(savedLang, persist: false)` để áp dụng ngôn ngữ đã lưu.",
-    "App gọi `DeviceMonitorService.Start()` trong `PLTour.App/Services/DeviceMonitorService.cs`.",
-    "`DeviceMonitorService` khởi chạy vòng heartbeat bằng `StartHeartbeatLoop()`.",
-    "App điều hướng vào màn hình đầu tiên của hệ thống.",
-  ]
-}
-```
+Luồng này mô tả lúc app vừa mở:
+- OS mở cửa sổ app qua `App.CreateWindow()`.
+- App áp dụng ngôn ngữ đã lưu bằng `LocalizationService.ApplyLanguage(...)`.
+- App bật dịch vụ monitor bằng `DeviceMonitorService.Start()`.
+- `DeviceMonitorService` chạy vòng heartbeat bằng `StartHeartbeatLoop()`.
+- App điều hướng vào màn hình đầu tiên.
 
 Câu nói báo cáo:
 
@@ -208,18 +202,12 @@ Câu nói báo cáo:
 - `PLTour.App/Services/LocalizationService.cs`
 - `Preferences`
 
-```json
-{
-  "title": "2) Chọn ngôn ngữ",
-  "sequence": [
-    "Người dùng mở `SettingsPage` trong `PLTour.App/Pages/SettingsPage.xaml.cs`.",
-    "Người dùng chọn ngôn ngữ mong muốn từ UI.",
-    "`SettingsPage` gọi `LocalizationService.ApplyLanguage(selectedLang, persist: true)`.",
-    "`LocalizationService` ghi ngôn ngữ vào `Preferences`.",
-    "UI refresh lại toàn bộ text theo culture mới.",
-  ]
-}
-```
+Luồng này mô tả:
+- Người dùng mở `SettingsPage`.
+- Người dùng chọn ngôn ngữ mong muốn từ UI.
+- `SettingsPage` gọi `LocalizationService.ApplyLanguage(selectedLang, persist: true)`.
+- `LocalizationService` ghi ngôn ngữ vào `Preferences`.
+- UI refresh lại toàn bộ text theo culture mới.
 
 Câu nói báo cáo:
 
@@ -235,20 +223,14 @@ Câu nói báo cáo:
 - `PLTour.API/Controllers/ToursController.cs`
 - `PLTour.API/Controllers/LocationsController.cs`
 
-```json
-{
-  "title": "3) Tải tour và location",
-  "sequence": [
-    "`HomePage` hoặc `MapPage` gọi `ApiService.GetToursAsync()` trong `PLTour.App/Services/ApiService.cs`.",
-    "`ApiService` gửi request lên `ToursController` ở `PLTour.API/Controllers/ToursController.cs`.",
-    "API trả về danh sách `TourDto`.",
-    "App map dữ liệu sang model hiển thị.",
-    "Sau đó `ApiService.GetLocationsAsync()` được gọi để lấy danh sách location.",
-    "`LocationsController` trả về `LocationDto[]` cho app.",
-    "UI render danh sách location hoặc POI trên màn hình.",
-  ]
-}
-```
+Luồng này mô tả:
+- `HomePage` hoặc `MapPage` gọi `ApiService.GetToursAsync()`.
+- `ApiService` gửi request lên `ToursController`.
+- API trả về danh sách `TourDto`.
+- App map dữ liệu sang model hiển thị.
+- Sau đó `ApiService.GetLocationsAsync()` được gọi để lấy danh sách location.
+- `LocationsController` trả về `LocationDto[]`.
+- UI render danh sách location hoặc POI trên màn hình.
 
 Câu nói báo cáo:
 
@@ -264,19 +246,13 @@ Câu nói báo cáo:
 - `PLTour.App/Services/ApiService.cs` → `GetLocationsAsync()`
 - `PLTour.API/Controllers/LocationsController.cs`
 
-```json
-{
-  "title": "4) Xem POI map/list + chọn POI",
-  "sequence": [
-    "Map khởi tạo tại `MapPage.InitMap()` trong `PLTour.App/Pages/MapPage.xaml.cs`.",
-    "Nạp vị trí hiện tại bằng `LocationService.LoadCurrentLocationAsync()`.",
-    "Nạp dữ liệu POI bằng `await ApiService.GetLocationsAsync()` trong `InitMap()`.",
-    "Render POI layer qua logic map UI và thêm layer vào bản đồ trong `InitMap()`.",
-    "Khi tap marker, sự kiện trên `MapPage` chọn POI gần nhất và gọi logic chọn POI.",
-    "Mở chi tiết POI bằng `PoiCard_Tapped(...)` hoặc điều hướng sang màn chi tiết tương ứng.",
-  ]
-}
-```
+Luồng này mô tả:
+- Map khởi tạo tại `MapPage.InitMap()`.
+- Nạp vị trí hiện tại bằng `LocationService.LoadCurrentLocationAsync()`.
+- Nạp dữ liệu POI bằng `await ApiService.GetLocationsAsync()`.
+- Render POI layer và thêm layer vào bản đồ.
+- Khi tap marker, `MapPage` chọn POI gần nhất.
+- Mở chi tiết POI bằng `PoiCard_Tapped(...)` hoặc điều hướng sang màn chi tiết.
 
 Câu nói báo cáo:
 
@@ -293,19 +269,13 @@ Câu nói báo cáo:
 - `PLTour.App/Services/ApiService.cs` → `GetLocationByIdAsync(...)`
 - `PLTour.API/Controllers/LocationsController.cs` → action chi tiết location
 
-```json
-{
-  "title": "5) Xem chi tiết địa điểm",
-  "sequence": [
-    "Người dùng chọn một POI từ bản đồ hoặc danh sách trong `MapPage`.",
-    "UI gọi `ApiService.GetLocationByIdAsync(id)` trong `PLTour.App/Services/ApiService.cs`.",
-    "`LocationsController` ở `PLTour.API/Controllers/LocationsController.cs` xử lý request chi tiết.",
-    "API trả về `LocationDto`.",
-    "App map dữ liệu vào `PoiDetailViewModel`.",
-    "`PoiDetailPopupView` hoặc `TourDetailPage` hiển thị tên, mô tả, ảnh và narration.",
-  ]
-}
-```
+Luồng này mô tả:
+- Người dùng chọn một POI từ bản đồ hoặc danh sách.
+- UI gọi `ApiService.GetLocationByIdAsync(id)`.
+- `LocationsController` xử lý request chi tiết.
+- API trả về `LocationDto`.
+- App map dữ liệu vào `PoiDetailViewModel`.
+- `PoiDetailPopupView` hoặc `TourDetailPage` hiển thị tên, mô tả, ảnh và narration.
 
 Câu nói báo cáo:
 
@@ -321,19 +291,13 @@ Câu nói báo cáo:
 - `PLTour.API/Controllers/LocationsController.cs` → endpoint QR
 - `PLTour.App/Services/Navigation` hoặc Shell navigation
 
-```json
-{
-  "title": "6) Quét QR",
-  "sequence": [
-    "Người dùng mở `QrScannerPage` trong `PLTour.App/Pages/QrScannerPage.xaml.cs`.",
-    "Camera quét QR code và trả chuỗi mã cho page.",
-    "`QrScannerPage` gọi `ApiService.GetLocationByQrAsync(qrCode)`.",
-    "`LocationsController` xử lý endpoint QR trong `PLTour.API/Controllers/LocationsController.cs`.",
-    "API trả về dữ liệu location hoặc thông tin điều hướng.",
-    "App dùng Shell navigation để mở màn hình chi tiết tương ứng.",
-  ]
-}
-```
+Luồng này mô tả:
+- Người dùng mở `QrScannerPage`.
+- Camera quét QR code và trả chuỗi mã cho page.
+- `QrScannerPage` gọi `ApiService.GetLocationByQrAsync(qrCode)`.
+- `LocationsController` xử lý endpoint QR.
+- API trả về dữ liệu location hoặc thông tin điều hướng.
+- App dùng Shell navigation để mở màn hình chi tiết tương ứng.
 
 Câu nói báo cáo:
 
@@ -349,19 +313,13 @@ Câu nói báo cáo:
 - `PLTour.App/Services/AudioService.cs` → `PlayAsync(audioUrl)`
 - `PLTour.API/Controllers/NarrationsController.cs`
 
-```json
-{
-  "title": "7) Phát narration audio",
-  "sequence": [
-    "Người dùng bấm nút Play trong `TourDetailPage`.",
-    "`TourDetailPage` gọi `ApiService.GetNarrationAsync(locationId, language)`.",
-    "`ApiService` gửi request đến `NarrationsController` trên backend.",
-    "API trả về `NarrationDto`.",
-    "Nếu có `AudioUrl`, `AudioService.PlayAsync(audioUrl)` sẽ stream file audio.",
-    "Nếu không có audio, app chuyển sang TTS fallback.",
-  ]
-}
-```
+Luồng này mô tả:
+- Người dùng bấm nút Play trong `TourDetailPage`.
+- `TourDetailPage` gọi `ApiService.GetNarrationAsync(locationId, language)`.
+- `ApiService` gửi request đến `NarrationsController`.
+- API trả về `NarrationDto`.
+- Nếu có `AudioUrl`, `AudioService.PlayAsync(audioUrl)` sẽ stream file audio.
+- Nếu không có audio, app chuyển sang TTS fallback.
 
 Câu nói báo cáo:
 
@@ -376,19 +334,13 @@ Câu nói báo cáo:
 - `PLTour.App/Services/ApiService.cs` → `PostListenAsync(...)`
 - `PLTour.API/Controllers/ListenAnalyticsController.cs` hoặc controller analytics tương ứng
 
-```json
-{
-  "title": "8) Ghi lịch sử phát audio",
-  "sequence": [
-    "Audio kết thúc và UI phát sinh sự kiện `OnPlaybackEnded(duration)`.",
-    "`AnalyticsService` nhận duration và tạo payload listen.",
-    "`AnalyticsService` gọi `ApiService.PostListenAsync(locationId, duration)`.",
-    "`ApiService` gửi request lên backend analytics controller.",
-    "API trả kết quả `accepted` hoặc `duplicate`.",
-    "App ghi nhận kết quả để phục vụ thống kê nghe.",
-  ]
-}
-```
+Luồng này mô tả:
+- Audio kết thúc và UI phát sinh sự kiện `OnPlaybackEnded(duration)`.
+- `AnalyticsService` nhận duration và tạo payload listen.
+- `AnalyticsService` gọi `ApiService.PostListenAsync(locationId, duration)`.
+- `ApiService` gửi request lên backend analytics controller.
+- API trả kết quả `accepted` hoặc `duplicate`.
+- App ghi nhận kết quả để phục vụ thống kê nghe.
 
 Câu nói báo cáo:
 
@@ -404,19 +356,13 @@ Câu nói báo cáo:
 - `PLTour.App/Services/MonitorQueueStore.cs`
 - `PLTour.API/Controllers/MonitorController.cs` → `Heartbeat(...)`
 
-```json
-{
-  "title": "9) Gửi heartbeat thiết bị",
-  "sequence": [
-    "`DeviceMonitorService` chạy timer và tạo heartbeat định kỳ.",
-    "Heartbeat payload được đưa vào `MonitorQueueService.EnqueueAsync(...)`.",
-    "`MonitorQueueService` lưu item vào queue và persist xuống store.",
-    "Worker của queue gửi POST lên `MonitorController.Heartbeat(...)`.",
-    "API cập nhật hoặc tạo mới `ActiveDevice` trong database.",
-    "Admin sẽ nhìn thấy thiết bị online ở dashboard monitor.",
-  ]
-}
-```
+Luồng này mô tả:
+- `DeviceMonitorService` chạy timer và tạo heartbeat định kỳ.
+- Heartbeat payload được đưa vào `MonitorQueueService.EnqueueAsync(...)`.
+- `MonitorQueueService` lưu item vào queue và persist xuống store.
+- Worker của queue gửi POST lên `MonitorController.Heartbeat(...)`.
+- API cập nhật hoặc tạo mới `ActiveDevice` trong database.
+- Admin sẽ nhìn thấy thiết bị online ở dashboard monitor.
 
 Câu nói báo cáo:
 
@@ -432,18 +378,12 @@ Câu nói báo cáo:
 - `PLTour.API/Controllers/MonitorController.cs`
 - `PLTour.App/Services/QueuedActionService.cs` (nếu luồng nội bộ cần xếp hàng)
 
-```json
-{
-  "title": "10) Quản lý queue khi mạng yếu",
-  "sequence": [
-    "Khi request heartbeat hoặc analytics thất bại, item không bị mất.",
-    "`MonitorQueueService` giữ item trong memory queue và lưu xuống store.",
-    "Worker tiếp tục retry theo chu kỳ.",
-    "Nếu gửi thành công thì item bị remove khỏi queue.",
-    "Nếu vẫn thất bại thì item được requeue để thử lại lần sau.",
-  ]
-}
-```
+Luồng này mô tả:
+- Khi request heartbeat hoặc analytics thất bại, item không bị mất.
+- `MonitorQueueService` giữ item trong memory queue và lưu xuống store.
+- Worker tiếp tục retry theo chu kỳ.
+- Nếu gửi thành công thì item bị remove khỏi queue.
+- Nếu vẫn thất bại thì item được requeue để thử lại lần sau.
 
 Câu nói báo cáo:
 
@@ -458,17 +398,11 @@ Câu nói báo cáo:
 - `PLTour.App/Services/AudioService.cs`
 - `PLTour.App/Properties/Preferences`
 
-```json
-{
-  "title": "11) Tự động phát theo preference",
-  "sequence": [
-    "`TourDetailPage` đọc cờ autoplay từ `Preferences`.",
-    "Nếu autoplay đang bật, app chọn nội dung gợi ý tiếp theo.",
-    "`AudioService` phát bài kế tiếp mà không cần người dùng bấm lại.",
-    "Nếu autoplay tắt, app dừng ở trạng thái chờ thao tác người dùng.",
-  ]
-}
-```
+Luồng này mô tả:
+- `TourDetailPage` đọc cờ autoplay từ `Preferences`.
+- Nếu autoplay đang bật, app chọn nội dung gợi ý tiếp theo.
+- `AudioService` phát bài kế tiếp mà không cần người dùng bấm lại.
+- Nếu autoplay tắt, app dừng ở trạng thái chờ thao tác người dùng.
 
 Câu nói báo cáo:
 
