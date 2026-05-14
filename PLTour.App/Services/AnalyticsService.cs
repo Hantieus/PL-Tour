@@ -1,4 +1,4 @@
-﻿using PLTour.Shared.Models.DTO;
+using PLTour.Shared.Models.DTO;
 
 namespace PLTour.App.Services;
 
@@ -24,12 +24,12 @@ public class AnalyticsService
     /// <summary>
     /// Gửi sự kiện lên server (bất đồng bộ, không chờ, không ảnh hưởng UI)
     /// </summary>
-    private void TrackEvent(string eventType, AnalyticsEventDto? data = null)
+    private Task TrackEventAsync(string eventType, AnalyticsEventDto? data = null)
     {
         try
         {
             System.Diagnostics.Debug.WriteLine($"[ANALYTICS] Queueing event '{eventType}'");
-            _ = _monitorService.TrackEventAsync(eventType, data).ContinueWith(task =>
+            return _monitorService.TrackEventAsync(eventType, data).ContinueWith(task =>
             {
                 if (task.Exception != null)
                 {
@@ -40,54 +40,83 @@ public class AnalyticsService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ANALYTICS] TrackEvent threw for '{eventType}': {ex.Message}");
+            return Task.CompletedTask;
         }
     }
 
     // ==================== CÁC PHƯƠNG THỨC GỌI TỪ APP ====================
 
     /// <summary> Gửi vị trí hiện tại (dùng cho heatmap) </summary>
-    public async Task TrackLocationPingAsync(double lat, double lng)
+    public Task TrackLocationPingAsync(double lat, double lng)
     {
         var key = _deduplicationService.BuildKey("location_ping", Math.Round(lat, 4), Math.Round(lng, 4));
         if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
-            return;
+            return Task.CompletedTask;
 
-        TrackEvent("location_ping", new AnalyticsEventDto { Latitude = lat, Longitude = lng });
+        _ = TrackEventAsync("location_ping", new AnalyticsEventDto
+        {
+            Latitude = lat,
+            Longitude = lng,
+            Timestamp = DateTime.UtcNow
+        });
+
+        return Task.CompletedTask;
     }
 
-    public async Task TrackPoiViewAsync(int locationId)
+    public Task TrackPoiViewAsync(int locationId)
     {
         var key = _deduplicationService.BuildKey("view_location", locationId);
         if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(20)))
-            return;
+            return Task.CompletedTask;
 
-        TrackEvent("view_location", new AnalyticsEventDto { LocationId = locationId });
+        _ = TrackEventAsync("view_location", new AnalyticsEventDto
+        {
+            LocationId = locationId,
+            Timestamp = DateTime.UtcNow
+        });
+
+        return Task.CompletedTask;
     }
 
-    public async Task TrackAudioStartAsync(int locationId, string languageCode, bool isOnSite)
+    public Task TrackAudioStartAsync(int locationId, string languageCode, bool isOnSite)
     {
         var key = _deduplicationService.BuildKey("audio_start", locationId, languageCode, isOnSite);
         if (!_deduplicationService.ShouldProcess(key, TimeSpan.FromSeconds(5)))
-            return;
+            return Task.CompletedTask;
 
         _playbackStartTime = DateTime.UtcNow;
         _currentTrackedLocationId = locationId;
         string eventType = isOnSite ? "listen_onsite" : "listen_remote";
-        TrackEvent(eventType, new AnalyticsEventDto { LocationId = locationId, LanguageCode = languageCode, HasAudio = true });
+        _ = TrackEventAsync(eventType, new AnalyticsEventDto
+        {
+            LocationId = locationId,
+            LanguageCode = languageCode,
+            HasAudio = true,
+            Timestamp = DateTime.UtcNow
+        });
+
+        return Task.CompletedTask;
     }
 
-    public async Task TrackAudioStopAsync()
+    public Task TrackAudioStopAsync()
     {
         if (_playbackStartTime.HasValue && _currentTrackedLocationId > 0)
         {
-            int seconds = (int)(DateTime.UtcNow - _playbackStartTime.Value).TotalSeconds;
-            if (seconds > 0)
+            var elapsedSeconds = (DateTime.UtcNow - _playbackStartTime.Value).TotalSeconds;
+            var seconds = Math.Max(1, (int)Math.Ceiling(elapsedSeconds));
+
+            _ = TrackEventAsync("listen_duration", new AnalyticsEventDto
             {
-                TrackEvent("listen_duration", new AnalyticsEventDto { LocationId = _currentTrackedLocationId, Duration = seconds });
-            }
+                LocationId = _currentTrackedLocationId,
+                Duration = seconds,
+                Timestamp = DateTime.UtcNow
+            });
+
             _playbackStartTime = null;
             _currentTrackedLocationId = 0;
         }
+
+        return Task.CompletedTask;
     }
 
 }

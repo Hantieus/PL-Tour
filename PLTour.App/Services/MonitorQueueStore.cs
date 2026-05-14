@@ -46,4 +46,11 @@ public sealed class MonitorQueueStore
     private static string GetPath() => Path.Combine(FileSystem.Current.AppDataDirectory, StorageFileName);
 }
 
-public sealed record MonitorQueueItem(string Url, string PayloadJson, string Label, int Attempt = 0);
+public sealed record MonitorQueueItem(
+    string Url,
+    string PayloadJson,
+    string Label,
+    int Attempt = 0,
+    string? DeduplicationKey = null,
+    int Priority = 0,
+    DateTime? NotBeforeUtc = null);

@@ -1,5 +1,6 @@
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Networking;
 using PLTour.App.Models;
 using PLTour.App.Services;
 using System.Collections.ObjectModel;
@@ -15,6 +16,13 @@ public partial class HomePage : ContentPage
     private readonly DeviceMonitorService _deviceMonitorService;
     private readonly IAudioService _audioService;
 
+    private string _syncStatusText = string.Empty;
+    public string SyncStatusText
+    {
+        get => _syncStatusText;
+        set { _syncStatusText = value; OnPropertyChanged(nameof(SyncStatusText)); }
+    }
+
     // 2. Truyền LocationService qua Constructor
     public HomePage(LocationService locationService, DeviceMonitorService deviceMonitorService, IAudioService audioService)
     {
@@ -24,6 +32,7 @@ public partial class HomePage : ContentPage
         _audioService = audioService;
         _audioService.PlaybackStopped += AudioService_PlaybackStopped;
         LocalizationService.Instance.LanguageChanged += (_, __) => OnPropertyChanged(string.Empty);
+        Connectivity.Current.ConnectivityChanged += Connectivity_Changed;
         BindingContext = this;
     }
 
@@ -50,8 +59,16 @@ public partial class HomePage : ContentPage
         base.OnAppearing();
         System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing start");
         await _deviceMonitorService.TrackEventAsync("screen_view", new PLTour.Shared.Models.DTO.AnalyticsEventDto { Keyword = "home" });
+        UpdateOfflineBanner();
+        UpdateSyncStatus();
         await LoadToursAsync();
         System.Diagnostics.Debug.WriteLine("[HOME] OnAppearing end");
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        Connectivity.Current.ConnectivityChanged -= Connectivity_Changed;
     }
 
     private async Task LoadToursAsync()
@@ -61,13 +78,19 @@ public partial class HomePage : ContentPage
             LoadingIndicator.IsRunning = true;
 
             var connectionOk = await _apiService.TestConnectionAsync();
+            UpdateSyncStatus();
             System.Diagnostics.Debug.WriteLine($"[HOME] Connection test = {connectionOk}");
+            OfflineBanner.IsVisible = !connectionOk;
             if (!connectionOk)
             {
                 System.Diagnostics.Debug.WriteLine("[HOME] Connection test failed, but continue loading tours anyway.");
             }
 
             var tours = await _apiService.GetToursAsync();
+            if (tours != null)
+            {
+                await OfflineCacheService.Instance.SaveToursAsync(tours);
+            }
             System.Diagnostics.Debug.WriteLine($"[HOME] Loaded tours: {tours?.Count ?? 0}");
 
             var userLoc = _locationService.GetSavedLocation();
@@ -172,6 +195,29 @@ public partial class HomePage : ContentPage
             url = url.Replace("http://", "https://");
         }
         return url;
+    }
+
+    private void UpdateOfflineBanner()
+    {
+        OfflineBanner.IsVisible = Connectivity.Current.NetworkAccess != NetworkAccess.Internet;
+    }
+
+    private void UpdateSyncStatus()
+    {
+        var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+        var pending = DeviceMonitorService.Instance?.PendingCount ?? 0;
+        SyncStatusText = isOnline
+            ? (pending > 0 ? $"Đang đồng bộ {pending} sự kiện..." : "Đã kết nối máy chủ")
+            : pending > 0 ? $"Offline — còn {pending} sự kiện chờ gửi" : "Offline — dữ liệu sẽ được gửi sau";
+    }
+
+    private void Connectivity_Changed(object? sender, ConnectivityChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            UpdateOfflineBanner();
+            UpdateSyncStatus();
+        });
     }
 
     private async void ViewTourDetail_Clicked(object sender, EventArgs e)

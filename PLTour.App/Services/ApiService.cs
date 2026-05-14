@@ -15,7 +15,10 @@ public class ApiService
     // Base URL của Backend (Server)
     private readonly string _baseUrl;
     //Dùng DevTunnelUrl không cần phải dùng chung 1 mạng wifi của máy tính và điện thoạii nhưng vẫn chạy được
-    private const string DevTunnelUrl = "https://cr7jqdb9-7291.asse.devtunnels.ms/";
+    private const string DevTunnelUrl = "https://q0x087zj-5229.asse.devtunnels.ms/";
+
+    //l-https://q0x087zj-7291.asse.devtunnels.ms/
+    //P-https://cr7jqdb9-7291.asse.devtunnels.ms/
 
     //Không cân bật api nhưng vẫn chạy được app
     private const string RenderUrl = "https://pl-tour.onrender.com/";
@@ -64,14 +67,17 @@ public class ApiService
         try
         {
             var tourDtos = await _httpClient.GetFromJsonAsync<List<TourDto>>("api/tours");
-            if (tourDtos == null || !tourDtos.Any()) return new List<TourModel>();
+            if (tourDtos == null || !tourDtos.Any())
+                return await OfflineCacheService.Instance.LoadToursAsync();
 
-            return tourDtos.Select(MapToTourModel).ToList();
+            var tours = tourDtos.Select(MapToTourModel).ToList();
+            await OfflineCacheService.Instance.SaveToursAsync(tours);
+            return tours;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetTours: {ex}");
-            return new List<TourModel>();
+            return await OfflineCacheService.Instance.LoadToursAsync();
         }
     }
 
@@ -81,7 +87,11 @@ public class ApiService
         {
             var locDtos = await _httpClient.GetFromJsonAsync<List<PLTour.Shared.Models.DTO.LocationDto>>("api/Locations");
             if (locDtos != null && locDtos.Any())
-                return locDtos.Select(loc => MapToPoiModel(loc)).ToList();
+            {
+                var pois = locDtos.Select(loc => MapToPoiModel(loc)).ToList();
+                await OfflineCacheService.Instance.SaveLocationsAsync(pois);
+                return pois;
+            }
 
             System.Diagnostics.Debug.WriteLine("[API_LOG] api/Locations returned empty. Falling back to tours locations.");
 
@@ -95,7 +105,10 @@ public class ApiService
                 .ToList();
 
             System.Diagnostics.Debug.WriteLine($"[API_LOG] Fallback POIs from tours: {fallbackPois.Count}");
-            return fallbackPois;
+            if (fallbackPois.Any())
+                await OfflineCacheService.Instance.SaveLocationsAsync(fallbackPois);
+
+            return fallbackPois.Any() ? fallbackPois : await OfflineCacheService.Instance.LoadLocationsAsync();
         }
         catch (Exception ex)
         {
@@ -104,19 +117,23 @@ public class ApiService
             try
             {
                 var tours = await GetToursAsync();
-                return tours
+                var fallbackPois = tours
                     .Where(t => t.Pois != null)
                     .SelectMany(t => t.Pois)
                     .Where(p => p != null)
                     .GroupBy(p => p.Id)
                     .Select(g => g.First())
                     .ToList();
+
+                if (fallbackPois.Any())
+                    return fallbackPois;
             }
             catch (Exception fallbackEx)
             {
                 System.Diagnostics.Debug.WriteLine($"[API_ERROR] GetAllLocations fallback failed: {fallbackEx}");
-                return new List<PoiModel>();
             }
+
+            return await OfflineCacheService.Instance.LoadLocationsAsync();
         }
     }
 

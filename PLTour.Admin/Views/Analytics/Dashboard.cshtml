@@ -83,8 +83,16 @@
 
     <!-- ========== TOP ĐỊA ĐIỂM ========== -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">🏆 Top địa điểm được nghe nhiều nhất</h5>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 small text-muted">Hiển thị</label>
+                <select id="topLocationsTake" class="form-select form-select-sm" style="width: 90px;">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                </select>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -96,7 +104,6 @@
                             <th>Số lượt nghe</th>
                             <th>Tổng thời gian</th>
                             <th>TB mỗi lượt</th>
-                            <th>Ngôn ngữ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -163,6 +170,7 @@
             });
 
             $('#refreshBtn').on('click', function() { loadAllData(); });
+            $('#topLocationsTake').on('change', function() { loadTopLocations(); });
 
             initHeatmap();
             loadAllData();
@@ -200,20 +208,30 @@
             const params = buildParams();
             const response = await fetch(`/api/analytics/overview${params}`);
             const data = await response.json();
+            const listenBreakdown = [
+                `Nghe tại chỗ: ${Number(data.onsiteCount || 0).toLocaleString()}`,
+                `Nghe từ xa: ${Number(data.remoteCount || 0).toLocaleString()}`
+            ].join(' • ');
             
             const kpis = [
-                { title: 'Tổng sự kiện', value: data.totalEvents, color: 'primary', icon: 'fa-chart-line' },
-                { title: 'Thiết bị', value: data.uniqueDevices, color: 'success', icon: 'fa-mobile-alt' },
-                { title: 'Phiên', value: data.uniqueSessions, color: 'info', icon: 'fa-clock' },
-                { title: 'Lượt nghe', value: data.totalListens, color: 'warning', icon: 'fa-headphones' }
+                { title: 'Tổng sự kiện', value: Number(data.totalEvents || 0).toLocaleString(), color: 'primary', icon: 'fa-chart-line' },
+                { title: 'Thiết bị', value: Number(data.uniqueDevices || 0).toLocaleString(), color: 'success', icon: 'fa-mobile-alt' },
+                { title: 'Lượt nghe', value: Number(data.totalListens || 0).toLocaleString(), color: 'info', icon: 'fa-headphones' },
+                { title: 'Nghe tại chỗ', value: Number(data.onsiteCount || 0).toLocaleString(), color: 'warning', icon: 'fa-map-marker-alt' },
+                { title: 'Nghe từ xa', value: Number(data.remoteCount || 0).toLocaleString(), color: 'dark', icon: 'fa-wifi' },
+                { title: 'TB thời lượng nghe', value: `${Number(data.avgDurationSeconds || 0).toFixed(1)}s`, color: 'secondary', icon: 'fa-stopwatch' }
             ];
             
             $('#kpiContainer').html(kpis.map(kpi => `
-                <div class="col-md-3">
-                    <div class="card bg-${kpi.color} text-white">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-${kpi.color} text-white h-100">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div><h6>${kpi.title}</h6><h2 class="mb-0">${Number(kpi.value || 0).toLocaleString()}</h2></div>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-2">${kpi.title}</h6>
+                                    <h2 class="mb-0">${kpi.value}</h2>
+                                    ${kpi.title === 'Lượt nghe' ? `<small class="opacity-75 d-block mt-2">${listenBreakdown}</small>` : ''}
+                                </div>
                                 <i class="fas ${kpi.icon} fa-2x opacity-50"></i>
                             </div>
                         </div>
@@ -286,19 +304,15 @@
         }
 
         async function loadTopLocations() {
-            const params = buildParams();
-            const response = await fetch(`/api/analytics/top-locations-detailed${params}`);
+            const params = buildParams(false);
+            const take = $('#topLocationsTake').val() || 10;
+            const response = await fetch(`/api/analytics/top-locations-detailed${params}&take=${take}`);
             const data = await response.json();
             
             if (!data.length) {
-                $('#topLocationsTable tbody').html('<tr><td colspan="6" class="text-center">📭 Chưa có dữ liệu nghe</td></tr>');
+                $('#topLocationsTable tbody').html('<tr><td colspan="5" class="text-center">📭 Chưa có dữ liệu nghe</td></tr>');
                 return;
             }
-            
-            const languageMap = {
-                'vi': '🇻🇳 Tiếng Việt', 'en': '🇬🇧 English', 'zh': '🇨🇳 中文',
-                'ko': '🇰🇷 한국어', 'ja': '🇯🇵 日本語'
-            };
             
             function formatDuration(seconds) {
                 if (!seconds || seconds === 0) return 'Chưa có dữ liệu';
@@ -314,7 +328,6 @@
                     <td><span class="badge bg-primary">${item.listenCount}</span></td>
                     <td>${formatDuration(item.totalDuration)}</td>
                     <td>${Math.round(item.avgDuration)} giây</td>
-                    <td>${languageMap[item.topLanguage] || '🌐 ' + item.topLanguage}</td>
                 </tr>
             `).join('');
             

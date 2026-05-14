@@ -16,6 +16,9 @@ public sealed class MonitorQueueService
     private bool _isRunning;
     private bool _isWorkerStarted;
 
+    private readonly ConcurrentDictionary<string, DateTime> _processedKeys = new();
+    private readonly TimeSpan _defaultCooldown = TimeSpan.FromMinutes(5);
+
     public event EventHandler? QueueChanged;
 
     public int PendingCount => _queue.Count;
@@ -60,11 +63,32 @@ public sealed class MonitorQueueService
         }
     }
 
-    public Task EnqueueAsync(string url, object payload, string label)
+    public Task EnqueueAsync(string url, object payload, string label, int priority = 0, string? deduplicationKey = null, TimeSpan? notBeforeDelay = null)
     {
-        var item = new MonitorQueueItem(url, JsonSerializer.Serialize(payload), label);
+        var item = new MonitorQueueItem(
+            url,
+            JsonSerializer.Serialize(payload),
+            label,
+            0,
+            deduplicationKey,
+            priority,
+            notBeforeDelay.HasValue ? DateTime.UtcNow.Add(notBeforeDelay.Value) : null);
+
+        if (!string.IsNullOrWhiteSpace(deduplicationKey))
+        {
+            var cooldown = item.NotBeforeUtc ?? DateTime.UtcNow.Add(_defaultCooldown);
+            var existing = _processedKeys.GetOrAdd(deduplicationKey, cooldown);
+            if (existing > DateTime.UtcNow)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Skipped duplicate {label}. Key={deduplicationKey}, CooldownUntil={existing:o}");
+                return Task.CompletedTask;
+            }
+
+            _processedKeys[deduplicationKey] = cooldown;
+        }
+
         _queue.Enqueue(item);
-        System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Enqueued {label}. Pending={_queue.Count}, Url={url}");
+        System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Enqueued {label}. Pending={_queue.Count}, Url={url}, Priority={priority}");
         QueueChanged?.Invoke(this, EventArgs.Empty);
         _signal.Release();
         return PersistAsync();
@@ -83,7 +107,11 @@ public sealed class MonitorQueueService
     {
         var items = await _store.LoadAsync();
         foreach (var item in items)
+        {
             _queue.Enqueue(item);
+            if (!string.IsNullOrWhiteSpace(item.DeduplicationKey))
+                _processedKeys[item.DeduplicationKey] = item.NotBeforeUtc ?? DateTime.UtcNow.Add(_defaultCooldown);
+        }
 
         System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Restored {items.Count} items. Pending={_queue.Count}");
 
@@ -116,23 +144,101 @@ public sealed class MonitorQueueService
                 return;
             }
 
-            while (_queue.TryDequeue(out var item))
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
             {
-                var sent = await SendWithRetryAsync(item);
-                if (!sent)
-                {
-                    _queue.Enqueue(item with { Attempt = item.Attempt + 1 });
-                    System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Re-queued {item.Label}. Attempt={item.Attempt + 1}, Pending={_queue.Count}");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Sent {item.Label} successfully. Pending={_queue.Count}");
-                }
-
-                QueueChanged?.Invoke(this, EventArgs.Empty);
-                await PersistAsync();
+                System.Diagnostics.Debug.WriteLine("[MONITOR_QUEUE] Offline - giữ hàng đợi để gửi sau.");
+                await Task.Delay(TimeSpan.FromSeconds(5), token).ContinueWith(_ => { }, TaskScheduler.Default);
+                continue;
             }
+
+            var nextItem = DequeueNextReadyItem();
+            if (nextItem is null)
+                continue;
+
+            var sent = await SendWithRetryAsync(nextItem);
+            if (!sent)
+            {
+                _queue.Enqueue(nextItem with { Attempt = nextItem.Attempt + 1, NotBeforeUtc = DateTime.UtcNow.Add(TimeSpan.FromSeconds(10)) });
+                System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Re-queued {nextItem.Label}. Attempt={nextItem.Attempt + 1}, Pending={_queue.Count}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[MONITOR_QUEUE] Sent {nextItem.Label} successfully. Pending={_queue.Count}");
+            }
+
+            QueueChanged?.Invoke(this, EventArgs.Empty);
+            await PersistAsync();
+
+            if (_queue.Count > 0)
+                _signal.Release();
         }
+    }
+
+    private MonitorQueueItem? DequeueNextReadyItem()
+    {
+        var snapshot = _queue.ToArray();
+        if (snapshot.Length == 0)
+            return null;
+
+        var now = DateTime.UtcNow;
+        var ordered = snapshot
+            .Select((item, index) => new { item, index })
+            .OrderByDescending(x => x.item.Priority)
+            .ThenBy(x => x.item.NotBeforeUtc ?? DateTime.MinValue)
+            .ThenBy(x => x.index)
+            .ToList();
+
+        foreach (var candidate in ordered)
+        {
+            if (candidate.item.NotBeforeUtc.HasValue && candidate.item.NotBeforeUtc.Value > now)
+                continue;
+
+            if (TryRemoveItem(candidate.item))
+                return candidate.item;
+        }
+
+        var nextDue = ordered
+            .Where(x => x.item.NotBeforeUtc.HasValue)
+            .Select(x => x.item.NotBeforeUtc!.Value)
+            .DefaultIfEmpty(now.AddSeconds(5))
+            .Min();
+
+        var delay = nextDue > now ? nextDue - now : TimeSpan.FromSeconds(1);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delay, _cts?.Token ?? CancellationToken.None);
+                _signal.Release();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        });
+
+        return null;
+    }
+
+    private bool TryRemoveItem(MonitorQueueItem item)
+    {
+        var removed = new List<MonitorQueueItem>();
+        var found = false;
+
+        while (_queue.TryDequeue(out var current))
+        {
+            if (!found && EqualityComparer<MonitorQueueItem>.Default.Equals(current, item))
+            {
+                found = true;
+                continue;
+            }
+
+            removed.Add(current);
+        }
+
+        foreach (var remaining in removed)
+            _queue.Enqueue(remaining);
+
+        return found;
     }
 
     private async Task<bool> SendWithRetryAsync(MonitorQueueItem item)

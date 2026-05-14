@@ -1,4 +1,4 @@
-﻿namespace PLTour.Shared.Models.DTO
+namespace PLTour.Shared.Models.DTO
 {
     public class AnalyticsEventDto
     {
@@ -15,7 +15,7 @@
         public bool? HasAudio { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public DateTime Timestamp { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 
     public class TimelinePointDto
